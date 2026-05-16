@@ -1,0 +1,73 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F7F8FB"/>
+  <defs>
+    <linearGradient id="currentBg" x1="150" y1="90" x2="420" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8E53"/>
+      <stop offset="1" stop-color="#FF4F1F"/>
+    </linearGradient>
+    <linearGradient id="refinedBg" x1="730" y1="90" x2="1000" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8A4A"/>
+      <stop offset="0.55" stop-color="#FF6B35"/>
+      <stop offset="1" stop-color="#F34217"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="20" stdDeviation="18" flood-color="#11122E" flood-opacity="0.18"/>
+    </filter>
+    <clipPath id="roundA"><rect x="140" y="86" width="300" height="300" rx="68"/></clipPath>
+    <clipPath id="roundB"><rect x="720" y="86" width="300" height="300" rx="68"/></clipPath>
+  </defs>
+
+  <text x="600" y="52" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="850" fill="#11122E">Propuesta de mejora del icono</text>
+
+  <g filter="url(#shadow)">
+    <rect x="140" y="86" width="300" height="300" rx="68" fill="url(#currentBg)"/>
+    <g clip-path="url(#roundA)">
+      <circle cx="290" cy="236" r="118" fill="white"/>
+      <circle cx="290" cy="236" r="65" fill="#FFF5EF"/>
+    </g>
+    <path d="M216 252C228 196 256 169 290 169C324 169 352 196 364 252" stroke="#11122E" stroke-width="21" stroke-linecap="round"/>
+    <path d="M214 270H366C358 300 332 318 290 318C248 318 222 300 214 270Z" fill="#11122E"/>
+    <path d="M230 253L265 222L292 238L345 184" stroke="#FF6B35" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M345 184L338 225L309 195Z" fill="#FF6B35"/>
+    <circle cx="265" cy="222" r="14" fill="#FF6B35"/>
+    <path d="M365 108L374 135L403 135L379 152L388 181L365 164L341 181L350 152L326 135L356 135Z" fill="white"/>
+  </g>
+  <text x="290" y="440" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800" fill="#11122E">Actual</text>
+  <text x="290" y="476" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" fill="#5F6575">Bueno, pero se lee como medalla/estrella</text>
+
+  <g filter="url(#shadow)">
+    <rect x="720" y="86" width="300" height="300" rx="68" fill="url(#refinedBg)"/>
+    <g clip-path="url(#roundB)">
+      <circle cx="724" cy="92" r="150" fill="white" fill-opacity="0.13"/>
+      <circle cx="1018" cy="388" r="150" fill="#11122E" fill-opacity="0.12"/>
+      <path d="M720 336C790 304 950 310 1020 360V386H720V336Z" fill="#11122E" fill-opacity="0.08"/>
+    </g>
+
+    <circle cx="870" cy="238" r="103" fill="white"/>
+    <circle cx="870" cy="238" r="55" fill="#FFF2EA"/>
+
+    <path d="M806 245C818 200 841 179 870 179C899 179 922 200 934 245" stroke="#11122E" stroke-width="19" stroke-linecap="round"/>
+    <path d="M799 261H941C934 290 910 307 870 307C830 307 806 290 799 261Z" fill="#11122E"/>
+
+    <path d="M816 249L845 223L871 238L924 185" stroke="#FF6B35" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M924 185L918 223L891 195Z" fill="#FF6B35"/>
+    <circle cx="845" cy="223" r="12" fill="#FF6B35"/>
+    <circle cx="871" cy="238" r="11" fill="#FF6B35"/>
+
+    <path d="M945 125L952 145L973 145L956 157L963 178L945 166L927 178L934 157L917 145L938 145Z" fill="#11122E"/>
+  </g>
+  <text x="870" y="440" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800" fill="#11122E">Propuesto</text>
+  <text x="870" y="476" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" fill="#5F6575">Más FoodRanker: plato grande, flecha protagonista</text>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="140" y="570" font-size="24" font-weight="850" fill="#11122E">Cambios que haría</text>
+    <circle cx="151" cy="613" r="5" fill="#FF6B35"/>
+    <text x="170" y="620" font-size="18" fill="#31364A">Agrandar el plato central para que sea la silueta principal.</text>
+    <circle cx="151" cy="648" r="5" fill="#FF6B35"/>
+    <text x="170" y="655" font-size="18" fill="#31364A">Hacer la flecha más gruesa y dominante: que se lea como ranking en 1 segundo.</text>
+    <circle cx="690" cy="613" r="5" fill="#FF6B35"/>
+    <text x="709" y="620" font-size="18" fill="#31364A">Reducir la estrella y ponerla en azul oscuro para que no parezca un badge genérico.</text>
+    <circle cx="690" cy="648" r="5" fill="#FF6B35"/>
+    <text x="709" y="655" font-size="18" fill="#31364A">Añadir profundidad sutil al fondo sin meter detalle fino.</text>
+  </g>
+</svg>

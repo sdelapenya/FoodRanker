@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FoodRanker</string>
+    <string name="app_tagline">EAT. RATE. REPEAT.</string>
+    <string name="default_web_client_id">350322634794-lh7jffnfjut9skbmk6d3a9u5iuav9ofd.apps.googleusercontent.com</string>
+
+    <!-- Navigation -->
+    <string name="nav_discover">Discover</string>
+    <string name="nav_explore">Explore</string>
+    <string name="nav_add">Add</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Common actions -->
+    <string name="action_like">Like</string>
+    <string name="action_rate">Rate</string>
+    <string name="action_share">Share</string>
+    <string name="action_save">Save</string>
+    <string name="action_report">Report</string>
+    <string name="action_comment">Comment</string>
+    <string name="action_follow">Follow</string>
+    <string name="action_unfollow">Unfollow</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save_changes">Save changes</string>
+    <string name="action_back">Back</string>
+    <string name="action_next">Next</string>
+    <string name="action_publish">Publish</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- Friendly errors -->
+    <string name="error_no_internet">No internet connection. Check your network and try again</string>
+    <string name="error_permission_denied">You don\'t have permission to do this</string>
+    <string name="error_service_unavailable">Service unavailable. Try again in a few minutes</string>
+    <string name="error_timeout">The operation took too long. Check your connection</string>
+    <string name="error_not_found">This content no longer exists</string>
+    <string name="error_upload_failed">Failed to upload image. Please try again</string>
+    <string name="error_generic">Something went wrong. Please try again</string>
+    <string name="error_login_required">You must be signed in</string>
+    <string name="error_photo_required">A photo is required</string>
+    <string name="error_name_required">Dish name is required</string>
+
+    <!-- Empty states -->
+    <string name="empty_feed">Add the first dish!</string>
+    <string name="empty_feed_subtitle">Tap + to get started</string>
+    <string name="empty_notifications">No notifications</string>
+    <string name="empty_notifications_subtitle">When someone interacts with your dishes it will appear here</string>
+    <string name="empty_following">You\'re not following anyone yet</string>
+    <string name="empty_following_subtitle">Follow other foodies to see their dishes here</string>
+    <string name="empty_plates">You haven\'t published any dishes yet</string>
+    <string name="empty_search">No results</string>
+
+    <!-- Feed -->
+    <string name="feed_for_you">For you</string>
+    <string name="feed_following">Following</string>
+    <string name="feed_end_title">You\'ve seen all the dishes!</string>
+    <string name="feed_end_subtitle">Come back later to discover new dishes from around the world</string>
+    <string name="feed_shuffle">Shuffle again</string>
+
+    <!-- Dishes -->
+    <string name="plate_publish">Publish dish 🚀</string>
+    <string name="plate_photo_required">Photo required *</string>
+    <string name="plate_photo_hint">A great photo gets 5× more likes</string>
+    <string name="plate_map">View on map</string>
+    <string name="plate_rate_this">Rate this dish</string>
+    <string name="plate_already_rated">You\'ve already rated this dish</string>
+
+    <!-- Profile -->
+    <string name="profile_edit">Edit profile</string>
+    <string name="profile_bio">Bio</string>
+    <string name="profile_city">City</string>
+    <string name="profile_website">Website or social (optional)</string>
+    <string name="profile_delete_account">Delete my account</string>
+    <string name="profile_delete_confirm">Delete account?</string>
+    <string name="profile_delete_warning">This action is irreversible. All your data will be permanently deleted</string>
+
+    <!-- Premium -->
+    <string name="premium_title">FoodRanker Premium</string>
+    <string name="premium_subtitle">The complete food experience</string>
+    <string name="premium_subscribe">Subscribe</string>
+    <string name="premium_month">/month</string>
+    <string name="premium_cancel_anytime">Cancel anytime</string>
+    <string name="premium_watch_ad">📺 Watch an ad — 24h Premium free</string>
+    <string name="premium_active">🎉 You\'re Premium! Thanks for supporting FoodRanker</string>
+
+    <!-- Notifications -->
+    <string name="notif_liked">liked</string>
+    <string name="notif_rated">rated</string>
+    <string name="notif_rejected">Your dish was rejected</string>
+
+    <!-- Offline -->
+    <string name="offline_banner">Offline — showing cached data</string>
+</resources>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FoodRanker</string>
+    <string name="app_tagline">EAT. RATE. REPEAT.</string>
+
+    <!-- Navegación -->
+    <string name="nav_discover">Descubrir</string>
+    <string name="nav_explore">Explorar</string>
+    <string name="nav_add">Añadir</string>
+    <string name="nav_profile">Perfil</string>
+
+    <!-- Acciones comunes -->
+    <string name="action_like">Me gusta</string>
+    <string name="action_rate">Valorar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_report">Reportar</string>
+    <string name="action_comment">Comentar</string>
+    <string name="action_follow">Seguir</string>
+    <string name="action_unfollow">Dejar de seguir</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_save_changes">Guardar cambios</string>
+    <string name="action_back">Volver</string>
+    <string name="action_next">Siguiente</string>
+    <string name="action_publish">Publicar</string>
+    <string name="action_retry">Reintentar</string>
+
+    <!-- Errores amigables -->
+    <string name="error_no_internet">Sin conexión a internet. Comprueba tu red e inténtalo de nuevo</string>
+    <string name="error_permission_denied">No tienes permisos para realizar esta acción</string>
+    <string name="error_service_unavailable">Servicio no disponible. Inténtalo en unos minutos</string>
+    <string name="error_timeout">La operación tardó demasiado. Comprueba tu conexión</string>
+    <string name="error_not_found">El contenido ya no existe</string>
+    <string name="error_upload_failed">Error al subir la imagen. Inténtalo de nuevo</string>
+    <string name="error_generic">Algo salió mal. Inténtalo de nuevo</string>
+    <string name="error_login_required">Debes iniciar sesión</string>
+    <string name="error_photo_required">La foto es obligatoria</string>
+    <string name="error_name_required">El nombre del plato es obligatorio</string>
+
+    <!-- Empty states -->
+    <string name="empty_feed">¡Añade el primer plato!</string>
+    <string name="empty_feed_subtitle">Pulsa + para empezar</string>
+    <string name="empty_notifications">Sin notificaciones</string>
+    <string name="empty_notifications_subtitle">Cuando alguien interactúe con tus platos aparecerá aquí</string>
+    <string name="empty_following">Aún no sigues a nadie</string>
+    <string name="empty_following_subtitle">Sigue a otros foodies para ver sus platos aquí</string>
+    <string name="empty_plates">Aún no has publicado ningún plato</string>
+    <string name="empty_search">Sin resultados</string>
+
+    <!-- Feed -->
+    <string name="feed_for_you">Para ti</string>
+    <string name="feed_following">Siguiendo</string>
+    <string name="feed_end_title">¡Has visto todos los platos!</string>
+    <string name="feed_end_subtitle">Vuelve más tarde para descubrir nuevos platos de todo el mundo</string>
+    <string name="feed_shuffle">Volver a mezclar</string>
+
+    <!-- Platos -->
+    <string name="plate_publish">Publicar plato 🚀</string>
+    <string name="plate_photo_required">Foto obligatoria *</string>
+    <string name="plate_photo_hint">Una buena foto consigue 5× más likes</string>
+    <string name="plate_map">Ver en mapa</string>
+    <string name="plate_rate_this">Valorar este plato</string>
+    <string name="plate_already_rated">Ya has valorado este plato</string>
+
+    <!-- Perfil -->
+    <string name="profile_edit">Editar perfil</string>
+    <string name="profile_bio">Bio</string>
+    <string name="profile_city">Ciudad</string>
+    <string name="profile_website">Web o red social (opcional)</string>
+    <string name="profile_delete_account">Eliminar mi cuenta</string>
+    <string name="profile_delete_confirm">¿Eliminar cuenta?</string>
+    <string name="profile_delete_warning">Esta acción es irreversible. Se borrarán permanentemente todos tus datos</string>
+
+    <!-- Premium -->
+    <string name="premium_title">FoodRanker Premium</string>
+    <string name="premium_subtitle">La experiencia gastronómica completa</string>
+    <string name="premium_subscribe">Suscribirse</string>
+    <string name="premium_month">/mes</string>
+    <string name="premium_cancel_anytime">Cancela cuando quieras</string>
+    <string name="premium_watch_ad">📺 Ver anuncio — 24h Premium gratis</string>
+    <string name="premium_active">🎉 ¡Eres Premium! Gracias por apoyar FoodRanker</string>
+
+    <!-- Notificaciones -->
+    <string name="notif_liked">le ha dado like a</string>
+    <string name="notif_rated">ha valorado</string>
+    <string name="notif_rejected">Tu plato fue rechazado</string>
+
+    <!-- Offline -->
+    <string name="offline_banner">Sin conexión — mostrando datos en caché</string>
+</resources>

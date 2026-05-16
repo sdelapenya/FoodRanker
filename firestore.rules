@@ -1,0 +1,197 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function changedKeys() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // ── USERS ──────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      // Crear perfil: valores por defecto obligatorios para evitar XP/Premium falsos
+      allow create: if isOwner(userId)
+                    && request.resource.data.id == userId
+                    && request.resource.data.xp == 0
+                    && request.resource.data.level == 1
+                    && request.resource.data.isPremium == false
+                    && request.resource.data.referralCount == 0;
+
+      allow update: if (
+        // El dueño puede editar perfil, gamificación y referidos propios
+        // TODO v2: mover xp/badges/isPremium a Cloud Functions
+        isOwner(userId)
+        && changedKeys().hasOnly([
+          'name', 'email', 'bio', 'city', 'website', 'photoUrl', 'fcmToken',
+          'xp', 'level', 'badges', 'isPremium',
+          'referralCode', 'referredByUserId'
+        ])
+        // referralCode solo se puede escribir si antes no existía
+        && (!changedKeys().hasAll(['referralCode'])
+            || !('referralCode' in resource.data)
+            || resource.data.referralCode == '')
+        // referredByUserId solo si estaba vacío (no se puede cambiar una vez puesto)
+        && (!changedKeys().hasAll(['referredByUserId'])
+            || resource.data.referredByUserId == '')
+      ) || (
+        // Otro usuario: solo puede incrementar referralCount en 1
+        isSignedIn()
+        && request.auth.uid != userId
+        && changedKeys().hasOnly(['referralCount'])
+        && request.resource.data.referralCount == resource.data.referralCount + 1
+      );
+
+      allow delete: if isOwner(userId);
+    }
+
+    // ── PLATES ─────────────────────────────────────────────────
+    match /plates/{plateId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+                    && request.resource.data.addedByUserId == request.auth.uid
+                    && request.resource.data.averageScore == 0
+                    && request.resource.data.totalRatings == 0
+                    && request.resource.data.likes == 0
+                    && request.resource.data.reportCount == 0;
+
+      allow update: if isSignedIn() && (
+        // Dueño: solo puede editar description
+        (
+          request.auth.uid == resource.data.addedByUserId
+          && changedKeys().hasOnly(['description'])
+        ) ||
+        // Like: el usuario NO estaba en la lista, ahora SÍ
+        (
+          changedKeys().hasOnly(['likes', 'likedByUsers'])
+          && !resource.data.likedByUsers.hasAll([request.auth.uid])
+          && request.resource.data.likedByUsers.hasAll(resource.data.likedByUsers)
+          && request.resource.data.likedByUsers.hasAll([request.auth.uid])
+          && request.resource.data.likedByUsers.size() == resource.data.likedByUsers.size() + 1
+          && request.resource.data.likes == resource.data.likes + 1
+        ) ||
+        // Unlike: el usuario SÍ estaba en la lista, ahora NO
+        (
+          changedKeys().hasOnly(['likes', 'likedByUsers'])
+          && resource.data.likedByUsers.hasAll([request.auth.uid])
+          && !request.resource.data.likedByUsers.hasAll([request.auth.uid])
+          && resource.data.likedByUsers.hasAll(request.resource.data.likedByUsers)
+          && request.resource.data.likedByUsers.size() == resource.data.likedByUsers.size() - 1
+          && request.resource.data.likes == resource.data.likes - 1
+          && request.resource.data.likes >= 0
+        ) ||
+        // Reportes: solo incremento de 1
+        (
+          changedKeys().hasOnly(['reportCount'])
+          && request.resource.data.reportCount == resource.data.reportCount + 1
+        ) ||
+        // Score: primera update desde 0 (seeder) o incremento +1 normal
+        (
+          changedKeys().hasOnly(['averageScore', 'totalRatings'])
+          && request.resource.data.averageScore >= 0
+          && request.resource.data.averageScore <= 10
+          && request.resource.data.totalRatings >= 0
+          && (
+            resource.data.totalRatings == 0 ||
+            request.resource.data.totalRatings == resource.data.totalRatings + 1
+          )
+        )
+      );
+
+      allow delete: if isSignedIn()
+                    && request.auth.uid == resource.data.addedByUserId;
+    }
+
+    // ── RATINGS ────────────────────────────────────────────────
+    match /ratings/{ratingId} {
+      allow read: if true;
+      // ID determinista plateId_userId: un usuario solo puede valorar un plato una vez
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && ratingId == request.resource.data.plateId + "_" + request.auth.uid
+                    && request.resource.data.averageScore >= 1
+                    && request.resource.data.averageScore <= 10;
+      allow update: if false;
+      // Sin delete: evita el exploit "borrar y volver a votar"
+      allow delete: if false;
+    }
+
+    // ── COMMENTS ───────────────────────────────────────────────
+    match /comments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── SAVES ──────────────────────────────────────────────────
+    match /saves/{saveId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
+    // ── COLLECTIONS ────────────────────────────────────────────
+    match /collections/{collectionId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── CHALLENGES ─────────────────────────────────────────────
+    match /challenges/{challengeId} {
+      allow read: if isSignedIn();
+      allow create: if false;
+      // Participar: solo si NO participaba antes, añade exactamente su uid, incrementa en 1
+      allow update: if isSignedIn()
+                    && changedKeys().hasOnly(['participantIds', 'participantCount'])
+                    && !resource.data.participantIds.hasAll([request.auth.uid])
+                    && request.resource.data.participantIds.hasAll(resource.data.participantIds)
+                    && request.resource.data.participantIds.hasAll([request.auth.uid])
+                    && request.resource.data.participantIds.size() == resource.data.participantIds.size() + 1
+                    && request.resource.data.participantCount == resource.data.participantCount + 1;
+      allow delete: if false;
+    }
+
+    // ── REPORTS ────────────────────────────────────────────────
+    match /reports/{reportId} {
+      allow read: if false;
+      allow create: if isSignedIn() && request.resource.data.reportedByUserId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── FOLLOWS ────────────────────────────────────────────────
+    match /follows/{followId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.followerId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.followerId == request.auth.uid;
+    }
+
+    // ── NOTIFICATIONS ──────────────────────────────────────────
+    match /notifications/{userId} {
+      allow read, write: if isOwner(userId);
+      match /items/{itemId} {
+        allow read, update, delete: if isOwner(userId);
+        // fromUserId debe ser el propio usuario que crea la notificación
+        allow create: if isSignedIn()
+                      && request.resource.data.keys().hasAll(['type', 'fromUserId', 'createdAt'])
+                      && request.resource.data.fromUserId == request.auth.uid
+                      && request.resource.data.isRead == false;
+      }
+    }
+
+    // ── REFERRALS ──────────────────────────────────────────────
+    match /referrals/{referralId} {
+      allow read: if false;
+      allow create: if isSignedIn()
+                    && request.resource.data.referredId == request.auth.uid
+                    && request.resource.data.referrerId != request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Plato blanco centrado, radio 30 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24 A30,30 0,0,1 54,84 A30,30 0,0,1 54,24 Z"/>
+
+    <!-- Borde sutil del plato -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFE8D6"
+        android:strokeWidth="2.5"
+        android:pathData="M54,27 A27,27 0,0,1 54,81 A27,27 0,0,1 54,27 Z"/>
+
+    <!-- Estrella naranja centrada: R=19, r=8, centro (54,54) -->
+    <path
+        android:fillColor="#FF6B35"
+        android:pathData="M54,35 L59,47 L72,47 L62,56 L66,69 L54,61 L42,69 L46,56 L36,47 L49,47 Z"/>
+
+</vector>

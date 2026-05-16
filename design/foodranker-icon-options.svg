@@ -1,0 +1,74 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="520" fill="#F7F8FB"/>
+
+  <defs>
+    <linearGradient id="orangeA" x1="160" y1="70" x2="340" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8E53"/>
+      <stop offset="1" stop-color="#FF4F1F"/>
+    </linearGradient>
+    <linearGradient id="orangeB" x1="510" y1="70" x2="700" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7A3D"/>
+      <stop offset="1" stop-color="#FF3F18"/>
+    </linearGradient>
+    <linearGradient id="navyC" x1="850" y1="70" x2="1040" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20234A"/>
+      <stop offset="1" stop-color="#090A1C"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#11122E" flood-opacity="0.18"/>
+    </filter>
+    <clipPath id="squircleA"><rect x="105" y="60" width="260" height="260" rx="58"/></clipPath>
+    <clipPath id="squircleB"><rect x="470" y="60" width="260" height="260" rx="58"/></clipPath>
+    <clipPath id="squircleC"><rect x="835" y="60" width="260" height="260" rx="58"/></clipPath>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <rect x="105" y="60" width="260" height="260" rx="58" fill="url(#orangeA)"/>
+    <g clip-path="url(#squircleA)">
+      <circle cx="120" cy="70" r="115" fill="white" fill-opacity="0.12"/>
+      <circle cx="350" cy="322" r="125" fill="#11122E" fill-opacity="0.10"/>
+    </g>
+    <path d="M153 209C153 151 190 118 235 118C280 118 317 151 317 209H153Z" fill="white"/>
+    <path d="M216 103C216 90 254 90 254 103C254 114 244 118 235 118C226 118 216 114 216 103Z" fill="white"/>
+    <path d="M166 223H304C304 239 292 249 274 249H196C178 249 166 239 166 223Z" fill="#11122E"/>
+    <path d="M216 257H254C257 271 278 267 284 284H186C192 267 213 271 216 257Z" fill="#11122E"/>
+    <path d="M181 200L208 173L226 184L261 149L282 164L309 131" stroke="#11122E" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M309 131L304 165L280 141Z" fill="#11122E"/>
+    <path d="M235 78L244 104L272 104L249 120L258 148L235 131L212 148L221 120L198 104L226 104L235 78Z" fill="white"/>
+  </g>
+  <text x="235" y="380" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800" fill="#11122E">1. Premium</text>
+  <text x="235" y="416" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" fill="#5F6575">Marca clara, elegante, muy FoodRanker</text>
+
+  <g filter="url(#softShadow)">
+    <rect x="470" y="60" width="260" height="260" rx="58" fill="url(#orangeB)"/>
+    <g clip-path="url(#squircleB)">
+      <circle cx="600" cy="190" r="102" fill="white"/>
+      <circle cx="600" cy="190" r="56" fill="#FFF5EF"/>
+    </g>
+    <path d="M535 204C546 156 570 133 600 133C630 133 654 156 665 204" stroke="#11122E" stroke-width="18" stroke-linecap="round"/>
+    <path d="M533 220H667C660 246 637 262 600 262C563 262 540 246 533 220Z" fill="#11122E"/>
+    <path d="M546 205L576 178L602 194L648 148" stroke="#FF6B35" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M648 148L642 184L617 158Z" fill="#FF6B35"/>
+    <circle cx="576" cy="178" r="12" fill="#FF6B35"/>
+    <path d="M664 85L672 108L696 108L676 122L684 146L664 131L644 146L652 122L632 108L656 108L664 85Z" fill="white"/>
+  </g>
+  <text x="600" y="380" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800" fill="#11122E">2. Viral</text>
+  <text x="600" y="416" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" fill="#5F6575">Más simple, recordable a tamaño pequeño</text>
+
+  <g filter="url(#softShadow)">
+    <rect x="835" y="60" width="260" height="260" rx="58" fill="url(#navyC)"/>
+    <g clip-path="url(#squircleC)">
+      <circle cx="848" cy="70" r="120" fill="white" fill-opacity="0.08"/>
+      <circle cx="1088" cy="320" r="130" fill="#FF6B35" fill-opacity="0.18"/>
+    </g>
+    <path d="M882 212C882 150 920 115 965 115C1010 115 1048 150 1048 212H882Z" fill="#FF6B35"/>
+    <path d="M946 99C946 86 984 86 984 99C984 111 974 115 965 115C956 115 946 111 946 99Z" fill="#FF6B35"/>
+    <path d="M892 225H1038C1038 242 1025 253 1007 253H923C905 253 892 242 892 225Z" fill="white"/>
+    <path d="M946 261H984C987 276 1008 272 1015 290H915C922 272 943 276 946 261Z" fill="white"/>
+    <path d="M906 202L935 175L956 187L992 151L1019 169" stroke="white" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M1019 169L1020 132L990 154Z" fill="white"/>
+    <path d="M1031 82L1039 106L1064 106L1044 121L1052 146L1031 131L1010 146L1018 121L998 106L1023 106L1031 82Z" fill="#FF6B35"/>
+  </g>
+  <text x="965" y="380" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800" fill="#11122E">3. App Store</text>
+  <text x="965" y="416" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" fill="#5F6575">Más tech, más contraste, menos gastronómico</text>
+</svg>
