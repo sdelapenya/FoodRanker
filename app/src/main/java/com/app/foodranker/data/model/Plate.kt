@@ -16,7 +16,7 @@ data class Plate(
     val addedByUserName: String = "",
     val averageScore: Double = 0.0,
     val totalRatings: Int = 0,
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = 0L,
     val likes: Int = 0,
     val likedByUsers: List<String> = emptyList(),
     val reportCount: Int = 0

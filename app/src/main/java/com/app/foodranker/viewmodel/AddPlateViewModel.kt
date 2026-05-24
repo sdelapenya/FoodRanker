@@ -76,15 +76,6 @@ class AddPlateViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = AddPlateState.Loading
             try {
-                // Validar que la imagen contiene comida antes de subir
-                if (imageUri != null) {
-                    val (isFood, reason) = com.app.foodranker.utils.FoodImageValidator.validate(context, imageUri)
-                    if (!isFood) {
-                        _state.value = AddPlateState.Error(reason)
-                        return@launch
-                    }
-                }
-
                 // Subir imagen a Cloudinary (obligatoria)
                 val imageUrl = if (imageUri != null) {
                     uploadImageToCloudinary(context, imageUri)
@@ -180,7 +171,9 @@ class AddPlateViewModel @Inject constructor(
         try {
             val now = System.currentTimeMillis()
             val snap = firestore.collection("challenges")
-                .whereLessThanOrEqualTo("startDate", now).limit(5).get().await()
+                .whereLessThanOrEqualTo("startDate", now)
+                .orderBy("startDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(5).get().await()
             val active = snap.documents
                 .mapNotNull { it.toObject(com.app.foodranker.data.model.WeeklyChallenge::class.java)?.copy(id = it.id) }
                 .firstOrNull { it.endDate >= now } ?: return

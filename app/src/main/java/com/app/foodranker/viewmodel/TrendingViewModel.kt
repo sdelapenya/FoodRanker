@@ -35,7 +35,7 @@ class TrendingViewModel @Inject constructor(
                 val snapshot = firestore.collection("plates").limit(100).get().await()
                 val plates = snapshot.documents.mapNotNull {
                     it.toObject(Plate::class.java)?.copy(id = it.id)
-                }
+                }.filter { it.reportCount < 3 }
 
                 val mostLiked = plates
                     .filter { it.likes > 0 }

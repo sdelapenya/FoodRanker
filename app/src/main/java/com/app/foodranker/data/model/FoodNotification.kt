@@ -9,5 +9,5 @@ data class FoodNotification(
     val score: Double = 0.0,        // solo para tipo "rating"
     val reasons: List<String> = emptyList(), // solo para "moderation_rejected"
     val isRead: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = 0L
 )

@@ -17,10 +17,14 @@ class FoodRankerMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
-            com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(userId)
-                .update("fcmToken", token)
+            try {
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(userId)
+                    .update("fcmToken", token)
+            } catch (e: Exception) {
+                android.util.Log.w("FCM", "Error actualizando token: ${e.message}")
+            }
         }
     }
 }

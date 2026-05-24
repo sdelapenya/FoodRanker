@@ -7,10 +7,12 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.app.foodranker.MainActivity
+import java.util.concurrent.atomic.AtomicInteger
 
 object NotificationHelper {
 
     const val CHANNEL_ID = "foodranker_notifications"
+    private val notifIdCounter = AtomicInteger(0)
 
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
@@ -27,11 +29,12 @@ object NotificationHelper {
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             plateId?.let { putExtra("plateId", it) }
         }
+        val notifId = notifIdCounter.incrementAndGet()
         val pendingIntent = PendingIntent.getActivity(
             context,
-            System.currentTimeMillis().toInt(),
+            notifId,
             intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -40,7 +43,7 @@ object NotificationHelper {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
-        manager(context).notify(System.currentTimeMillis().toInt(), notification)
+        manager(context).notify(notifId, notification)
     }
 
     private fun manager(context: Context) =

@@ -38,4 +38,5 @@ object RemoteConfigManager {
     val showTheForkButton: Boolean  get() = config.getBoolean("show_thefork_button")
     val enableFollowingFeed: Boolean get() = config.getBoolean("enable_following_feed")
     val onboardingEnabled: Boolean  get() = config.getBoolean("onboarding_enabled")
+    val visionApiEnabled: Boolean   get() = config.getBoolean("vision_api_enabled")
 }

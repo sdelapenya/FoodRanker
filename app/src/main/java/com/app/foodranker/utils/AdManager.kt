@@ -2,6 +2,7 @@ package com.app.foodranker.utils
 
 import android.app.Activity
 import android.content.Context
+import java.util.concurrent.atomic.AtomicInteger
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
@@ -16,16 +17,15 @@ object AdManager {
     const val REWARDED_AD_UNIT_ID     = "ca-app-pub-6291919286572988/3409088549"
     const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-6291919286572988/9166857850"
 
-    private var interstitialAd: InterstitialAd? = null
-    private var rewardedAd: RewardedAd? = null
+    @Volatile private var interstitialAd: InterstitialAd? = null
+    @Volatile private var rewardedAd: RewardedAd? = null
 
-    // Session counter: show interstitial every 3rd PlateDetail open
-    private var plateDetailViewCount = 0
+    private val plateDetailViewCount = AtomicInteger(0)
 
     fun recordPlateDetailView(): Boolean {
-        plateDetailViewCount++
-        return if (plateDetailViewCount >= 3) {
-            plateDetailViewCount = 0
+        val count = plateDetailViewCount.incrementAndGet()
+        return if (count >= 3) {
+            plateDetailViewCount.set(0)
             true
         } else false
     }

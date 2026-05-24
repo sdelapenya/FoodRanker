@@ -3,6 +3,7 @@ package com.app.foodranker.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.User
@@ -11,8 +12,11 @@ import com.app.foodranker.utils.InputLimits.sanitized
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.app.foodranker.utils.ErrorMapper
 import javax.inject.Inject
 
 enum class ProfileTab { MY_PLATES, SAVED, COLLECTIONS }
@@ -45,81 +49,98 @@ class ProfileViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState
+    @Volatile private var lastLoadTime = 0L
+
+    fun loadProfileIfStale(userId: String) {
+        if (System.currentTimeMillis() - lastLoadTime < 60_000L) return
+        loadProfile(userId)
+    }
 
     fun loadProfile(userId: String) {
         if (userId.isBlank()) {
             _uiState.value = _uiState.value.copy(isLoading = false, error = "Usuario no válido")
             return
         }
+        lastLoadTime = System.currentTimeMillis()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val currentUserId = auth.currentUser?.uid ?: ""
+                val firebaseUser = auth.currentUser
+                val currentUserId = firebaseUser?.uid ?: ""
                 val isOwnProfile = currentUserId == userId
 
-                val user = if (isOwnProfile && auth.currentUser != null) {
-                    val firebaseUser = auth.currentUser!!
-                    val userDoc = firestore.collection("users").document(userId).get().await()
-                    if (userDoc.exists()) {
-                        userDoc.toObject(User::class.java) ?: User(
-                            id = firebaseUser.uid,
-                            name = firebaseUser.displayName ?: "Usuario",
-                            email = firebaseUser.email ?: "",
-                            photoUrl = firebaseUser.photoUrl?.toString() ?: ""
-                        )
-                    } else {
-                        val newUser = User(
-                            id = firebaseUser.uid,
-                            name = firebaseUser.displayName ?: "Usuario",
-                            email = firebaseUser.email ?: "",
-                            photoUrl = firebaseUser.photoUrl?.toString() ?: ""
-                        )
-                        firestore.collection("users").document(firebaseUser.uid).set(newUser).await()
-                        newUser
+                coroutineScope {
+                    val userDeferred = async {
+                        if (isOwnProfile && firebaseUser != null) {
+                            val userDoc = firestore.collection("users").document(userId).get().await()
+                            if (userDoc.exists()) {
+                                userDoc.toObject(User::class.java) ?: User(
+                                    id = firebaseUser.uid,
+                                    name = firebaseUser.displayName ?: "Usuario",
+                                    email = firebaseUser.email ?: "",
+                                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                                )
+                            } else {
+                                val newUser = User(
+                                    id = firebaseUser.uid,
+                                    name = firebaseUser.displayName ?: "Usuario",
+                                    email = firebaseUser.email ?: "",
+                                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                                )
+                                firestore.collection("users").document(firebaseUser.uid).set(newUser).await()
+                                newUser
+                            }
+                        } else {
+                            firestore.collection("users").document(userId).get().await().toObject(User::class.java)
+                        }
                     }
-                } else {
-                    firestore.collection("users").document(userId).get().await().toObject(User::class.java)
-                }
+                    val platesDeferred = async {
+                        firestore.collection("plates")
+                            .whereEqualTo("addedByUserId", userId).get().await()
+                            .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                            .sortedByDescending { it.createdAt }
+                    }
+                    val ratingsDeferred = async {
+                        firestore.collection("ratings")
+                            .whereEqualTo("userId", userId).get().await().size()
+                    }
+                    val likesDeferred = async {
+                        firestore.collection("plates")
+                            .whereArrayContains("likedByUsers", userId).limit(500).get().await().size()
+                    }
+                    val followerDeferred = async {
+                        firestore.collection("follows").whereEqualTo("followingId", userId).get().await()
+                    }
+                    val followingDeferred = async {
+                        firestore.collection("follows").whereEqualTo("followerId", userId).get().await()
+                    }
 
-                val rawPlates = firestore.collection("plates")
-                    .whereEqualTo("addedByUserId", userId).get().await()
-                    .documents.mapNotNull { it.toObject(Plate::class.java) }
-                val plates = rawPlates.sortedByDescending { it.createdAt }
+                    val user = userDeferred.await()
+                    val plates = platesDeferred.await()
+                    val ratingsGiven = ratingsDeferred.await()
+                    val likesGiven = likesDeferred.await()
+                    val followerSnap = followerDeferred.await()
+                    val followingSnap = followingDeferred.await()
+                    val isFollowing = if (!isOwnProfile) {
+                        followerSnap.documents.any { it.getString("followerId") == currentUserId }
+                    } else false
 
-                // Actividad como consumidor
-                val ratingsGiven = firestore.collection("ratings")
-                    .whereEqualTo("userId", userId).get().await().size()
-
-                // Likes dados (platos donde el usuario aparece en likedByUsers)
-                val likesGivenSnap = firestore.collection("plates")
-                    .whereArrayContains("likedByUsers", userId).get().await()
-                val likesGiven = likesGivenSnap.size()
-
-                // Cargar datos de seguimiento
-                val followerSnap = firestore.collection("follows")
-                    .whereEqualTo("followingId", userId).get().await()
-                val followingSnap = firestore.collection("follows")
-                    .whereEqualTo("followerId", userId).get().await()
-                val isFollowing = if (!isOwnProfile) {
-                    followerSnap.documents.any { it.getString("followerId") == currentUserId }
-                } else false
-
-                _uiState.value = _uiState.value.copy(
-                    user = user, plates = plates,
-                    isLoading = false, isOwnProfile = isOwnProfile,
-                    isFollowing = isFollowing,
-                    followerCount = followerSnap.size(),
-                    followingCount = followingSnap.size(),
-                    ratingsGiven = ratingsGiven,
-                    likesGiven = likesGiven
-                )
-                // Siempre refrescar saved y collections en perfil propio
-                if (isOwnProfile) {
-                    loadSavedPlates()
-                    loadCollections()
+                    _uiState.value = _uiState.value.copy(
+                        user = user, plates = plates,
+                        isLoading = false, isOwnProfile = isOwnProfile,
+                        isFollowing = isFollowing,
+                        followerCount = followerSnap.size(),
+                        followingCount = followingSnap.size(),
+                        ratingsGiven = ratingsGiven,
+                        likesGiven = likesGiven
+                    )
+                    if (isOwnProfile) {
+                        loadSavedPlates()
+                        loadCollections()
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+                _uiState.value = _uiState.value.copy(isLoading = false, error = ErrorMapper.toUserMessage(e))
             }
         }
     }
@@ -138,7 +159,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val snap = firestore.collection("collections")
-                    .whereEqualTo("userId", userId).get().await()
+                    .whereEqualTo("userId", userId).limit(50).get().await()
                 val cols = snap.documents.mapNotNull {
                     it.toObject(com.app.foodranker.data.model.PlateCollection::class.java)
                 }.sortedByDescending { it.createdAt }
@@ -210,7 +231,7 @@ class ProfileViewModel @Inject constructor(
                 val saved = mutableListOf<Plate>()
                 plateIds.chunked(30).forEach { chunk ->
                     firestore.collection("plates")
-                        .whereIn("id", chunk).get().await()
+                        .whereIn(FieldPath.documentId(), chunk).get().await()
                         .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                         .let { saved.addAll(it) }
                 }
@@ -310,8 +331,8 @@ class ProfileViewModel @Inject constructor(
                 val plates = mutableListOf<Plate>()
                 plateIds.chunked(30).forEach { chunk ->
                     firestore.collection("plates")
-                        .whereIn("id", chunk).get().await()
-                        .documents.mapNotNull { it.toObject(Plate::class.java) }
+                        .whereIn(FieldPath.documentId(), chunk).get().await()
+                        .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                         .let { plates.addAll(it) }
                 }
                 _uiState.value = _uiState.value.copy(
@@ -347,49 +368,45 @@ class ProfileViewModel @Inject constructor(
                     }
                 }
 
-                // 1. Borrar platos del usuario
-                deleteQueryInBatches(
-                    firestore.collection("plates").whereEqualTo("addedByUserId", uid)
-                )
+                // Limpiar datos en Firestore. Las valoraciones (ratings) tienen
+                // allow delete: if false en las reglas — solo se pueden borrar via
+                // Cloud Function. Aislamos este bloque para que un fallo parcial
+                // no impida eliminar la cuenta de Auth.
+                try {
+                    // 1. Platos del usuario
+                    deleteQueryInBatches(
+                        firestore.collection("plates").whereEqualTo("addedByUserId", uid)
+                    )
+                    // 2. Comentarios del usuario
+                    deleteQueryInBatches(
+                        firestore.collection("comments").whereEqualTo("userId", uid)
+                    )
+                    // 3. Seguimientos
+                    deleteQueryInBatches(
+                        firestore.collection("follows").whereEqualTo("followerId", uid)
+                    )
+                    deleteQueryInBatches(
+                        firestore.collection("follows").whereEqualTo("followingId", uid)
+                    )
+                    // 4. Guardados
+                    deleteQueryInBatches(
+                        firestore.collection("saves").whereEqualTo("userId", uid)
+                    )
+                    // 5. Colecciones
+                    deleteQueryInBatches(
+                        firestore.collection("collections").whereEqualTo("userId", uid)
+                    )
+                    // 6. Notificaciones
+                    deleteQueryInBatches(
+                        firestore.collection("notifications").document(uid).collection("items")
+                    )
+                    firestore.collection("users").document(uid).delete().await()
+                    firestore.collection("notifications").document(uid).delete().await()
+                } catch (e: Exception) {
+                    android.util.Log.w("Profile", "Limpieza parcial de Firestore: ${e.message}")
+                }
 
-                // 2. Borrar valoraciones del usuario
-                deleteQueryInBatches(
-                    firestore.collection("ratings").whereEqualTo("userId", uid)
-                )
-
-                // 3. Comentarios escritos por el usuario
-                deleteQueryInBatches(
-                    firestore.collection("comments").whereEqualTo("userId", uid)
-                )
-
-                // 4. Seguimientos
-                deleteQueryInBatches(
-                    firestore.collection("follows").whereEqualTo("followerId", uid)
-                )
-                deleteQueryInBatches(
-                    firestore.collection("follows").whereEqualTo("followingId", uid)
-                )
-
-                // 5. Platos guardados (saves)
-                deleteQueryInBatches(
-                    firestore.collection("saves").whereEqualTo("userId", uid)
-                )
-
-                // 6. Listas/colecciones del usuario
-                deleteQueryInBatches(
-                    firestore.collection("collections").whereEqualTo("userId", uid)
-                )
-
-                // 7. Items de notificación (subcolección)
-                deleteQueryInBatches(
-                    firestore.collection("notifications").document(uid).collection("items")
-                )
-
-                // 8. Documento de usuario, raíz de notificaciones
-                firestore.collection("users").document(uid).delete().await()
-                firestore.collection("notifications").document(uid).delete().await()
-
-                // 9. Borrar cuenta de Firebase Auth
+                // Borrar cuenta de Auth siempre, incluso si el cleanup de Firestore fue parcial
                 user.delete().await()
 
                 _uiState.value = _uiState.value.copy(isDeletingAccount = false)

@@ -23,6 +23,7 @@ data class HomeUiState(
     val topPlates: List<Plate> = emptyList(),
     val recentPlates: List<Plate> = emptyList(),
     val allPlates: List<Plate> = emptyList(),
+    val allRecentPlates: List<Plate> = emptyList(),
     val selectedCategory: PlateCategory? = null,
     val unreadNotificationCount: Int = 0,
     val isLoading: Boolean = false,
@@ -43,20 +44,30 @@ class HomeViewModel @Inject constructor(
     val currentUserId: String get() = auth.currentUser?.uid ?: ""
 
     private var notifListener: ListenerRegistration? = null
-    private var isFirstNotifLoad = true
+    @Volatile private var isFirstNotifLoad = true
+    @Volatile private var lastLoadTime = 0L
 
-    init { loadHomeData() }
+    fun loadHomeDataIfStale() {
+        if (System.currentTimeMillis() - lastLoadTime < 60_000L) return
+        loadHomeData()
+    }
 
     fun loadHomeData() {
+        lastLoadTime = System.currentTimeMillis()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val topResult = plateRepository.getTopPlates(20)
             val recentResult = plateRepository.getRecentPlates(20)
             val allPlates = topResult.getOrDefault(emptyList())
+            val category = _uiState.value.selectedCategory
+            val filteredTop = if (category == null) allPlates else allPlates.filter { it.category == category }
+            val allRecent = recentResult.getOrDefault(emptyList())
+            val filteredRecent = if (category == null) allRecent else allRecent.filter { it.category == category }
             _uiState.value = _uiState.value.copy(
-                topPlates = allPlates,
-                recentPlates = recentResult.getOrDefault(emptyList()),
+                topPlates = filteredTop,
+                recentPlates = filteredRecent,
                 allPlates = allPlates,
+                allRecentPlates = allRecent,
                 isLoading = false
             )
         }
@@ -64,17 +75,21 @@ class HomeViewModel @Inject constructor(
 
     fun selectCategory(category: PlateCategory?) {
         val allPlates = _uiState.value.allPlates
-        val filtered = if (category == null) allPlates else allPlates.filter { it.category == category }
+        val allRecent = _uiState.value.allRecentPlates
+        val filteredTop = if (category == null) allPlates else allPlates.filter { it.category == category }
+        val filteredRecent = if (category == null) allRecent else allRecent.filter { it.category == category }
         _uiState.value = _uiState.value.copy(
             selectedCategory = category,
-            topPlates = filtered,
-            recentPlates = filtered.sortedByDescending { it.createdAt }
+            topPlates = filteredTop,
+            recentPlates = filteredRecent
         )
     }
 
     fun toggleLike(plateId: String) {
         val userId = currentUserId.ifEmpty { return }
-        val plate = _uiState.value.allPlates.find { it.id == plateId } ?: return
+        val plate = _uiState.value.allPlates.find { it.id == plateId }
+            ?: _uiState.value.recentPlates.find { it.id == plateId }
+            ?: return
         val isCurrentlyLiked = userId in plate.likedByUsers
 
         val updatedPlate = plate.copy(
@@ -94,13 +109,10 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun applyPlateUpdate(plateId: String, updatedPlate: Plate) {
-        val allPlates = _uiState.value.allPlates.map { if (it.id == plateId) updatedPlate else it }
-        val category = _uiState.value.selectedCategory
-        val filtered = if (category == null) allPlates else allPlates.filter { it.category == category }
         _uiState.value = _uiState.value.copy(
-            allPlates = allPlates,
-            topPlates = filtered,
-            recentPlates = filtered.sortedByDescending { it.createdAt }
+            allPlates = _uiState.value.allPlates.map { if (it.id == plateId) updatedPlate else it },
+            topPlates = _uiState.value.topPlates.map { if (it.id == plateId) updatedPlate else it },
+            recentPlates = _uiState.value.recentPlates.map { if (it.id == plateId) updatedPlate else it }
         )
     }
 
@@ -110,6 +122,8 @@ class HomeViewModel @Inject constructor(
         notifListener = firestore.collection("notifications")
             .document(userId)
             .collection("items")
+            .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(50)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
                 val unread = snapshot.documents.count { doc -> doc.get("isRead") != true }
@@ -147,6 +161,8 @@ class HomeViewModel @Inject constructor(
                 val snapshot = firestore.collection("notifications")
                     .document(userId)
                     .collection("items")
+                    .whereEqualTo("isRead", false)
+                    .limit(100)
                     .get()
                     .await()
                 if (snapshot.documents.isEmpty()) return@launch

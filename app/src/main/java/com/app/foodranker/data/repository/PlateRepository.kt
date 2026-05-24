@@ -21,7 +21,9 @@ class PlateRepository @Inject constructor(
                 .limit(limit)
                 .get()
                 .await()
-            val plates = snapshot.documents.mapNotNull { it.toObject(Plate::class.java) }
+            val plates = snapshot.documents
+                .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                .filter { it.reportCount < 3 }
             Result.success(plates)
         } catch (e: Exception) {
             Result.failure(e)
@@ -36,7 +38,7 @@ class PlateRepository @Inject constructor(
                 .limit(20)
                 .get()
                 .await()
-            val plates = snapshot.documents.mapNotNull { it.toObject(Plate::class.java) }
+            val plates = snapshot.documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
             Result.success(plates)
         } catch (e: Exception) {
             Result.failure(e)
@@ -50,7 +52,9 @@ class PlateRepository @Inject constructor(
                 .limit(limit)
                 .get()
                 .await()
-            val plates = snapshot.documents.mapNotNull { it.toObject(Plate::class.java) }
+            val plates = snapshot.documents
+                .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                .filter { it.reportCount < 3 }
             Result.success(plates)
         } catch (e: Exception) {
             Result.failure(e)

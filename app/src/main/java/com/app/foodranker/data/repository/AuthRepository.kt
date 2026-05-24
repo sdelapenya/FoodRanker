@@ -24,7 +24,8 @@ class AuthRepository @Inject constructor(
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = auth.signInWithCredential(credential).await()
-            val firebaseUser = result.user!!
+            val firebaseUser = result.user
+                ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
 
             val displayName = (firebaseUser.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME)
             val email = firebaseUser.email ?: ""

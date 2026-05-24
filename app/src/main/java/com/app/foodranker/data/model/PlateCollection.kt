@@ -6,5 +6,5 @@ data class PlateCollection(
     val name: String = "",
     val emoji: String = "🍽️",
     val plateIds: List<String> = emptyList(),
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = 0L
 )

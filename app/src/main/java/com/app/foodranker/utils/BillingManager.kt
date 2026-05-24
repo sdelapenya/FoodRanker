@@ -3,8 +3,6 @@ package com.app.foodranker.utils
 import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.*
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -40,7 +38,7 @@ object BillingManager {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     _isAvailable.value = true
                     queryProductDetails()
-                    restorePurchases(context)
+                    restorePurchases()
                 }
             }
             override fun onBillingServiceDisconnected() {
@@ -87,14 +85,13 @@ object BillingManager {
             ?.responseCode == BillingClient.BillingResponseCode.OK
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun handlePurchase(purchase: Purchase, context: Context) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
             _isPremium.value = true
-            // Guardar en Firestore
-            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-            FirebaseFirestore.getInstance().collection("users").document(uid)
-                .update("isPremium", true)
-            // Confirmar la compra con Google
+            // isPremium en Firestore solo debe escribirse desde Cloud Functions
+            // via Admin SDK para evitar activación fraudulenta desde el cliente.
+            // Confirmar la compra con Google Play
             if (!purchase.isAcknowledged) {
                 val ackParams = AcknowledgePurchaseParams.newBuilder()
                     .setPurchaseToken(purchase.purchaseToken).build()
@@ -103,10 +100,11 @@ object BillingManager {
         }
     }
 
-    private fun restorePurchases(context: Context) {
+    private fun restorePurchases() {
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.SUBS).build()
-        billingClient?.queryPurchasesAsync(params) { _, purchases ->
+        billingClient?.queryPurchasesAsync(params) { result, purchases ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryPurchasesAsync
             val hasActive = purchases.any { it.purchaseState == Purchase.PurchaseState.PURCHASED }
             _isPremium.value = hasActive
         }

@@ -6,6 +6,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -49,11 +51,14 @@ class ExploreViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ExploreUiState())
     val uiState: StateFlow<ExploreUiState> = _uiState
 
+    private var searchJob: Job? = null
+    private var searchUsersJob: Job? = null
+
     init { search() }
 
     fun onQueryChange(query: String) {
         _uiState.value = _uiState.value.copy(query = query)
-        search()
+        if (_uiState.value.searchMode == SearchMode.USERS) searchUsers() else search()
     }
 
     fun onCategoryChange(category: PlateCategory?) {
@@ -77,9 +82,11 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun searchUsers() {
-        val q = _uiState.value.query.trim()
-        viewModelScope.launch {
+        searchUsersJob?.cancel()
+        searchUsersJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
+            delay(300)
+            val q = _uiState.value.query.trim()
             try {
                 val snapshot = if (q.isBlank()) {
                     firestore.collection("users").limit(20).get().await()
@@ -106,20 +113,23 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun search() {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
+            delay(300)
             try {
                 val state = _uiState.value
 
-                // Cargamos todos los platos sin filtros en Firestore
-                // El filtrado lo hacemos en local para evitar necesitar índices compuestos
+                // Cargamos los platos sin filtros en Firestore y filtramos en local
+                // para evitar índices compuestos. Excluimos platos con 3+ reportes.
                 val snapshot = firestore.collection("plates")
                     .limit(100)
                     .get()
                     .await()
 
                 var plates = snapshot.documents
-                    .mapNotNull { it.toObject(Plate::class.java) }
+                    .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                    .filter { it.reportCount < 3 }
 
                 // Filtro por categoría (local)
                 if (state.selectedCategory != null) {
@@ -157,7 +167,7 @@ class ExploreViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.message
+                    error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
                 )
             }
         }

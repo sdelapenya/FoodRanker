@@ -33,6 +33,7 @@ object FoodImageValidator {
 
     suspend fun validate(context: Context, imageUri: Uri): Pair<Boolean, String> =
         withContext(Dispatchers.IO) {
+            if (!RemoteConfigManager.visionApiEnabled) return@withContext Pair(true, "")
             try {
                 val base64 = encodeImageToBase64(context, imageUri)
                     ?: return@withContext Pair(false, "No se pudo leer la imagen 📸")

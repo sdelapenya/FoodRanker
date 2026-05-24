@@ -20,12 +20,13 @@ service cloud.firestore {
                     && request.resource.data.referralCount == 0;
 
       allow update: if (
-        // El dueño puede editar perfil, gamificación y referidos propios
-        // TODO v2: mover xp/badges/isPremium a Cloud Functions
+        // El dueño puede editar perfil y gamificación.
+        // isPremium NO está aquí: solo Cloud Functions puede escribirlo
+        // via Admin SDK para evitar activación sin pagar.
         isOwner(userId)
         && changedKeys().hasOnly([
           'name', 'email', 'bio', 'city', 'website', 'photoUrl', 'fcmToken',
-          'xp', 'level', 'badges', 'isPremium',
+          'xp', 'level', 'badges',
           'referralCode', 'referredByUserId'
         ])
         // referralCode solo se puede escribir si antes no existía
@@ -87,16 +88,12 @@ service cloud.firestore {
           changedKeys().hasOnly(['reportCount'])
           && request.resource.data.reportCount == resource.data.reportCount + 1
         ) ||
-        // Score: primera update desde 0 (seeder) o incremento +1 normal
+        // Score: cualquier incremento positivo está permitido (cubre concurrencia y seeder)
         (
           changedKeys().hasOnly(['averageScore', 'totalRatings'])
           && request.resource.data.averageScore >= 0
           && request.resource.data.averageScore <= 10
-          && request.resource.data.totalRatings >= 0
-          && (
-            resource.data.totalRatings == 0 ||
-            request.resource.data.totalRatings == resource.data.totalRatings + 1
-          )
+          && request.resource.data.totalRatings > resource.data.totalRatings
         )
       );
 

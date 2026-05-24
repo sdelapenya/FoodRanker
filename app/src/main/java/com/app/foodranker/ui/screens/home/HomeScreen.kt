@@ -88,11 +88,11 @@ fun HomeScreen(
         }
     }
 
-    // Recargar al volver a HomeScreen
+    // Recargar al volver a HomeScreen (solo si han pasado más de 60s)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) homeViewModel.loadHomeData()
+            if (event == Lifecycle.Event.ON_RESUME) homeViewModel.loadHomeDataIfStale()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }

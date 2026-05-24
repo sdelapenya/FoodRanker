@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.produceState
 import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -81,7 +80,7 @@ fun DiscoverScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val forYouPagerState = rememberPagerState(pageCount = { uiState.plates.size + 1 })
-    val isOnline by rememberIsOnline(context)
+    val isOnline by viewModel.isOnline.collectAsState()
 
     // Mostrar feedback de reporte
     val reportFeedback = uiState.reportFeedback
@@ -92,16 +91,18 @@ fun DiscoverScreen(
         }
     }
 
-    // Snackbar al guardar/desguardar plato
-    var prevSavedIds by remember { mutableStateOf(uiState.savedPlateIds) }
+    // Snackbar al guardar/desguardar plato (se omite la carga inicial)
+    var prevSavedIds by remember { mutableStateOf<Set<String>?>(null) }
     LaunchedEffect(uiState.savedPlateIds) {
-        val added   = uiState.savedPlateIds - prevSavedIds
-        val removed = prevSavedIds - uiState.savedPlateIds
+        val prev = prevSavedIds
+        prevSavedIds = uiState.savedPlateIds
+        if (prev == null) return@LaunchedEffect  // primera carga: no mostrar snackbar
+        val added   = uiState.savedPlateIds - prev
+        val removed = prev - uiState.savedPlateIds
         when {
             added.isNotEmpty()   -> snackbarHostState.showSnackbar("🔖 Guardado en tu colección")
             removed.isNotEmpty() -> snackbarHostState.showSnackbar("Eliminado de guardados")
         }
-        prevSavedIds = uiState.savedPlateIds
     }
 
     val ratingFeedback = uiState.ratingFeedback
@@ -116,7 +117,7 @@ fun DiscoverScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadPlates()
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadPlatesIfStale()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -1013,28 +1014,6 @@ private fun ReportDialog(onDismiss: () -> Unit, onReport: (String) -> Unit) {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
-}
-
-// Gradientes para el placeholder full-screen
-@Composable
-private fun rememberIsOnline(context: android.content.Context): androidx.compose.runtime.State<Boolean> {
-    val connectivityManager = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE)
-            as android.net.ConnectivityManager
-    return produceState(
-        initialValue = connectivityManager.activeNetwork?.let {
-            connectivityManager.getNetworkCapabilities(it)
-                ?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        } == true
-    ) {
-        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: android.net.Network) { value = true }
-            override fun onLost(network: android.net.Network) { value = false }
-        }
-        val request = android.net.NetworkRequest.Builder()
-            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET).build()
-        connectivityManager.registerNetworkCallback(request, callback)
-        awaitDispose { connectivityManager.unregisterNetworkCallback(callback) }
-    }
 }
 
 private fun PlateCategory.placeholderGradient() = when (this) {

@@ -13,6 +13,8 @@ import com.app.foodranker.utils.InputLimits
 import com.app.foodranker.utils.InputLimits.sanitized
 import com.app.foodranker.utils.RewardManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -31,7 +33,8 @@ data class PlateDetailUiState(
     val isSaved: Boolean = false,
     val isSubmittingRating: Boolean = false,
     val isSubmittingComment: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val successMessage: String? = null
 )
 
 @HiltViewModel
@@ -44,6 +47,12 @@ class PlateDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PlateDetailUiState())
     val uiState: StateFlow<PlateDetailUiState> = _uiState
+    @Volatile private var lastLoadTime = 0L
+
+    fun loadPlateIfStale(plateId: String) {
+        if (System.currentTimeMillis() - lastLoadTime < 60_000L) return
+        loadPlate(plateId)
+    }
 
     fun loadPlate(plateId: String) {
         if (plateId.isBlank()) {
@@ -51,75 +60,85 @@ class PlateDetailViewModel @Inject constructor(
             return
         }
         android.util.Log.d("PlateDetail", "Cargando plato con ID: $plateId")
+        lastLoadTime = System.currentTimeMillis()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val plateDoc = firestore.collection("plates")
-                    .document(plateId)
-                    .get()
-                    .await()
-
-                android.util.Log.d("PlateDetail", "Documento existe: ${plateDoc.exists()}")
-
-                val plate = if (plateDoc.exists()) {
-                    plateDoc.toObject(Plate::class.java)?.copy(id = plateDoc.id)
-                        ?: plateDoc.data?.let { data ->
-                            @Suppress("UNCHECKED_CAST")
-                            Plate(
-                                id = plateDoc.id,
-                                name = data["name"] as? String ?: "",
-                                description = data["description"] as? String ?: "",
-                                category = try {
-                                    PlateCategory.valueOf(data["category"] as? String ?: "OTHER")
-                                } catch (e: Exception) { PlateCategory.OTHER },
-                                restaurantName = data["restaurantName"] as? String ?: "",
-                                restaurantAddress = data["restaurantAddress"] as? String ?: "",
-                                city = data["city"] as? String ?: "",
-                                country = data["country"] as? String ?: "",
-                                imageUrl = data["imageUrl"] as? String ?: "",
-                                addedByUserId = data["addedByUserId"] as? String ?: "",
-                                addedByUserName = data["addedByUserName"] as? String ?: "",
-                                averageScore = (data["averageScore"] as? Double) ?: 0.0,
-                                totalRatings = (data["totalRatings"] as? Long)?.toInt() ?: 0,
-                                createdAt = (data["createdAt"] as? Long) ?: 0L,
-                                likes = (data["likes"] as? Long)?.toInt() ?: 0,
-                                likedByUsers = (data["likedByUsers"] as? List<*>)
-                                    ?.filterIsInstance<String>() ?: emptyList()
-                            )
-                        }
-                } else null
-
-                val ratingsSnapshot = firestore.collection("ratings")
-                    .whereEqualTo("plateId", plateId)
-                    .get()
-                    .await()
-                val ratings = ratingsSnapshot.documents
-                    .mapNotNull { it.toObject(Rating::class.java) }
-                    .sortedByDescending { it.createdAt }
-
-                val commentsSnapshot = firestore.collection("comments")
-                    .whereEqualTo("plateId", plateId).get().await()
-                val comments = commentsSnapshot.documents
-                    .mapNotNull { it.toObject(Comment::class.java) }
-                    .sortedByDescending { it.createdAt }
-
                 val userId = auth.currentUser?.uid ?: ""
-                val isSaved = if (userId.isNotEmpty()) {
-                    try {
-                        firestore.collection("saves").document("${userId}_${plateId}")
-                            .get().await().exists()
-                    } catch (e: Exception) { false }
-                } else false
+                coroutineScope {
+                    val plateDeferred = async {
+                        firestore.collection("plates").document(plateId).get().await()
+                    }
+                    val ratingsDeferred = async {
+                        firestore.collection("ratings")
+                            .whereEqualTo("plateId", plateId)
+                            .limit(50).get().await()
+                    }
+                    val commentsDeferred = async {
+                        firestore.collection("comments")
+                            .whereEqualTo("plateId", plateId)
+                            .limit(50).get().await()
+                    }
+                    val isSavedDeferred = async {
+                        if (userId.isNotEmpty()) {
+                            try {
+                                firestore.collection("saves").document("${userId}_${plateId}")
+                                    .get().await().exists()
+                            } catch (e: Exception) { false }
+                        } else false
+                    }
 
-                _uiState.value = _uiState.value.copy(
-                    plate = plate,
-                    ratings = ratings,
-                    comments = comments,
-                    hasUserRated = ratings.any { it.userId == userId },
-                    isLiked = plate?.likedByUsers?.contains(userId) == true,
-                    isSaved = isSaved,
-                    isLoading = false
-                )
+                    val plateDoc = plateDeferred.await()
+                    android.util.Log.d("PlateDetail", "Documento existe: ${plateDoc.exists()}")
+
+                    val plate = if (plateDoc.exists()) {
+                        plateDoc.toObject(Plate::class.java)?.copy(id = plateDoc.id)
+                            ?: plateDoc.data?.let { data ->
+                                @Suppress("UNCHECKED_CAST")
+                                Plate(
+                                    id = plateDoc.id,
+                                    name = data["name"] as? String ?: "",
+                                    description = data["description"] as? String ?: "",
+                                    category = try {
+                                        PlateCategory.valueOf(data["category"] as? String ?: "OTHER")
+                                    } catch (e: Exception) { PlateCategory.OTHER },
+                                    restaurantName = data["restaurantName"] as? String ?: "",
+                                    restaurantAddress = data["restaurantAddress"] as? String ?: "",
+                                    city = data["city"] as? String ?: "",
+                                    country = data["country"] as? String ?: "",
+                                    imageUrl = data["imageUrl"] as? String ?: "",
+                                    addedByUserId = data["addedByUserId"] as? String ?: "",
+                                    addedByUserName = data["addedByUserName"] as? String ?: "",
+                                    averageScore = (data["averageScore"] as? Double) ?: 0.0,
+                                    totalRatings = (data["totalRatings"] as? Long)?.toInt() ?: 0,
+                                    createdAt = (data["createdAt"] as? Long) ?: 0L,
+                                    likes = (data["likes"] as? Long)?.toInt() ?: 0,
+                                    likedByUsers = (data["likedByUsers"] as? List<*>)
+                                        ?.filterIsInstance<String>() ?: emptyList()
+                                )
+                            }
+                    } else null
+
+                    val ratings = ratingsDeferred.await().documents
+                        .mapNotNull { it.toObject(Rating::class.java) }
+                        .sortedByDescending { it.createdAt }
+
+                    val comments = commentsDeferred.await().documents
+                        .mapNotNull { it.toObject(Comment::class.java) }
+                        .sortedByDescending { it.createdAt }
+
+                    val isSaved = isSavedDeferred.await()
+
+                    _uiState.value = _uiState.value.copy(
+                        plate = plate,
+                        ratings = ratings,
+                        comments = comments,
+                        hasUserRated = ratings.any { it.userId == userId },
+                        isLiked = plate?.likedByUsers?.contains(userId) == true,
+                        isSaved = isSaved,
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
                 android.util.Log.e("PlateDetail", "Error: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(isLoading = false, error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
@@ -237,7 +256,7 @@ class PlateDetailViewModel @Inject constructor(
         }
     }
 
-    fun addComment(plateId: String, text: String) {
+    fun addComment(plateId: String, text: String, onSuccess: () -> Unit = {}) {
         val user = auth.currentUser ?: return
         val clean = text.sanitized(InputLimits.COMMENT_TEXT)
         if (clean.isBlank()) return
@@ -258,6 +277,7 @@ class PlateDetailViewModel @Inject constructor(
                     isSubmittingComment = false
                 )
                 RewardManager.awardXP(user.uid, 5, firestore)
+                onSuccess()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isSubmittingComment = false)
             }
@@ -265,19 +285,14 @@ class PlateDetailViewModel @Inject constructor(
     }
 
     fun deleteComment(commentId: String) {
-        val uid = auth.currentUser?.uid ?: return
+        if (auth.currentUser == null) return
         viewModelScope.launch {
             try {
-                val ref = firestore.collection("comments").document(commentId)
-                val snap = ref.get().await()
-                val authorId = snap.getString("userId") ?: return@launch
-                if (authorId != uid) return@launch
-
-                ref.delete().await()
+                firestore.collection("comments").document(commentId).delete().await()
                 _uiState.value = _uiState.value.copy(
                     comments = _uiState.value.comments.filter { it.id != commentId }
                 )
-            } catch (e: Exception) { /* silencioso */ }
+            } catch (e: Exception) { /* silencioso — las rules rechazan si no es el autor */ }
         }
     }
 
@@ -303,7 +318,10 @@ class PlateDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                val avgScore = ((flavorScore + presentationScore + valueScore) / 3.0)
+                val safeFlavor = flavorScore.coerceIn(1f, 10f)
+                val safePresentation = presentationScore.coerceIn(1f, 10f)
+                val safeValue = valueScore.coerceIn(1f, 10f)
+                val avgScore = ((safeFlavor + safePresentation + safeValue) / 3.0)
                 val ratingId = "${plateId}_${user.uid}"
                 val rating = Rating(
                     id = ratingId,
@@ -311,9 +329,9 @@ class PlateDetailViewModel @Inject constructor(
                     userId = user.uid,
                     userName = user.displayName ?: "Usuario",
                     userPhotoUrl = user.photoUrl?.toString() ?: "",
-                    flavorScore = flavorScore.coerceIn(1f, 10f),
-                    presentationScore = presentationScore.coerceIn(1f, 10f),
-                    valueScore = valueScore.coerceIn(1f, 10f),
+                    flavorScore = safeFlavor,
+                    presentationScore = safePresentation,
+                    valueScore = safeValue,
                     averageScore = avgScore,
                     comment = comment.sanitized(InputLimits.RATING_COMMENT)
                 )
@@ -321,7 +339,11 @@ class PlateDetailViewModel @Inject constructor(
                 firestore.collection("ratings").document(ratingId).set(rating).await()
 
                 val plate = _uiState.value.plate ?: return@launch
-                val allRatings = _uiState.value.ratings + rating
+                // Reconsultar Firestore para evitar promedio incorrecto si otro
+                // usuario valoró mientras esta pantalla estaba abierta.
+                val allRatings = firestore.collection("ratings")
+                    .whereEqualTo("plateId", plateId).get().await()
+                    .documents.mapNotNull { it.toObject(Rating::class.java) }
                 val newAvg = allRatings.map { it.averageScore }.average()
 
                 firestore.collection("plates").document(plateId).update(
@@ -372,12 +394,16 @@ class PlateDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
+    fun clearSuccessMessage() {
+        _uiState.value = _uiState.value.copy(successMessage = null)
+    }
+
     fun awardXpFromAd() {
         val uid = auth.currentUser?.uid ?: return
         viewModelScope.launch {
             try {
                 RewardManager.awardXP(uid, 50, firestore)
-                _uiState.value = _uiState.value.copy(error = "+50 XP añadidos a tu perfil!")
+                _uiState.value = _uiState.value.copy(successMessage = "+50 XP añadidos a tu perfil!")
             } catch (e: Exception) { /* silencioso */ }
         }
     }

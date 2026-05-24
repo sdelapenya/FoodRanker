@@ -2,6 +2,7 @@ package com.app.foodranker.utils
 
 import android.util.Log
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -101,7 +102,7 @@ object RewardManager {
 
             // Globetrotter (platos en 3+ países)
             val allPlates = firestore.collection("plates")
-                .whereEqualTo("addedByUserId", userId).get().await()
+                .whereEqualTo("addedByUserId", userId).limit(100).get().await()
             val countries = allPlates.documents.mapNotNull { it.getString("country") }.distinct()
             if (countries.size >= 3 && "globetrotter" !in earned) earned.add("globetrotter")
 
@@ -111,12 +112,23 @@ object RewardManager {
             if (ratingsSnap.size() >= 10 && "critic" !in earned) earned.add("critic")
 
             // Popular (50+ likes recibidos sumando todos sus platos)
-            val totalLikes = allPlates.documents.sumOf { (it.getLong("likes") ?: 0L).toInt() }
+            // Consulta propia sin limit para no subestimar likes en usuarios prolíficos
+            val allPlatesForLikes = firestore.collection("plates")
+                .whereEqualTo("addedByUserId", userId).get().await()
+            val totalLikes = allPlatesForLikes.documents.sumOf { (it.getLong("likes") ?: 0L).toInt() }
             if (totalLikes >= 50 && "popular" !in earned) earned.add("popular")
 
-            if (earned != current) {
-                userRef.update("badges", earned).await()
-                Log.d("RewardManager", "Nuevos badges para $userId: ${earned - current}")
+            // Top 10 (un plato del usuario en el ranking global)
+            val top10Snap = firestore.collection("plates")
+                .orderBy("averageScore", Query.Direction.DESCENDING)
+                .limit(10).get().await()
+            val isInTop10 = top10Snap.documents.any { it.getString("addedByUserId") == userId }
+            if (isInTop10 && "top10" !in earned) earned.add("top10")
+
+            val newBadges = earned - current.toSet()
+            if (newBadges.isNotEmpty()) {
+                userRef.update("badges", FieldValue.arrayUnion(*newBadges.toTypedArray())).await()
+                Log.d("RewardManager", "Nuevos badges para $userId: $newBadges")
             }
         } catch (e: Exception) {
             Log.e("RewardManager", "Error comprobando badges: ${e.message}")

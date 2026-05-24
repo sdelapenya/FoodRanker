@@ -88,13 +88,11 @@ fun ProfileScreen(
     var showEditPlateId by remember { mutableStateOf<String?>(null) }
     var deleteError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(userId) { viewModel.loadProfile(userId) }
-
-    // Recargar al volver a la pantalla (para reflejar likes, comentarios, etc.)
+    // ON_RESUME carga el perfil tanto en la primera apertura como al volver.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadProfile(userId)
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadProfileIfStale(userId)
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -258,13 +256,21 @@ fun ProfileScreen(
                 item {
                     if (uiState.isOwnProfile) {
                         TabRow(
-                            selectedTabIndex = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) 0 else 1,
+                            selectedTabIndex = when (uiState.activeTab) {
+                                com.app.foodranker.viewmodel.ProfileTab.MY_PLATES -> 0
+                                com.app.foodranker.viewmodel.ProfileTab.SAVED -> 1
+                                com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS -> 2
+                            },
                             containerColor = SurfaceWhite,
                             contentColor = OrangePrimary,
                             indicator = { tabPositions ->
                                 TabRowDefaults.SecondaryIndicator(
                                     modifier = Modifier.tabIndicatorOffset(
-                                        tabPositions[if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) 0 else 1]
+                                        tabPositions[when (uiState.activeTab) {
+                                            com.app.foodranker.viewmodel.ProfileTab.MY_PLATES -> 0
+                                            com.app.foodranker.viewmodel.ProfileTab.SAVED -> 1
+                                            com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS -> 2
+                                        }]
                                     ),
                                     color = OrangePrimary
                                 )
@@ -337,18 +343,19 @@ fun ProfileScreen(
                 if (displayedPlates.isEmpty() && !(uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED && uiState.isOwnProfile)) {
                     item {
                         EmptyStateCentered(
-                            title = if (uiState.isOwnProfile) "Tu galeria esta vacia" else "Sin publicaciones",
+                            title = if (uiState.isOwnProfile) "Tu galería está vacía" else "Sin publicaciones",
                             message = if (uiState.isOwnProfile) {
-                                "Publica desde Anadir en la barra inferior para mostrar tus platos."
+                                "Publica desde Añadir en la barra inferior para mostrar tus platos."
                             } else {
-                                "Cuando esta persona publique, veras aqui sus platos."
+                                "Cuando esta persona publique, verás aquí sus platos."
                             },
                             icon = Icons.Default.Collections,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp)
                         )
                     }
                 } else if (displayedPlates.isNotEmpty()) {
-                    items(displayedPlates.chunked(2).size) { rowIndex ->
+                    val plateRows = displayedPlates.chunked(2)
+                    items(plateRows.size) { rowIndex ->
                         var visible by remember(uiState.activeTab) { mutableStateOf(false) }
                         LaunchedEffect(uiState.activeTab, rowIndex) {
                             kotlinx.coroutines.delay(rowIndex * 60L)
@@ -358,7 +365,7 @@ fun ProfileScreen(
                             visible = visible,
                             enter = fadeIn(tween(250)) + slideInVertically(tween(280)) { 30 }
                         ) {
-                            val rowPlates = displayedPlates.chunked(2)[rowIndex]
+                            val rowPlates = plateRows[rowIndex]
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)

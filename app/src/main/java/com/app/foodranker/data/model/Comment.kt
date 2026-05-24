@@ -7,5 +7,5 @@ data class Comment(
     val userName: String = "",
     val userPhotoUrl: String = "",
     val text: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = 0L
 )

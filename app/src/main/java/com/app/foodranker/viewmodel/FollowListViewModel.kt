@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.User
+import com.app.foodranker.utils.ErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,12 +57,12 @@ class FollowListViewModel @Inject constructor(
                 val ids = if (listType == "following") {
                     firestore.collection("follows")
                         .whereEqualTo("followerId", profileUserId)
-                        .get().await()
+                        .limit(200).get().await()
                         .documents.mapNotNull { it.getString("followingId") }
                 } else {
                     firestore.collection("follows")
                         .whereEqualTo("followingId", profileUserId)
-                        .get().await()
+                        .limit(200).get().await()
                         .documents.mapNotNull { it.getString("followerId") }
                 }.distinct()
 
@@ -92,7 +93,7 @@ class FollowListViewModel @Inject constructor(
                 _uiState.value = FollowListUiState(
                     isLoading = false,
                     title = titleFor(listType),
-                    error = e.message ?: "Error al cargar"
+                    error = ErrorMapper.toUserMessage(e)
                 )
             }
         }

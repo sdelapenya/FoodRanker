@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.app.foodranker.data.model.FoodNotification
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,8 @@ class NotificationsViewModel @Inject constructor(
             try {
                 val snapshot = firestore.collection("notifications")
                     .document(userId).collection("items")
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(100)
                     .get().await()
 
                 val notifications = snapshot.documents.mapNotNull { doc ->

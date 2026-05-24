@@ -49,8 +49,14 @@ fun AuthScreen(
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { visible = true }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(authState) {
-        if (authState is AuthState.Success) onNavigateToHome()
+        when (authState) {
+            is AuthState.Success -> onNavigateToHome()
+            is AuthState.Error -> errorMessage = (authState as AuthState.Error).message
+            else -> {}
+        }
     }
 
     val launcher = rememberLauncherForActivityResult(
@@ -60,8 +66,15 @@ fun AuthScreen(
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                account.idToken?.let { viewModel.signInWithGoogle(it) }
-            } catch (e: ApiException) { }
+                val token = account.idToken
+                if (token != null) {
+                    viewModel.signInWithGoogle(token)
+                } else {
+                    errorMessage = "No se pudo obtener el token de Google. Inténtalo de nuevo."
+                }
+            } catch (e: ApiException) {
+                errorMessage = "Error al iniciar sesión con Google (${e.statusCode})"
+            }
         }
     }
 
@@ -196,6 +209,17 @@ fun AuthScreen(
                         Text("Continuar con Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
+
+            errorMessage?.let { msg ->
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = msg,
+                    color = Color(0xFFFFCDD2),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))

@@ -33,7 +33,7 @@ class AuthViewModel @Inject constructor(
             _authState.value = AuthState.Loading
             val result = authRepository.signInWithGoogle(idToken)
             _authState.value = if (result.isSuccess) {
-                AuthState.Success(result.getOrNull()!!)
+                AuthState.Success(result.getOrThrow())
             } else {
                 AuthState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
             }

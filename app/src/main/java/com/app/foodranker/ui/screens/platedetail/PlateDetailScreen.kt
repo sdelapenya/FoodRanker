@@ -73,8 +73,9 @@ fun PlateDetailScreen(
 
     LaunchedEffect(Unit) { viewModel.loadUserCollections() }
 
+    // El interstitial se contabiliza una sola vez al abrir la pantalla.
+    // La carga de datos la gestiona el observer ON_RESUME (más abajo).
     LaunchedEffect(plateId) {
-        viewModel.loadPlate(plateId)
         if (AdManager.recordPlateDetailView()) {
             val activity = context as? android.app.Activity
             if (activity != null) AdManager.showInterstitial(activity) {}
@@ -88,12 +89,17 @@ fun PlateDetailScreen(
         snackbarHostState.showSnackbar(msg)
         viewModel.clearError()
     }
+    LaunchedEffect(uiState.successMessage) {
+        val msg = uiState.successMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(msg)
+        viewModel.clearSuccessMessage()
+    }
 
-    // Recargar al volver a la pantalla
+    // Recargar al volver a la pantalla (con protección de frescura de 60s)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadPlate(plateId)
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadPlateIfStale(plateId)
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -412,8 +418,9 @@ fun PlateDetailScreen(
                                     )
                                     IconButton(
                                         onClick = {
-                                            viewModel.addComment(plateId, commentText)
-                                            commentText = ""
+                                            viewModel.addComment(plateId, commentText) {
+                                                commentText = ""
+                                            }
                                         },
                                         enabled = commentText.isNotBlank() && !uiState.isSubmittingComment
                                     ) {
@@ -492,7 +499,7 @@ fun PlateDetailScreen(
                                 }
                             }
                         } else {
-                            itemsIndexed(uiState.ratings) { index, rating ->
+                            itemsIndexed(uiState.ratings, key = { _, r -> r.id }) { index, rating ->
                                 var visible by remember { mutableStateOf(false) }
                                 LaunchedEffect(rating.id) {
                                     kotlinx.coroutines.delay(index * 80L)

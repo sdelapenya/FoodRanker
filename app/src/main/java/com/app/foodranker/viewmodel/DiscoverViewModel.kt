@@ -15,6 +15,7 @@ import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.Rating
 import com.app.foodranker.utils.InputLimits
 import com.app.foodranker.utils.InputLimits.sanitized
+import com.app.foodranker.utils.ConnectivityObserver
 import com.app.foodranker.utils.MealDBSeeder
 import com.app.foodranker.utils.NotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,11 +48,14 @@ enum class FeedMode { FOR_YOU, FOLLOWING }
 class DiscoverViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val connectivityObserver: ConnectivityObserver
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverUiState())
     val uiState: StateFlow<DiscoverUiState> = _uiState
+
+    val isOnline: StateFlow<Boolean> = connectivityObserver.isOnline
 
     val currentUserId: String get() = auth.currentUser?.uid ?: ""
 
@@ -59,6 +63,7 @@ class DiscoverViewModel @Inject constructor(
     @Volatile private var lastDocument: DocumentSnapshot? = null
     private val PAGE_SIZE = 20L
     @Volatile private var isFirstNotifLoad = true
+    @Volatile private var lastLoadTime = 0L
 
     fun setFeedMode(mode: FeedMode) {
         _uiState.value = _uiState.value.copy(feedMode = mode)
@@ -84,7 +89,7 @@ class DiscoverViewModel @Inject constructor(
 
                 // Cargar platos de esos usuarios
                 val platesSnap = firestore.collection("plates")
-                    .whereIn("addedByUserId", followingIds.take(10))
+                    .whereIn("addedByUserId", followingIds.take(30))
                     .orderBy("createdAt", Query.Direction.DESCENDING)
                     .limit(30).get().await()
                 val plates = platesSnap.documents
@@ -258,8 +263,14 @@ class DiscoverViewModel @Inject constructor(
         }
     }
 
+    fun loadPlatesIfStale() {
+        if (System.currentTimeMillis() - lastLoadTime < 60_000L) return
+        loadPlates()
+    }
+
     fun loadPlates() {
         lastDocument = null
+        lastLoadTime = System.currentTimeMillis()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, hasMorePlates = true)
             try {
@@ -338,7 +349,9 @@ class DiscoverViewModel @Inject constructor(
 
     fun toggleLike(plateId: String) {
         val userId = currentUserId.ifEmpty { return }
-        val plate = _uiState.value.plates.find { it.id == plateId } ?: return
+        val plate = _uiState.value.plates.find { it.id == plateId }
+            ?: _uiState.value.followingPlates.find { it.id == plateId }
+            ?: return
         val isCurrentlyLiked = userId in plate.likedByUsers
 
         val updated = plate.copy(
@@ -394,7 +407,9 @@ class DiscoverViewModel @Inject constructor(
                 )
                 firestore.collection("ratings").document(ratingId).set(rating).await()
 
-                val plate = _uiState.value.plates.find { it.id == plateId } ?: return@launch
+                val plate = _uiState.value.plates.find { it.id == plateId }
+                    ?: _uiState.value.followingPlates.find { it.id == plateId }
+                    ?: return@launch
                 val allRatings = firestore.collection("ratings")
                     .whereEqualTo("plateId", plateId).get().await()
                     .documents.mapNotNull { it.toObject(Rating::class.java) }
@@ -402,7 +417,8 @@ class DiscoverViewModel @Inject constructor(
                 firestore.collection("plates").document(plateId)
                     .update("averageScore", newAvg, "totalRatings", allRatings.size).await()
 
-                applyPlateUpdate(plateId, plate.copy(averageScore = newAvg, totalRatings = allRatings.size))
+                val updated = plate.copy(averageScore = newAvg, totalRatings = allRatings.size)
+                applyPlateUpdate(plateId, updated)
 
                 val ownerUserId = plate.addedByUserId
                 if (ownerUserId.isNotEmpty() && ownerUserId != user.uid) {
@@ -416,7 +432,10 @@ class DiscoverViewModel @Inject constructor(
                             "score" to avgScore, "isRead" to false,
                             "createdAt" to System.currentTimeMillis()
                         )).await()
+                    com.app.foodranker.utils.RewardManager.awardXP(ownerUserId, com.app.foodranker.utils.RewardManager.XP_RECEIVE_RATING, firestore)
                 }
+                com.app.foodranker.utils.RewardManager.awardXP(user.uid, com.app.foodranker.utils.RewardManager.XP_GIVE_RATING, firestore)
+                com.app.foodranker.utils.RewardManager.checkAndAwardBadges(user.uid, firestore)
             } catch (e: Exception) {
                 android.util.Log.e("DiscoverVM", "Error submitRating: ${e.message}")
             }
@@ -441,7 +460,8 @@ class DiscoverViewModel @Inject constructor(
 
     private fun applyPlateUpdate(plateId: String, updated: Plate) {
         _uiState.value = _uiState.value.copy(
-            plates = _uiState.value.plates.map { if (it.id == plateId) updated else it }
+            plates = _uiState.value.plates.map { if (it.id == plateId) updated else it },
+            followingPlates = _uiState.value.followingPlates.map { if (it.id == plateId) updated else it }
         )
     }
 
@@ -450,6 +470,8 @@ class DiscoverViewModel @Inject constructor(
         isFirstNotifLoad = true
         notifListener = firestore.collection("notifications")
             .document(userId).collection("items")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(50)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
                 val unread = snapshot.documents.count { it.get("isRead") != true }
@@ -481,7 +503,9 @@ class DiscoverViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val snapshot = firestore.collection("notifications")
-                    .document(userId).collection("items").get().await()
+                    .document(userId).collection("items")
+                    .whereEqualTo("isRead", false)
+                    .limit(100).get().await()
                 if (snapshot.documents.isEmpty()) return@launch
                 val batch = firestore.batch()
                 snapshot.documents.forEach { batch.update(it.reference, "isRead", true) }

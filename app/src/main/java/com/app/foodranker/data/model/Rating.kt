@@ -11,5 +11,5 @@ data class Rating(
     val valueScore: Float = 0f,        // Precio/Calidad (1-10)
     val averageScore: Double = 0.0,    // Calculado automáticamente
     val comment: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = 0L
 )
