@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -45,7 +45,7 @@ fun FollowListScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
                     }
                 },
                 actions = {
@@ -70,7 +70,7 @@ fun FollowListScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("⚠️", fontSize = 44.sp)
                     Spacer(Modifier.height(12.dp))
-                    Text(uiState.error!!, color = TextSecondary, textAlign = TextAlign.Center)
+                    Text(uiState.error ?: "", color = TextSecondary, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)) {
                         Text("Reintentar")
@@ -86,7 +86,7 @@ fun FollowListScreen(
                     Text("👥", fontSize = 48.sp)
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        if (uiState.title == "Seguidores") "Aún nadie sigue este perfil"
+                        if (uiState.listType != "following") "Aún nadie sigue este perfil"
                         else "No sigue a nadie por ahora",
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,

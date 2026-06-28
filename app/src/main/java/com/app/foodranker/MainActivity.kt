@@ -13,7 +13,6 @@ import androidx.navigation.compose.rememberNavController
 import com.app.foodranker.ui.Screen
 import com.app.foodranker.ui.screens.addplate.AddPlateScreen
 import com.app.foodranker.ui.screens.auth.AuthScreen
-import com.app.foodranker.ui.screens.home.HomeScreen
 import com.app.foodranker.ui.theme.FoodRankerTheme
 import com.app.foodranker.viewmodel.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,15 +25,24 @@ import com.app.foodranker.ui.screens.discover.DiscoverScreen
 import com.app.foodranker.ui.screens.notifications.NotificationsScreen
 import com.app.foodranker.ui.screens.onboarding.OnboardingScreen
 import com.app.foodranker.utils.parseFoodRankerProfileUserId
+import com.app.foodranker.utils.parseFoodRankerPlateId
+import com.app.foodranker.utils.parseFoodRankerInviteCode
+import com.app.foodranker.viewmodel.DiscoverViewModel
 import com.app.foodranker.ui.screens.profile.FollowListScreen
 import com.app.foodranker.utils.OnboardingManager
 import com.app.foodranker.ui.screens.privacy.PrivacyPolicyScreen
 import com.app.foodranker.ui.screens.privacy.TermsOfServiceScreen
 import com.app.foodranker.ui.screens.splash.SplashScreen
 import com.app.foodranker.ui.screens.trending.TrendingScreen
+import com.app.foodranker.ui.screens.league.LeagueScreen
+import com.app.foodranker.ui.screens.referral.ReferralScreen
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.EaseOutCubic
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +55,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.app.foodranker.utils.FoodRankerMessagingService
 
 
 @AndroidEntryPoint
@@ -75,25 +84,36 @@ fun FoodRankerNavigation() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var pendingProfileUserId by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingPlateId by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingInviteCode by rememberSaveable { mutableStateOf<String?>(null) }
     val startDestination = if (!OnboardingManager.isDone(context))
         Screen.Onboarding.route else Screen.Splash.route
 
-    // Deep link perfil desde intent (cold start / onNewIntent) + notificación plateId
+    // Request POST_NOTIFICATIONS permission on Android 13+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { /* result is informational — the system handles the denial UI */ }
+        LaunchedEffect(Unit) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    // Deep links (cold start / onNewIntent) + notificación plateId
     DisposableEffect(lifecycleOwner, navController) {
         val activity = context as ComponentActivity
         val observer = LifecycleEventObserver { _, event ->
             if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
-            activity.intent?.data?.parseFoodRankerProfileUserId()?.let {
-                pendingProfileUserId = it
+            val uri = activity.intent?.data
+            if (uri != null) {
+                uri.parseFoodRankerProfileUserId()?.let { pendingProfileUserId = it }
+                uri.parseFoodRankerPlateId()?.let { pendingPlateId = it }
+                uri.parseFoodRankerInviteCode()?.let { pendingInviteCode = it }
+                activity.intent.setData(null)
             }
 
-            val plateId = activity.intent.getStringExtra("plateId") ?: return@LifecycleEventObserver
-            if (!authViewModel.isLoggedIn) return@LifecycleEventObserver
-            val route = navController.currentDestination?.route ?: return@LifecycleEventObserver
-            if (route != Screen.Discover.route) return@LifecycleEventObserver
-            navController.navigate(Screen.PlateDetail.createRoute(plateId)) {
-                launchSingleTop = true
-            }
+            val notifPlateId = activity.intent?.getStringExtra("plateId") ?: return@LifecycleEventObserver
+            pendingPlateId = notifPlateId
             activity.intent.removeExtra("plateId")
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -106,25 +126,25 @@ fun FoodRankerNavigation() {
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(300, easing = EaseInOutCubic)
+                animationSpec = tween(200, easing = EaseOutCubic)
             )
         },
         exitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(300, easing = EaseInOutCubic)
+                animationSpec = tween(200, easing = EaseOutCubic)
             )
         },
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(300, easing = EaseInOutCubic)
+                animationSpec = tween(200, easing = EaseOutCubic)
             )
         },
         popExitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(300, easing = EaseInOutCubic)
+                animationSpec = tween(200, easing = EaseOutCubic)
             )
         }
     ) {
@@ -143,7 +163,7 @@ fun FoodRankerNavigation() {
 
         composable(Screen.Splash.route) {
             SplashScreen(
-                isLoggedIn = authViewModel.isLoggedIn,
+                awaitAuthReady = { authViewModel.awaitAuthReady() },
                 onNavigateToAuth = {
                     navController.navigate(Screen.Auth.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
@@ -158,6 +178,7 @@ fun FoodRankerNavigation() {
         }
 
         composable(Screen.Discover.route) {
+            val discoverViewModel: DiscoverViewModel = hiltViewModel()
             val pending = pendingProfileUserId
             LaunchedEffect(pending, authViewModel.isLoggedIn) {
                 val uid = pending ?: return@LaunchedEffect
@@ -167,8 +188,25 @@ fun FoodRankerNavigation() {
                     launchSingleTop = true
                 }
             }
+            val pendingPlate = pendingPlateId
+            LaunchedEffect(pendingPlate, authViewModel.isLoggedIn) {
+                val pid = pendingPlate ?: return@LaunchedEffect
+                if (!authViewModel.isLoggedIn) return@LaunchedEffect
+                pendingPlateId = null
+                navController.navigate(Screen.PlateDetail.createRoute(pid)) {
+                    launchSingleTop = true
+                }
+            }
+            val pendingInvite = pendingInviteCode
+            LaunchedEffect(pendingInvite, authViewModel.isLoggedIn) {
+                val code = pendingInvite ?: return@LaunchedEffect
+                if (!authViewModel.isLoggedIn) return@LaunchedEffect
+                pendingInviteCode = null
+                discoverViewModel.applyInviteCode(code)
+            }
             DiscoverScreen(
                 onNavigateToExplore = { navController.navigate(Screen.Explore.route) },
+                onNavigateToExploreUsers = { navController.navigate(Screen.ExploreUsers.route) },
                 onNavigateToAddPlate = { navController.navigate(Screen.AddPlate.route) },
                 onNavigateToProfile = { userId ->
                     navController.navigate(Screen.Profile.createRoute(userId))
@@ -178,6 +216,9 @@ fun FoodRankerNavigation() {
                 },
                 onNavigateToNotifications = {
                     navController.navigate(Screen.Notifications.route)
+                },
+                onNavigateToLeague = {
+                    navController.navigate(Screen.League.route)
                 }
             )
         }
@@ -191,28 +232,6 @@ fun FoodRankerNavigation() {
             )
         }
 
-        composable(Screen.Home.route) {
-            val pending = pendingProfileUserId
-            LaunchedEffect(pending, authViewModel.isLoggedIn) {
-                val uid = pending ?: return@LaunchedEffect
-                if (!authViewModel.isLoggedIn) return@LaunchedEffect
-                pendingProfileUserId = null
-                navController.navigate(Screen.Profile.createRoute(uid)) {
-                    launchSingleTop = true
-                }
-            }
-            HomeScreen(
-                onNavigateToExplore = { navController.navigate(Screen.Explore.route) },
-                onNavigateToAddPlate = { navController.navigate(Screen.AddPlate.route) },
-                onNavigateToProfile = { userId ->
-                    navController.navigate(Screen.Profile.createRoute(userId))
-                },
-                onNavigateToPlateDetail = { plateId ->
-                    navController.navigate(Screen.PlateDetail.createRoute(plateId))
-                },
-                onNavigateToTrending = { navController.navigate(Screen.Trending.route) }
-            )
-        }
 
         composable(
             route = Screen.Profile.route,
@@ -236,7 +255,8 @@ fun FoodRankerNavigation() {
                     navController.navigate(Screen.FollowList.createRoute(uid, followers))
                 },
                 onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
-                onNavigateToTerms = { navController.navigate(Screen.Terms.route) }
+                onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
+                onNavigateToReferral = { navController.navigate(Screen.Referral.route) }
             )
         }
 
@@ -262,6 +282,26 @@ fun FoodRankerNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 onPlateClick = { plateId ->
                     navController.navigate(Screen.PlateDetail.createRoute(plateId))
+                },
+                onUserClick = { uid ->
+                    navController.navigate(Screen.Profile.createRoute(uid)) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(Screen.ExploreUsers.route) {
+            ExploreScreen(
+                startInUsersMode = true,
+                onNavigateBack = { navController.popBackStack() },
+                onPlateClick = { plateId ->
+                    navController.navigate(Screen.PlateDetail.createRoute(plateId))
+                },
+                onUserClick = { uid ->
+                    navController.navigate(Screen.Profile.createRoute(uid)) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -285,6 +325,7 @@ fun FoodRankerNavigation() {
                 onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
                 onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
                 onNavigateToHome = {
+                    FoodRankerMessagingService.saveCurrentToken()
                     navController.navigate(Screen.Discover.route) {
                         popUpTo(Screen.Auth.route) { inclusive = true }
                     }
@@ -317,6 +358,25 @@ fun FoodRankerNavigation() {
                         popUpTo(Screen.Discover.route) { inclusive = false }
                     }
                 }
+            )
+        }
+
+        composable(Screen.League.route) {
+            LeagueScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDiscover = { navController.popBackStack() },
+                onNavigateToProfile = {
+                    val uid = authViewModel.currentUser?.uid ?: return@LeagueScreen
+                    navController.navigate(Screen.Profile.createRoute(uid)) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Referral.route) {
+            ReferralScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

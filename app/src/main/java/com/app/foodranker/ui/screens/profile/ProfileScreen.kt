@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
@@ -60,6 +61,7 @@ import com.app.foodranker.ui.components.EmptyStateCentered
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.ui.theme.*
+import com.app.foodranker.ui.theme.cardGradient
 import com.app.foodranker.utils.RewardManager
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
@@ -76,6 +78,7 @@ fun ProfileScreen(
     onNavigateToFollowList: (profileUserId: String, followers: Boolean) -> Unit = { _, _ -> },
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToTerms: () -> Unit = {},
+    onNavigateToReferral: () -> Unit = {},
     onAccountDeleted: () -> Unit = onSignOut,
     viewModel: ProfileViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
@@ -149,6 +152,8 @@ fun ProfileScreen(
             }
         } else {
             val listState = rememberLazyListState()
+            // Volver al inicio al cambiar de tab para evitar posición obsoleta
+            LaunchedEffect(uiState.activeTab) { listState.scrollToItem(0) }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -234,6 +239,17 @@ fun ProfileScreen(
                     LevelCard(xp = xp, badges = badges)
                 }
 
+                // Rival card (own profile, rival found)
+                uiState.nearbyRival?.takeIf { uiState.isOwnProfile }?.let { rival ->
+                    item {
+                        RivalCard(
+                            rivalName = rival.name,
+                            rivalXp = rival.xp,
+                            gap = uiState.nearbyRivalGap
+                        )
+                    }
+                }
+
                 // Stats 2x2
                 item {
                     var visible by remember { mutableStateOf(false) }
@@ -247,7 +263,9 @@ fun ProfileScreen(
                             totalPlates    = uiState.plates.size,
                             likesReceived  = likesReceived,
                             likesGiven     = uiState.likesGiven,
-                            ratingsGiven   = uiState.ratingsGiven
+                            ratingsGiven   = uiState.ratingsGiven,
+                            cityRank       = uiState.cityRank,
+                            city           = uiState.user?.city ?: ""
                         )
                     }
                 }
@@ -356,8 +374,10 @@ fun ProfileScreen(
                 } else if (displayedPlates.isNotEmpty()) {
                     val plateRows = displayedPlates.chunked(2)
                     items(plateRows.size) { rowIndex ->
-                        var visible by remember(uiState.activeTab) { mutableStateOf(false) }
-                        LaunchedEffect(uiState.activeTab, rowIndex) {
+                        val rowPlates = plateRows[rowIndex]
+                        val rowKey = rowPlates.joinToString { it.id }
+                        var visible by remember(rowKey) { mutableStateOf(false) }
+                        LaunchedEffect(rowKey) {
                             kotlinx.coroutines.delay(rowIndex * 60L)
                             visible = true
                         }
@@ -365,7 +385,6 @@ fun ProfileScreen(
                             visible = visible,
                             enter = fadeIn(tween(250)) + slideInVertically(tween(280)) { 30 }
                         ) {
-                            val rowPlates = plateRows[rowIndex]
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -397,6 +416,7 @@ fun ProfileScreen(
                             onDeleteClick = { showDeleteDialog = true },
                             onPrivacy = onNavigateToPrivacy,
                             onTerms = onNavigateToTerms,
+                            onReferral = onNavigateToReferral,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
@@ -551,6 +571,7 @@ private fun ProfileAccountDangerZone(
     onDeleteClick: () -> Unit,
     onPrivacy: () -> Unit,
     onTerms: () -> Unit,
+    onReferral: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -570,6 +591,37 @@ private fun ProfileAccountDangerZone(
             )
 
             HorizontalDivider(color = DividerColor.copy(alpha = 0.85f))
+
+            Surface(
+                onClick = onReferral,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFFFF3E0)
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp, horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(
+                            Icons.Default.CardGiftcard,
+                            contentDescription = null,
+                            tint = OrangePrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Column {
+                            Text("Invita amigos", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("Comparte tu código y gana XP", fontSize = 11.sp, color = TextSecondary)
+                        }
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = OrangePrimary)
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
 
             Surface(
                 onClick = onPrivacy,
@@ -811,7 +863,9 @@ private fun ProfileStats2x2(
     totalPlates: Int,
     likesReceived: Int,
     likesGiven: Int,
-    ratingsGiven: Int
+    ratingsGiven: Int,
+    cityRank: Int = 0,
+    city: String = ""
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -830,6 +884,14 @@ private fun ProfileStats2x2(
                 StatItem(likesGiven.formatCompact(), "Likes\ndados", modifier = Modifier.weight(1f))
                 VerticalDivider()
                 StatItem(ratingsGiven.formatCompact(), "Valoraciones\ndadas", modifier = Modifier.weight(1f))
+            }
+            if (cityRank > 0 && city.isNotEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerColor)
+                StatItem(
+                    value = "#$cityRank en $city",
+                    label = "Ranking ciudad",
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
@@ -1068,6 +1130,7 @@ private fun CollectionsSection(
     var newName by remember { mutableStateOf("") }
     var newEmoji by remember { mutableStateOf("★") }
     var openCollection by remember { mutableStateOf<com.app.foodranker.data.model.PlateCollection?>(null) }
+    var collectionToDelete by remember { mutableStateOf<com.app.foodranker.data.model.PlateCollection?>(null) }
 
     val emojiOptions = listOf("★","♥","◆","♦","♠","♣","✿","♪","☺","✓","●","▲")
 
@@ -1116,7 +1179,7 @@ private fun CollectionsSection(
                             tint = TextSecondary,
                             modifier = Modifier.size(20.dp)
                         )
-                        IconButton(onClick = { onDeleteCollection(col.id) }) {
+                        IconButton(onClick = { collectionToDelete = col }) {
                             Icon(Icons.Default.Delete, contentDescription = "Eliminar",
                                 tint = TextSecondary, modifier = Modifier.size(20.dp))
                         }
@@ -1228,6 +1291,26 @@ private fun CollectionsSection(
         }
     }
 
+    // Confirmación antes de borrar una lista
+    collectionToDelete?.let { col ->
+        AlertDialog(
+            onDismissRequest = { collectionToDelete = null },
+            title = { Text("¿Eliminar lista?", fontWeight = FontWeight.Bold) },
+            text = { Text("Se eliminará la lista \"${col.name}\". Los platos no se borrarán, solo dejarán de estar en esta lista.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteCollection(col.id)
+                    collectionToDelete = null
+                }) {
+                    Text("Eliminar", color = ErrorRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { collectionToDelete = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
     if (showCreate) {
         ModalBottomSheet(onDismissRequest = { showCreate = false; newName = "" }) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
@@ -1336,7 +1419,7 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                            .background(Brush.verticalGradient(plate.category.gridGradient())),
+                            .background(Brush.verticalGradient(plate.category.cardGradient())),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(plate.category.emoji, fontSize = 32.sp)
@@ -1380,17 +1463,53 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
     }
 }
 
-private fun PlateCategory.gridGradient() = when (this) {
-    PlateCategory.PASTA     -> listOf(Color(0xFFE8A838), Color(0xFFBF7A1A))
-    PlateCategory.SUSHI     -> listOf(Color(0xFF2D7AAF), Color(0xFF14486A))
-    PlateCategory.BURGER    -> listOf(Color(0xFFBF4828), Color(0xFF8B2A10))
-    PlateCategory.PIZZA     -> listOf(Color(0xFFD44030), Color(0xFFAA2015))
-    PlateCategory.TAPAS     -> listOf(Color(0xFFBF6840), Color(0xFF8B3D20))
-    PlateCategory.RAMEN     -> listOf(Color(0xFFD47828), Color(0xFFAA5000))
-    PlateCategory.STEAK     -> listOf(Color(0xFF8B4040), Color(0xFF5C2020))
-    PlateCategory.SEAFOOD   -> listOf(Color(0xFF2090B0), Color(0xFF0D5878))
-    PlateCategory.DESSERT   -> listOf(Color(0xFFD46898), Color(0xFFA83868))
-    PlateCategory.BREAKFAST -> listOf(Color(0xFFD4A828), Color(0xFFA07818))
-    PlateCategory.SALAD     -> listOf(Color(0xFF4A9848), Color(0xFF2A6828))
-    PlateCategory.OTHER     -> listOf(Color(0xFF787888), Color(0xFF505060))
+@Composable
+private fun RivalCard(rivalName: String, rivalXp: Int, gap: Int) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+        border = BorderStroke(1.dp, Color(0xFFFFCC80)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("⚔️", fontSize = 28.sp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Rival cercano",
+                    fontSize = 11.sp,
+                    color = Color(0xFFA0522D),
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    rivalName,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF5D2E00)
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "solo $gap XP más",
+                    fontSize = 12.sp,
+                    color = Color(0xFFA0522D),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "$rivalXp XP",
+                    fontSize = 11.sp,
+                    color = Color(0xFFA0522D)
+                )
+            }
+        }
+    }
 }
+

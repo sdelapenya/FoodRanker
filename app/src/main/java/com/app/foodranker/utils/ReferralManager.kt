@@ -1,7 +1,6 @@
 package com.app.foodranker.utils
 
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
@@ -55,13 +54,15 @@ class ReferralManager @Inject constructor(
                     "referredId" to userId,
                     "createdAt" to System.currentTimeMillis()
                 ))
-                tx.update(referrerRef, "referralCount", FieldValue.increment(1))
+                // referralCount y XP los incrementa la Cloud Function onReferralCreated
                 tx.update(myUserRef, mapOf("referredByUserId" to referrerId))
             }.await()
 
+            // XP otorgado por onReferralCreated (Cloud Function via Admin SDK)
             true
         } catch (e: Exception) {
-            if (e.message == "already_referred") false else false
+            if (e.message == "already_referred") false
+            else throw e
         }
     }
 
@@ -73,5 +74,6 @@ class ReferralManager @Inject constructor(
         "https://foodranker.app/invite/$code\n\n" +
         "#FoodRanker #Gastronomia"
 
-    private fun generateCode(): String = UUID.randomUUID().toString().take(8).uppercase()
+    private fun generateCode(): String = UUID.randomUUID().toString()
+        .replace("-", "").take(10).uppercase()
 }

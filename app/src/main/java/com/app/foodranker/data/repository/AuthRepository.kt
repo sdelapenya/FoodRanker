@@ -20,6 +20,20 @@ class AuthRepository @Inject constructor(
 
     val isLoggedIn: Boolean get() = auth.currentUser != null
 
+    // Espera a que FirebaseAuth restaure la sesión persistida desde disco antes
+    // de devolver el estado de login. Sin esto, currentUser puede ser null
+    // momentáneamente al arrancar la app, enviando a un usuario logueado a Auth.
+    suspend fun awaitAuthReady(): Boolean = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        val listener = object : FirebaseAuth.AuthStateListener {
+            override fun onAuthStateChanged(firebaseAuth: FirebaseAuth) {
+                auth.removeAuthStateListener(this)
+                if (cont.isActive) cont.resume(firebaseAuth.currentUser != null) {}
+            }
+        }
+        auth.addAuthStateListener(listener)
+        cont.invokeOnCancellation { auth.removeAuthStateListener(listener) }
+    }
+
     suspend fun signInWithGoogle(idToken: String): Result<FirebaseUser> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
@@ -61,5 +75,14 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    fun signOut() = auth.signOut()
+    suspend fun signOut() {
+        val userId = auth.currentUser?.uid
+        if (userId != null) {
+            try {
+                firestore.collection("users").document(userId)
+                    .update("fcmToken", "").await()
+            } catch (e: Exception) { /* sin red u otro fallo: no bloquear el logout */ }
+        }
+        auth.signOut()
+    }
 }

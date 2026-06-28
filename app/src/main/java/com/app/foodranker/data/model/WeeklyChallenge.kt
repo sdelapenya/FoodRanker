@@ -21,6 +21,6 @@ data class WeeklyChallenge(
     val daysLeft: Int
         get() {
             val diff = endDate - System.currentTimeMillis()
-            return if (diff > 0) (diff / (24 * 3600 * 1000)).toInt() else 0
+            return if (diff > 0) kotlin.math.ceil(diff / (24.0 * 3600 * 1000)).toInt() else 0
         }
 }

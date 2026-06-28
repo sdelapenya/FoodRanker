@@ -27,7 +27,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    isLoggedIn: Boolean,
+    awaitAuthReady: suspend () -> Boolean,
     onNavigateToAuth: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
@@ -44,7 +44,7 @@ fun SplashScreen(
         )
         textOffsetY.animateTo(0f, animationSpec = tween(400))
         delay(850)
-        if (isLoggedIn) onNavigateToHome() else onNavigateToAuth()
+        if (awaitAuthReady()) onNavigateToHome() else onNavigateToAuth()
     }
 
     Box(

@@ -6,7 +6,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.WeeklyChallenge
-import com.app.foodranker.utils.RewardManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +17,8 @@ data class ChallengeUiState(
     val currentChallenge: WeeklyChallenge? = null,
     val isParticipating: Boolean = false,
     val isLoading: Boolean = false,
-    val justCompleted: Boolean = false
+    val justCompleted: Boolean = false,
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -39,6 +39,7 @@ class ChallengeViewModel @Inject constructor(
                 val now = System.currentTimeMillis()
                 val snap = firestore.collection("challenges")
                     .whereLessThanOrEqualTo("startDate", now)
+                    .orderBy("startDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
                     .limit(5).get().await()
 
                 val active = snap.documents
@@ -68,20 +69,47 @@ class ChallengeViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                firestore.collection("challenges").document(challenge.id).update(
-                    mapOf(
+                // Transacción atómica: evita que un doble-tap incremente participantCount
+                // dos veces (arrayUnion es idempotente para el ID pero increment no lo es).
+                val challengeRef = firestore.collection("challenges").document(challenge.id)
+                val alreadyIn = firestore.runTransaction { tx ->
+                    @Suppress("UNCHECKED_CAST")
+                    val ids = (tx.get(challengeRef).get("participantIds") as? List<String>) ?: emptyList()
+                    if (userId in ids) return@runTransaction true
+                    tx.update(challengeRef, mapOf(
                         "participantIds" to FieldValue.arrayUnion(userId),
                         "participantCount" to FieldValue.increment(1)
+                    ))
+                    false
+                }.await()
+
+                if (alreadyIn) {
+                    _uiState.value = _uiState.value.copy(isParticipating = true)
+                    return@launch
+                }
+
+                // XP por challenge lo otorgará una Cloud Function al detectar la participación
+                _uiState.value = _uiState.value.copy(
+                    isParticipating = true,
+                    justCompleted = true,
+                    currentChallenge = challenge.copy(
+                        participantIds = challenge.participantIds + userId,
+                        participantCount = challenge.participantCount + 1
                     )
-                ).await()
-                RewardManager.awardXP(userId, challenge.xpReward, firestore)
-                _uiState.value = _uiState.value.copy(isParticipating = true, justCompleted = true)
-            } catch (e: Exception) { }
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("Challenge", "participate: ${e.message}")
+                _uiState.value = _uiState.value.copy(error = "No se pudo registrar la participación")
+            }
         }
     }
 
     fun clearJustCompleted() {
         _uiState.value = _uiState.value.copy(justCompleted = false)
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
     }
 
 

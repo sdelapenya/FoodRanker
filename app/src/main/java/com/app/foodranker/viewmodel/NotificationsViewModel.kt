@@ -29,6 +29,24 @@ class NotificationsViewModel @Inject constructor(
 
     init { loadAndMarkRead() }
 
+    fun clearAll() {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                val snapshot = firestore.collection("notifications")
+                    .document(userId).collection("items")
+                    .limit(500).get().await()
+                if (snapshot.documents.isEmpty()) return@launch
+                val batch = firestore.batch()
+                snapshot.documents.forEach { batch.delete(it.reference) }
+                batch.commit().await()
+                _uiState.value = NotificationsUiState(notifications = emptyList(), isLoading = false)
+            } catch (e: Exception) {
+                android.util.Log.e("NotificationsVM", "Error clearAll: ${e.message}")
+            }
+        }
+    }
+
     fun loadAndMarkRead() {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {
@@ -56,12 +74,15 @@ class NotificationsViewModel @Inject constructor(
                     )
                 }.sortedByDescending { it.createdAt }
 
-                // Marcar todas como leídas
-                val batch = firestore.batch()
-                snapshot.documents.forEach { batch.update(it.reference, "isRead", true) }
-                if (snapshot.documents.isNotEmpty()) batch.commit().await()
-
+                // Mostrar primero, marcar leídas después (el usuario ya las ve)
                 _uiState.value = NotificationsUiState(notifications = notifications, isLoading = false)
+
+                val unread = snapshot.documents.filter { it.get("isRead") != true }
+                if (unread.isNotEmpty()) {
+                    val batch = firestore.batch()
+                    unread.forEach { batch.update(it.reference, "isRead", true) }
+                    batch.commit().await()
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }

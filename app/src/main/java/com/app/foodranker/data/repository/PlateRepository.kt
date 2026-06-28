@@ -18,12 +18,13 @@ class PlateRepository @Inject constructor(
         return try {
             val snapshot = platesCollection
                 .orderBy("averageScore", Query.Direction.DESCENDING)
-                .limit(limit)
+                .limit(limit + 5)  // over-fetch para compensar los filtrados por reportCount
                 .get()
                 .await()
             val plates = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                 .filter { it.reportCount < 3 }
+                .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
             Result.failure(e)

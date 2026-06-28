@@ -1,11 +1,5 @@
 package com.app.foodranker.utils
 
-import android.util.Log
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
-
 object RewardManager {
 
     // ── XP por acción ─────────────────────────────────────────────
@@ -14,6 +8,7 @@ object RewardManager {
     const val XP_GIVE_RATING      = 5
     const val XP_RECEIVE_RATING   = 10
     const val XP_RECEIVE_LIKE     = 3
+    const val XP_REFERRAL         = 100
 
     // ── Definición de niveles ──────────────────────────────────────
     data class Level(
@@ -55,83 +50,9 @@ object RewardManager {
         Badge("globetrotter", "🌍", "Globetrotter",      "Platos en 3 países distintos"),
         Badge("popular",      "❤️", "Popular",           "50 likes recibidos"),
         Badge("critic",       "⭐", "Crítico",           "10 valoraciones dadas"),
-        Badge("streak_7",     "🔥", "Racha 7 días",      "7 días consecutivos activo"),
         Badge("top10",        "🏆", "Top 10",            "Un plato tuyo en el Top 10")
     )
 
     fun getBadge(id: String): Badge? = ALL_BADGES.find { it.id == id }
-
-    // ── Otorgar XP ────────────────────────────────────────────────
-    // Usamos una transacción para evitar pérdida de XP cuando dos valoraciones
-    // llegan al mismo plato casi a la vez (read-then-write no atómico perdería
-    // uno de los incrementos).
-    suspend fun awardXP(userId: String, amount: Int, firestore: FirebaseFirestore) {
-        if (userId.isEmpty() || userId.startsWith("seed")) return
-        try {
-            val ref = firestore.collection("users").document(userId)
-            val newXP = firestore.runTransaction { tx ->
-                val snap = tx.get(ref)
-                val current = (snap.getLong("xp") ?: 0L).toInt()
-                val updated = current + amount
-                tx.update(ref, mapOf(
-                    "xp" to updated,
-                    "level" to getLevel(updated).number
-                ))
-                updated
-            }.await()
-            Log.d("RewardManager", "XP +$amount → usuario $userId (total: $newXP)")
-        } catch (e: Exception) {
-            Log.e("RewardManager", "Error otorgando XP: ${e.message}")
-        }
-    }
-
-    // ── Comprobar y asignar badges ─────────────────────────────────
-    suspend fun checkAndAwardBadges(userId: String, firestore: FirebaseFirestore) {
-        if (userId.isEmpty() || userId.startsWith("seed")) return
-        try {
-            val userRef = firestore.collection("users").document(userId)
-            val userDoc = userRef.get().await()
-            @Suppress("UNCHECKED_CAST")
-            val current = (userDoc.get("badges") as? List<String>) ?: emptyList()
-            val earned = current.toMutableList()
-
-            // Primer plato
-            val platesSnap = firestore.collection("plates")
-                .whereEqualTo("addedByUserId", userId).limit(1).get().await()
-            if (platesSnap.size() >= 1 && "first_plate" !in earned) earned.add("first_plate")
-
-            // Globetrotter (platos en 3+ países)
-            val allPlates = firestore.collection("plates")
-                .whereEqualTo("addedByUserId", userId).limit(100).get().await()
-            val countries = allPlates.documents.mapNotNull { it.getString("country") }.distinct()
-            if (countries.size >= 3 && "globetrotter" !in earned) earned.add("globetrotter")
-
-            // Crítico (10+ valoraciones dadas)
-            val ratingsSnap = firestore.collection("ratings")
-                .whereEqualTo("userId", userId).get().await()
-            if (ratingsSnap.size() >= 10 && "critic" !in earned) earned.add("critic")
-
-            // Popular (50+ likes recibidos sumando todos sus platos)
-            // Consulta propia sin limit para no subestimar likes en usuarios prolíficos
-            val allPlatesForLikes = firestore.collection("plates")
-                .whereEqualTo("addedByUserId", userId).get().await()
-            val totalLikes = allPlatesForLikes.documents.sumOf { (it.getLong("likes") ?: 0L).toInt() }
-            if (totalLikes >= 50 && "popular" !in earned) earned.add("popular")
-
-            // Top 10 (un plato del usuario en el ranking global)
-            val top10Snap = firestore.collection("plates")
-                .orderBy("averageScore", Query.Direction.DESCENDING)
-                .limit(10).get().await()
-            val isInTop10 = top10Snap.documents.any { it.getString("addedByUserId") == userId }
-            if (isInTop10 && "top10" !in earned) earned.add("top10")
-
-            val newBadges = earned - current.toSet()
-            if (newBadges.isNotEmpty()) {
-                userRef.update("badges", FieldValue.arrayUnion(*newBadges.toTypedArray())).await()
-                Log.d("RewardManager", "Nuevos badges para $userId: $newBadges")
-            }
-        } catch (e: Exception) {
-            Log.e("RewardManager", "Error comprobando badges: ${e.message}")
-        }
-    }
+    // XP and badge writes are handled server-side by Cloud Functions (onRatingCreated, moderatePlateImage)
 }

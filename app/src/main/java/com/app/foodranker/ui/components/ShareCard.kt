@@ -1,5 +1,6 @@
 package com.app.foodranker.ui.components
 
+import com.app.foodranker.utils.formatCompact
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,112 +21,137 @@ import com.app.foodranker.data.model.Plate
 import com.app.foodranker.ui.theme.*
 
 @Composable
-fun ShareCard(plate: Plate, modifier: Modifier = Modifier) {
+fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .width(320.dp)
-            .height(400.dp)
+            .height(480.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(Color.White)
     ) {
-        Column {
-            // Imagen con gradiente
+        // Full-bleed background image
+        if (plate.imageUrl.isNotEmpty()) {
+            AsyncImage(
+                model = plate.imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .background(DividerColor)
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF1A1F19), Color(0xFF2E3A2E))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                if (plate.imageUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = plate.imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                Text(plate.category.emoji, fontSize = 80.sp)
+            }
+        }
+
+        // Dark gradient overlay — lighter at top, heavy at bottom
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.45f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.80f)
+                        ),
+                        startY = 0f,
+                        endY = Float.POSITIVE_INFINITY
                     )
-                } else {
+                )
+        )
+
+        // Top bar: FoodRanker logo + rank badge
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .align(Alignment.TopStart),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color.Black.copy(alpha = 0.55f)
+            ) {
+                Text(
+                    "🍽️ FoodRanker",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+            if (cityRank > 0) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = OrangePrimary
+                ) {
                     Text(
-                        plate.category.emoji,
-                        fontSize = 72.sp,
-                        modifier = Modifier.align(Alignment.Center)
+                        "#$cityRank en ${plate.city}",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
-                // Gradiente sobre imagen
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
-                                startY = 100f
-                            )
-                        )
-                )
-                // Puntuación encima de imagen
+            }
+        }
+
+        // Bottom info block
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomStart)
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                plate.name,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                maxLines = 2
+            )
+            Text(
+                "${plate.restaurantName} · ${plate.city}",
+                color = Color.White.copy(alpha = 0.80f),
+                fontSize = 13.sp,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(20.dp),
                     color = OrangePrimary
                 ) {
                     Text(
                         "★ ${"%.1f".format(plate.averageScore)}/10",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Black.copy(alpha = 0.55f)
+                ) {
+                    Text(
+                        "👥 ${plate.totalRatings.formatCompact()} votos",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
                     )
                 }
             }
-
-            // Contenido
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    plate.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    plate.restaurantName,
-                    fontSize = 14.sp,
-                    color = TextSecondary
-                )
-                Text(
-                    "📍 ${plate.city}, ${plate.country}",
-                    fontSize = 13.sp,
-                    color = TextSecondary
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                // Mini scores
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MiniScoreBadge("😋 Sabor", plate.averageScore)
-                    MiniScoreBadge("👥 ${plate.totalRatings} votos", null)
-                }
-            }
-        }
-
-        // Footer con branding
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
-            color = OrangePrimary
-        ) {
-            Text(
-                "🍽️ FoodRanker — Los mejores platos del mundo",
-                color = Color.White,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(8.dp)
-            )
         }
     }
 }

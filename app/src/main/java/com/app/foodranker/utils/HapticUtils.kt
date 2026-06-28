@@ -17,11 +17,9 @@ object HapticUtils {
     // Tap fuerte — para logros, level-up, primer like en propio plato
     fun heavyTap(context: Context) {
         vibrate(context, 30L, 255)
-        context.mainExecutor.execute {
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                vibrate(context, 20L, 200)
-            }, 80)
-        }
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            vibrate(context, 20L, 200)
+        }, 80)
     }
 
     private fun vibrate(context: Context, durationMs: Long, amplitude: Int) {

@@ -26,9 +26,16 @@ object RemoteConfigManager {
             "enable_following_feed"  to true,
             "onboarding_enabled"     to true,
             "vision_api_enabled"     to true,
-            "min_image_score"        to 0.5f
+            "min_image_score"        to 0.5f,
+            "daily_mission_goal"     to 3L
         ))
         config.fetchAndActivate()
+            .addOnSuccessListener { updated ->
+                android.util.Log.d("RemoteConfig", "fetch OK — valores actualizados: $updated")
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.w("RemoteConfig", "fetch fallido, usando defaults: ${e.message}")
+            }
     }
 
     val premiumPriceMonthly: String get() = config.getString("premium_price_monthly")
@@ -39,4 +46,6 @@ object RemoteConfigManager {
     val enableFollowingFeed: Boolean get() = config.getBoolean("enable_following_feed")
     val onboardingEnabled: Boolean  get() = config.getBoolean("onboarding_enabled")
     val visionApiEnabled: Boolean   get() = config.getBoolean("vision_api_enabled")
+    val minImageScore: Float        get() = config.getDouble("min_image_score").toFloat().coerceIn(0f, 1f)
+    val dailyMissionGoal: Int       get() = config.getLong("daily_mission_goal").toInt().coerceAtLeast(1)
 }

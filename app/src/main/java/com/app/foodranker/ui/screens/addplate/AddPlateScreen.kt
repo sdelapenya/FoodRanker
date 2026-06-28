@@ -2,7 +2,7 @@ package com.app.foodranker.ui.screens.addplate
 
 import android.app.Activity
 import android.net.Uri
-import com.app.foodranker.utils.FoodImageValidator
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,45 +51,69 @@ fun AddPlateScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
-    var plateName        by remember { mutableStateOf("") }
-    var description      by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(PlateCategory.OTHER) }
-    var restaurantName   by remember { mutableStateOf("") }
-    var city             by remember { mutableStateOf("") }
-    var country          by remember { mutableStateOf("") }
-    var flavorScore      by remember { mutableFloatStateOf(7f) }
-    var presentationScore by remember { mutableFloatStateOf(7f) }
-    var valueScore       by remember { mutableFloatStateOf(7f) }
-    var comment          by remember { mutableStateOf("") }
-    var imageUri              by remember { mutableStateOf<Uri?>(null) }
-    var imageValidating       by remember { mutableStateOf(false) }
-    var imageValidationError  by remember { mutableStateOf<String?>(null) }
-    var currentStep           by remember { mutableIntStateOf(1) }
-    var formVisible           by remember { mutableStateOf(false) }
+    val plateName        = viewModel.formName
+    val description      = viewModel.formDescription
+    val selectedCategory = viewModel.formCategory
+    val restaurantName   = viewModel.formRestaurantName
+    val restaurantAddress = viewModel.formRestaurantAddress
+    val city             = viewModel.formCity
+    val country          = viewModel.formCountry
+    val flavorScore      = viewModel.formFlavorScore
+    val presentationScore = viewModel.formPresentationScore
+    val valueScore       = viewModel.formValueScore
+    val comment          = viewModel.formComment
+    val imageUri         = viewModel.formImageUri
+    val imageValidating  = viewModel.formImageValidating
+    val imageValidationError = viewModel.formImageValidationError
+    val currentStep      = viewModel.formCurrentStep
+    var formVisible      by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(100); formVisible = true }
 
-    // Validar imagen con TFLite al seleccionarla
-    LaunchedEffect(imageUri) {
-        val uri = imageUri ?: return@LaunchedEffect
-        imageValidating = true
-        imageValidationError = null
-        val result = FoodImageValidator.validate(context, uri)
-        imageValidating = false
-        if (result.first.not()) { imageValidationError = result.second; imageUri = null }
-    }
-
     val imageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri -> imageUri = uri }
+    ) { uri -> viewModel.onImageSelected(uri) }
+
+    // Confirm discard when form has data
+    val hasData = plateName.isNotEmpty() || imageUri != null || restaurantName.isNotEmpty()
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = currentStep == 1 && hasData) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("¿Descartar plato?", fontWeight = FontWeight.Bold) },
+            text  = { Text("Perderás los datos que has introducido.") },
+            confirmButton = {
+                TextButton(onClick = { showDiscardDialog = false; onNavigateBack() }) {
+                    Text("Descartar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Seguir editando")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(state) {
         if (state is AddPlateState.Success) {
-            AdManager.showInterstitial(
-                activity = context as Activity,
-                onDismiss = { onSuccess(); viewModel.resetState() }
-            )
+            val activity = context as? Activity
+            if (activity != null) {
+                AdManager.showInterstitial(
+                    activity = activity,
+                    onDismiss = { onSuccess(); viewModel.resetState() }
+                )
+            } else {
+                onSuccess()
+                viewModel.resetState()
+            }
         }
     }
 
@@ -102,8 +128,14 @@ fun AddPlateScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (currentStep > 1) currentStep-- else onNavigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                    IconButton(onClick = {
+                        when {
+                            currentStep > 1 -> viewModel.formCurrentStep--
+                            hasData         -> showDiscardDialog = true
+                            else            -> onNavigateBack()
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
@@ -160,14 +192,14 @@ fun AddPlateScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             FoodTextField(
                                 value = plateName,
-                                onValueChange = { plateName = it },
+                                onValueChange = { viewModel.formName = it },
                                 label = "Nombre del plato *",
                                 placeholder = "Ej: Croquetas de jamón ibérico",
                                 maxLength = InputLimits.PLATE_NAME
                             )
                             FoodTextField(
                                 value = description,
-                                onValueChange = { description = it },
+                                onValueChange = { viewModel.formDescription = it },
                                 label = "Descripción (opcional)",
                                 placeholder = "¿Qué lo hace especial?",
                                 singleLine = false,
@@ -184,7 +216,7 @@ fun AddPlateScreen(
                                 PlateCategory.entries.forEach { category ->
                                     FilterChip(
                                         selected = selectedCategory == category,
-                                        onClick = { selectedCategory = category },
+                                        onClick = { viewModel.formCategory = category },
                                         label = { Text("${category.emoji} ${category.displayName}", fontSize = 13.sp) },
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = OrangePrimary,
@@ -199,9 +231,9 @@ fun AddPlateScreen(
 
                 // Botón "Siguiente" del paso 1
                 item {
-                    val step1Valid = plateName.isNotBlank() && imageUri != null && !imageValidating
+                    val step1Valid = plateName.isNotBlank() && imageUri != null && !imageValidating && imageValidationError == null
                     Button(
-                        onClick = { currentStep = 2 },
+                        onClick = { viewModel.formCurrentStep = 2 },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         enabled = step1Valid,
                         shape = RoundedCornerShape(14.dp),
@@ -209,7 +241,7 @@ fun AddPlateScreen(
                     ) {
                         Text("Siguiente →", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                    if (!step1Valid && imageUri == null) {
+                    if (!step1Valid && imageUri == null && imageValidationError == null) {
                         Spacer(Modifier.height(4.dp))
                         Text("Añade una foto y el nombre del plato para continuar",
                             fontSize = 12.sp, color = TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -225,15 +257,22 @@ fun AddPlateScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             FoodTextField(
                                 value = restaurantName,
-                                onValueChange = { restaurantName = it },
+                                onValueChange = { viewModel.formRestaurantName = it },
                                 label = "Restaurante / Bar *",
                                 placeholder = "Nombre del local",
+                                maxLength = InputLimits.RESTAURANT_NAME
+                            )
+                            FoodTextField(
+                                value = restaurantAddress,
+                                onValueChange = { viewModel.formRestaurantAddress = it },
+                                label = "Dirección (opcional)",
+                                placeholder = "Calle, número, etc.",
                                 maxLength = InputLimits.RESTAURANT_NAME
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 FoodTextField(
                                     value = city,
-                                    onValueChange = { city = it },
+                                    onValueChange = { viewModel.formCity = it },
                                     label = "Ciudad *",
                                     placeholder = "Madrid",
                                     modifier = Modifier.weight(1f),
@@ -241,7 +280,7 @@ fun AddPlateScreen(
                                 )
                                 FoodTextField(
                                     value = country,
-                                    onValueChange = { country = it },
+                                    onValueChange = { viewModel.formCountry = it },
                                     label = "País *",
                                     placeholder = "España",
                                     modifier = Modifier.weight(1f),
@@ -256,9 +295,9 @@ fun AddPlateScreen(
                 item {
                     SectionCard(title = "⭐ Tu puntuación") {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            ScoreSlider("Sabor", "😋", flavorScore) { flavorScore = it }
-                            ScoreSlider("Presentación", "🎨", presentationScore) { presentationScore = it }
-                            ScoreSlider("Precio/Calidad", "💰", valueScore) { valueScore = it }
+                            ScoreSlider("Sabor", "😋", flavorScore) { viewModel.formFlavorScore = it }
+                            ScoreSlider("Presentación", "🎨", presentationScore) { viewModel.formPresentationScore = it }
+                            ScoreSlider("Precio/Calidad", "💰", valueScore) { viewModel.formValueScore = it }
 
                             val avg = (flavorScore + presentationScore + valueScore) / 3f
                             Surface(
@@ -282,7 +321,7 @@ fun AddPlateScreen(
 
                             FoodTextField(
                                 value = comment,
-                                onValueChange = { comment = it },
+                                onValueChange = { viewModel.formComment = it },
                                 label = "Comentario (opcional)",
                                 placeholder = "¿Lo recomendarías? ¿Qué lo hace especial?",
                                 singleLine = false,
@@ -306,15 +345,18 @@ fun AddPlateScreen(
                     )
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
                         Button(
                             onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                focusManager.clearFocus()
                                 viewModel.submitPlate(
                                     context = context,
                                     name = plateName,
                                     description = description,
                                     category = selectedCategory,
                                     restaurantName = restaurantName,
-                                    restaurantAddress = "",
+                                    restaurantAddress = restaurantAddress,
                                     city = city,
                                     country = country,
                                     flavorScore = flavorScore,
@@ -330,7 +372,23 @@ fun AddPlateScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
                         ) {
                             if (state is AddPlateState.Loading) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                                val pct = (state as AddPlateState.Loading).uploadProgress
+                                if (pct in 0..100) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            progress = { pct / 100f },
+                                            modifier = Modifier.size(22.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.5.dp
+                                        )
+                                        Text("Subiendo imagen… $pct%", color = Color.White, fontSize = 14.sp)
+                                    }
+                                } else {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                                }
                             } else {
                                 Text("Publicar plato 🚀", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             }
@@ -341,6 +399,14 @@ fun AddPlateScreen(
                                 text = (state as AddPlateState.Error).message,
                                 color = ErrorRed,
                                 fontSize = 13.sp
+                            )
+                        } else if (!isValid) {
+                            Text(
+                                text = "Completa restaurante, ciudad y país para publicar",
+                                color = TextSecondary,
+                                fontSize = 12.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))

@@ -20,13 +20,11 @@ service cloud.firestore {
                     && request.resource.data.referralCount == 0;
 
       allow update: if (
-        // El dueño puede editar perfil y gamificación.
-        // isPremium NO está aquí: solo Cloud Functions puede escribirlo
-        // via Admin SDK para evitar activación sin pagar.
+        // El dueño puede editar perfil.
+        // isPremium, xp, level, badges: solo Cloud Functions via Admin SDK.
         isOwner(userId)
         && changedKeys().hasOnly([
           'name', 'email', 'bio', 'city', 'website', 'photoUrl', 'fcmToken',
-          'xp', 'level', 'badges',
           'referralCode', 'referredByUserId'
         ])
         // referralCode solo se puede escribir si antes no existía
@@ -36,13 +34,8 @@ service cloud.firestore {
         // referredByUserId solo si estaba vacío (no se puede cambiar una vez puesto)
         && (!changedKeys().hasAll(['referredByUserId'])
             || resource.data.referredByUserId == '')
-      ) || (
-        // Otro usuario: solo puede incrementar referralCount en 1
-        isSignedIn()
-        && request.auth.uid != userId
-        && changedKeys().hasOnly(['referralCount'])
-        && request.resource.data.referralCount == resource.data.referralCount + 1
       );
+      // referralCount y XP solo los escribe onReferralCreated Cloud Function via Admin SDK
 
       allow delete: if isOwner(userId);
     }
@@ -56,13 +49,23 @@ service cloud.firestore {
                     && request.resource.data.averageScore == 0
                     && request.resource.data.totalRatings == 0
                     && request.resource.data.likes == 0
-                    && request.resource.data.reportCount == 0;
+                    && request.resource.data.reportCount == 0
+                    && request.resource.data.status == "pending"
+                    && request.resource.data.keys().hasOnly([
+                         'id', 'name', 'description', 'category',
+                         'restaurantName', 'restaurantAddress',
+                         'city', 'country', 'latitude', 'longitude',
+                         'imageUrl', 'addedByUserId', 'addedByUserName',
+                         'averageScore', 'totalRatings', 'createdAt',
+                         'likes', 'likedByUsers', 'reportCount', 'status'
+                       ]);
 
       allow update: if isSignedIn() && (
-        // Dueño: solo puede editar description
+        // Dueño: solo puede editar description una vez aprobado
         (
           request.auth.uid == resource.data.addedByUserId
           && changedKeys().hasOnly(['description'])
+          && resource.data.status == 'approved'
         ) ||
         // Like: el usuario NO estaba en la lista, ahora SÍ
         (
@@ -87,14 +90,8 @@ service cloud.firestore {
         (
           changedKeys().hasOnly(['reportCount'])
           && request.resource.data.reportCount == resource.data.reportCount + 1
-        ) ||
-        // Score: cualquier incremento positivo está permitido (cubre concurrencia y seeder)
-        (
-          changedKeys().hasOnly(['averageScore', 'totalRatings'])
-          && request.resource.data.averageScore >= 0
-          && request.resource.data.averageScore <= 10
-          && request.resource.data.totalRatings > resource.data.totalRatings
         )
+        // averageScore y totalRatings solo los escribe Cloud Functions via Admin SDK
       );
 
       allow delete: if isSignedIn()
@@ -108,9 +105,23 @@ service cloud.firestore {
       allow create: if isSignedIn()
                     && request.resource.data.userId == request.auth.uid
                     && ratingId == request.resource.data.plateId + "_" + request.auth.uid
+                    && request.resource.data.flavorScore >= 1
+                    && request.resource.data.flavorScore <= 10
+                    && request.resource.data.presentationScore >= 1
+                    && request.resource.data.presentationScore <= 10
+                    && request.resource.data.valueScore >= 1
+                    && request.resource.data.valueScore <= 10
                     && request.resource.data.averageScore >= 1
-                    && request.resource.data.averageScore <= 10;
-      allow update: if false;
+                    && request.resource.data.averageScore <= 10
+                    && !('processed' in request.resource.data);
+      // El autor puede actualizar sus puntuaciones y comentario (no userId/plateId/createdAt)
+      allow update: if isSignedIn()
+                    && resource.data.userId == request.auth.uid
+                    && changedKeys().hasOnly(['flavorScore', 'presentationScore', 'valueScore', 'averageScore', 'comment'])
+                    && request.resource.data.flavorScore >= 1 && request.resource.data.flavorScore <= 10
+                    && request.resource.data.presentationScore >= 1 && request.resource.data.presentationScore <= 10
+                    && request.resource.data.valueScore >= 1 && request.resource.data.valueScore <= 10
+                    && request.resource.data.averageScore >= 1 && request.resource.data.averageScore <= 10;
       // Sin delete: evita el exploit "borrar y volver a votar"
       allow delete: if false;
     }
@@ -164,7 +175,10 @@ service cloud.firestore {
     // ── FOLLOWS ────────────────────────────────────────────────
     match /follows/{followId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.followerId == request.auth.uid;
+      // ID determinista followerId_followingId: evita duplicados
+      allow create: if isSignedIn()
+                    && request.resource.data.followerId == request.auth.uid
+                    && followId == request.resource.data.followerId + "_" + request.resource.data.followingId;
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.followerId == request.auth.uid;
     }
@@ -185,10 +199,23 @@ service cloud.firestore {
     // ── REFERRALS ──────────────────────────────────────────────
     match /referrals/{referralId} {
       allow read: if false;
+      // ID determinista referrerId_referredId: evita que un usuario cree múltiples
+      // referrals para el mismo referidor y acumule XP varias veces.
       allow create: if isSignedIn()
                     && request.resource.data.referredId == request.auth.uid
-                    && request.resource.data.referrerId != request.auth.uid;
+                    && request.resource.data.referrerId != request.auth.uid
+                    && referralId == request.resource.data.referrerId + "_" + request.auth.uid;
       allow update, delete: if false;
+    }
+
+    // ── LEAGUES ────────────────────────────────────────────────
+    match /leagues/{leagueId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only Cloud Functions via Admin SDK
+      match /entries/{userId} {
+        allow read: if isSignedIn();
+        allow write: if false; // Only Cloud Functions via Admin SDK
+      }
     }
   }
 }

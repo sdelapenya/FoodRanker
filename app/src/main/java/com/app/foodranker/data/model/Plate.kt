@@ -19,8 +19,15 @@ data class Plate(
     val createdAt: Long = 0L,
     val likes: Int = 0,
     val likedByUsers: List<String> = emptyList(),
-    val reportCount: Int = 0
+    val reportCount: Int = 0,
+    val status: String = ""
 )
+
+object PlateStatus {
+    const val PENDING  = "pending"
+    const val APPROVED = "approved"
+    const val REJECTED = "rejected"
+}
 
 enum class PlateCategory(val displayName: String, val emoji: String) {
     PASTA("Pasta", "🍝"),

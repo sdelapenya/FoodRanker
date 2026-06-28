@@ -28,6 +28,8 @@ class AuthViewModel @Inject constructor(
     val isLoggedIn: Boolean get() = authRepository.isLoggedIn
     val currentUser get() = authRepository.currentUser
 
+    suspend fun awaitAuthReady(): Boolean = authRepository.awaitAuthReady()
+
     fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -35,13 +37,19 @@ class AuthViewModel @Inject constructor(
             _authState.value = if (result.isSuccess) {
                 AuthState.Success(result.getOrThrow())
             } else {
-                AuthState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
+                val error = result.exceptionOrNull()
+                AuthState.Error(
+                    (error as? Exception)?.let { com.app.foodranker.utils.ErrorMapper.toUserMessage(it) }
+                        ?: "Error desconocido"
+                )
             }
         }
     }
 
     fun signOut() {
-        authRepository.signOut()
-        _authState.value = AuthState.Idle
+        viewModelScope.launch {
+            authRepository.signOut()
+            _authState.value = AuthState.Idle
+        }
     }
 }

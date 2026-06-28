@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,8 +37,16 @@ fun TrendingScreen(
     viewModel: TrendingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        val msg = uiState.error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(msg)
+        viewModel.clearError()
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = BackgroundLight,
         topBar = {
             TopAppBar(
@@ -51,12 +59,23 @@ fun TrendingScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.loadTrending() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = OrangePrimary)
+                    IconButton(
+                        onClick = { if (!uiState.isLoading) viewModel.loadTrending() },
+                        enabled = !uiState.isLoading
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = OrangePrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = OrangePrimary)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)

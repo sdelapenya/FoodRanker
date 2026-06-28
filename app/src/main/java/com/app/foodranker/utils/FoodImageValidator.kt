@@ -41,7 +41,7 @@ object FoodImageValidator {
                 val response = callVisionApi(base64)
                     ?: return@withContext Pair(true, "") // Si Vision falla, permitir
 
-                android.util.Log.d("FoodValidator", "Vision response: $response")
+                if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("FoodValidator", "Vision response: $response")
 
                 val responses = response.optJSONArray("responses")
                     ?: return@withContext Pair(true, "")
@@ -54,20 +54,22 @@ object FoodImageValidator {
                     val adult    = safeSearch.optString("adult", "UNKNOWN")
                     val violence = safeSearch.optString("violence", "UNKNOWN")
                     val racy     = safeSearch.optString("racy", "UNKNOWN")
-                    android.util.Log.d("FoodValidator", "SafeSearch — adult:$adult violence:$violence racy:$racy")
+                    if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("FoodValidator", "SafeSearch — adult:$adult violence:$violence racy:$racy")
                     if (adult in REJECTED_LEVELS || violence in REJECTED_LEVELS) {
                         return@withContext Pair(false, "Contenido inapropiado detectado ⚠️\nEsta foto no cumple nuestras normas de comunidad")
                     }
                 }
 
-                // 2. Labels — verificar que hay comida
+                // 2. Labels — verificar que hay comida con score >= min_image_score
                 val labels = first.optJSONArray("labelAnnotations") ?: JSONArray()
-                val descriptions = (0 until labels.length())
-                    .map { labels.getJSONObject(it).optString("description", "").lowercase() }
-                android.util.Log.d("FoodValidator", "Labels: $descriptions")
+                val minScore = RemoteConfigManager.minImageScore
+                if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("FoodValidator", "Labels count: ${labels.length()}, minScore: $minScore")
 
-                val isFood = descriptions.any { label ->
-                    FOOD_LABELS.any { label.contains(it) }
+                val isFood = (0 until labels.length()).any { i ->
+                    val labelObj = labels.getJSONObject(i)
+                    val description = labelObj.optString("description", "").lowercase()
+                    val score = labelObj.optDouble("score", 0.0).toFloat()
+                    score >= minScore && FOOD_LABELS.any { description.contains(it) }
                 }
 
                 if (isFood) Pair(true, "")
@@ -81,7 +83,15 @@ object FoodImageValidator {
 
     private fun encodeImageToBase64(context: Context, uri: Uri): String? {
         return try {
-            val opts = BitmapFactory.Options().apply { inSampleSize = 4 }
+            // Paso 1: decodificar solo los bounds para calcular inSampleSize dinámicamente
+            val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, boundsOpts)
+            }
+            val sampleSize = calculateInSampleSize(boundsOpts, reqWidth = 800, reqHeight = 800)
+
+            // Paso 2: decodificar a la resolución calculada
+            val opts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
             val bitmap = context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, opts)
             } ?: return null
@@ -93,6 +103,20 @@ object FoodImageValidator {
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun calculateInSampleSize(opts: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val height = opts.outHeight
+        val width = opts.outWidth
+        var inSampleSize = 1
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 
     private fun callVisionApi(base64Image: String): JSONObject? {

@@ -53,16 +53,24 @@ object AdManager {
 
     // Mostrar intersticial (al añadir un plato)
     fun showInterstitial(activity: Activity, onDismiss: () -> Unit) {
-        if (interstitialAd != null) {
-            interstitialAd?.fullScreenContentCallback =
+        // Captura local para evitar la race entre el null-check y el .show():
+        // si otro hilo pone interstitialAd=null entre ambas líneas, onDismiss
+        // nunca se llamaría y la navegación quedaría bloqueada.
+        val ad = interstitialAd
+        if (ad != null) {
+            ad.fullScreenContentCallback =
                 object : com.google.android.gms.ads.FullScreenContentCallback() {
                     override fun onAdDismissedFullScreenContent() {
                         interstitialAd = null
-                        loadInterstitial(activity) // precargar el siguiente
+                        loadInterstitial(activity)
+                        onDismiss()
+                    }
+                    override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
+                        interstitialAd = null
                         onDismiss()
                     }
                 }
-            interstitialAd?.show(activity)
+            ad.show(activity)
         } else {
             onDismiss()
         }
@@ -87,16 +95,21 @@ object AdManager {
 
     // Mostrar recompensado (para desbloquear funciones premium)
     fun showRewarded(activity: Activity, onRewarded: () -> Unit, onDismiss: () -> Unit) {
-        if (rewardedAd != null) {
-            rewardedAd?.fullScreenContentCallback =
+        val ad = rewardedAd
+        if (ad != null) {
+            ad.fullScreenContentCallback =
                 object : com.google.android.gms.ads.FullScreenContentCallback() {
                     override fun onAdDismissedFullScreenContent() {
                         rewardedAd = null
                         loadRewarded(activity)
                         onDismiss()
                     }
+                    override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
+                        rewardedAd = null
+                        onDismiss()
+                    }
                 }
-            rewardedAd?.show(activity) {
+            ad.show(activity) {
                 onRewarded()
             }
         } else {

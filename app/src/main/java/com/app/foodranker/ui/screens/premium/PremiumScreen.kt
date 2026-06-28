@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,18 +18,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.utils.AdManager
-import com.app.foodranker.utils.BillingManager
+import com.app.foodranker.viewmodel.BillingViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumScreen(onNavigateBack: () -> Unit) {
     val context = LocalContext.current
+    val billingViewModel: BillingViewModel = hiltViewModel()
     var watchingAd by remember { mutableStateOf(false) }
-    val isPremium     by BillingManager.isPremium.collectAsState()
-    val isBillingAvailable by BillingManager.isAvailable.collectAsState()
-    val price         by BillingManager.price.collectAsState()
+    val isPremium          by billingViewModel.isPremium.collectAsState()
+    val isBillingAvailable by billingViewModel.isAvailable.collectAsState()
+    val price              by billingViewModel.price.collectAsState()
     var billingError  by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
@@ -38,7 +40,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 title = { Text("Premium", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
@@ -139,9 +141,10 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 OutlinedButton(
                     onClick = {
                         watchingAd = true
+                        val activity = context as? Activity ?: run { watchingAd = false; return@OutlinedButton }
                         AdManager.showRewarded(
-                            activity = context as Activity,
-                            onRewarded = { /* Premium temporal en local */ },
+                            activity = activity,
+                            onRewarded = { billingViewModel.grantTemporaryPremium() },
                             onDismiss = { watchingAd = false }
                         )
                     },
@@ -158,8 +161,11 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 // Opción 2 — Suscripción real con Google Play Billing
                 Button(
                     onClick = {
-                        if (isBillingAvailable) {
-                            val ok = BillingManager.launchPurchase(context as Activity)
+                        val activity = context as? Activity
+                        if (activity == null) {
+                            billingError = "No se pudo iniciar la compra. Inténtalo de nuevo."
+                        } else if (isBillingAvailable) {
+                            val ok = billingViewModel.launchPurchase(activity)
                             if (!ok) billingError = "No se pudo iniciar la compra. Inténtalo de nuevo."
                         } else {
                             billingError = "Las compras no están disponibles en este momento."

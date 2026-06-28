@@ -9,9 +9,10 @@ import com.app.foodranker.data.model.Comment
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.data.model.Rating
+import com.app.foodranker.data.repository.PlateRepository
 import com.app.foodranker.utils.InputLimits
+import com.google.firebase.functions.FirebaseFunctions
 import com.app.foodranker.utils.InputLimits.sanitized
-import com.app.foodranker.utils.RewardManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -29,18 +30,25 @@ data class PlateDetailUiState(
     val collections: List<com.app.foodranker.data.model.PlateCollection> = emptyList(),
     val isLoading: Boolean = false,
     val hasUserRated: Boolean = false,
+    val currentUserId: String = "",
     val isLiked: Boolean = false,
     val isSaved: Boolean = false,
     val isSubmittingRating: Boolean = false,
     val isSubmittingComment: Boolean = false,
     val error: String? = null,
-    val successMessage: String? = null
-)
+    val successMessage: String? = null,
+    val cityRank: Int = 0
+) {
+    // Derivado de ratings para evitar desincronización con el campo separado
+    val userRating: Rating? get() = ratings.find { it.userId == currentUserId }
+}
 
 @HiltViewModel
 class PlateDetailViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val plateRepository: PlateRepository,
+    private val functions: FirebaseFunctions
 ) : ViewModel() {
 
     val currentUserId: String get() = auth.currentUser?.uid ?: ""
@@ -59,7 +67,7 @@ class PlateDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = false, error = "Plato no válido")
             return
         }
-        android.util.Log.d("PlateDetail", "Cargando plato con ID: $plateId")
+        if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("PlateDetail", "Cargando plato con ID: $plateId")
         lastLoadTime = System.currentTimeMillis()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -89,7 +97,7 @@ class PlateDetailViewModel @Inject constructor(
                     }
 
                     val plateDoc = plateDeferred.await()
-                    android.util.Log.d("PlateDetail", "Documento existe: ${plateDoc.exists()}")
+                    if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("PlateDetail", "Documento existe: ${plateDoc.exists()}")
 
                     val plate = if (plateDoc.exists()) {
                         plateDoc.toObject(Plate::class.java)?.copy(id = plateDoc.id)
@@ -119,6 +127,19 @@ class PlateDetailViewModel @Inject constructor(
                             }
                     } else null
 
+                    // City rank: plates in same city with higher score, run in parallel
+                    val cityRankDeferred = if (plate != null && plate.city.isNotEmpty()) {
+                        async {
+                            try {
+                                firestore.collection("plates")
+                                    .whereEqualTo("status", com.app.foodranker.data.model.PlateStatus.APPROVED)
+                                    .whereEqualTo("city", plate.city)
+                                    .whereGreaterThan("averageScore", plate.averageScore)
+                                    .limit(100).get().await().size() + 1
+                            } catch (e: Exception) { 0 }
+                        }
+                    } else null
+
                     val ratings = ratingsDeferred.await().documents
                         .mapNotNull { it.toObject(Rating::class.java) }
                         .sortedByDescending { it.createdAt }
@@ -128,14 +149,17 @@ class PlateDetailViewModel @Inject constructor(
                         .sortedByDescending { it.createdAt }
 
                     val isSaved = isSavedDeferred.await()
+                    val cityRank = cityRankDeferred?.await() ?: 0
 
                     _uiState.value = _uiState.value.copy(
                         plate = plate,
                         ratings = ratings,
                         comments = comments,
                         hasUserRated = ratings.any { it.userId == userId },
+                        currentUserId = userId,
                         isLiked = plate?.likedByUsers?.contains(userId) == true,
                         isSaved = isSaved,
+                        cityRank = cityRank,
                         isLoading = false
                     )
                 }
@@ -158,25 +182,13 @@ class PlateDetailViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
-            try {
-                val plateRef = firestore.collection("plates").document(plateId)
-                if (isCurrentlyLiked) {
-                    plateRef.update(
-                        "likedByUsers", FieldValue.arrayRemove(userId),
-                        "likes", FieldValue.increment(-1)
-                    ).await()
-                } else {
-                    plateRef.update(
-                        "likedByUsers", FieldValue.arrayUnion(userId),
-                        "likes", FieldValue.increment(1)
-                    ).await()
-                    // Notificar al dueño del plato si no es el propio usuario
-                    sendLikeNotification(plateId, plate, userId)
-                }
-            } catch (e: Exception) {
-                // Revertir en caso de error
+            val result = plateRepository.toggleLike(plateId, userId)
+            if (result.isFailure) {
                 _uiState.value = _uiState.value.copy(isLiked = isCurrentlyLiked, plate = plate)
-                android.util.Log.e("PlateDetail", "Error toggleLike: ${e.message}")
+                android.util.Log.e("PlateDetail", "Error toggleLike: ${result.exceptionOrNull()?.message}")
+            } else {
+                val nowLiked = result.getOrDefault(false)
+                if (nowLiked) sendLikeNotification(plateId, plate, userId)
             }
         }
     }
@@ -210,7 +222,7 @@ class PlateDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val snap = firestore.collection("collections")
-                    .whereEqualTo("userId", userId).get().await()
+                    .whereEqualTo("userId", userId).limit(50).get().await()
                 val cols = snap.documents.mapNotNull {
                     it.toObject(com.app.foodranker.data.model.PlateCollection::class.java)
                 }
@@ -267,16 +279,16 @@ class PlateDetailViewModel @Inject constructor(
                 val comment = Comment(
                     id = commentId, plateId = plateId,
                     userId = user.uid,
-                    userName = user.displayName ?: "Usuario",
+                    userName = (user.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME),
                     userPhotoUrl = user.photoUrl?.toString() ?: "",
-                    text = clean
+                    text = clean,
+                    createdAt = System.currentTimeMillis()
                 )
                 firestore.collection("comments").document(commentId).set(comment).await()
                 _uiState.value = _uiState.value.copy(
                     comments = listOf(comment) + _uiState.value.comments,
                     isSubmittingComment = false
                 )
-                RewardManager.awardXP(user.uid, 5, firestore)
                 onSuccess()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isSubmittingComment = false)
@@ -327,65 +339,81 @@ class PlateDetailViewModel @Inject constructor(
                     id = ratingId,
                     plateId = plateId,
                     userId = user.uid,
-                    userName = user.displayName ?: "Usuario",
+                    userName = (user.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME),
                     userPhotoUrl = user.photoUrl?.toString() ?: "",
                     flavorScore = safeFlavor,
                     presentationScore = safePresentation,
                     valueScore = safeValue,
                     averageScore = avgScore,
-                    comment = comment.sanitized(InputLimits.RATING_COMMENT)
+                    comment = comment.sanitized(InputLimits.RATING_COMMENT),
+                    createdAt = System.currentTimeMillis()
                 )
 
                 firestore.collection("ratings").document(ratingId).set(rating).await()
 
+                // Score, XP, badges y notificación los actualiza onRatingCreated (Cloud Function).
+                // Calculamos el score localmente solo para el optimistic update de la UI.
                 val plate = _uiState.value.plate ?: return@launch
-                // Reconsultar Firestore para evitar promedio incorrecto si otro
-                // usuario valoró mientras esta pantalla estaba abierta.
-                val allRatings = firestore.collection("ratings")
-                    .whereEqualTo("plateId", plateId).get().await()
-                    .documents.mapNotNull { it.toObject(Rating::class.java) }
-                val newAvg = allRatings.map { it.averageScore }.average()
-
-                firestore.collection("plates").document(plateId).update(
-                    mapOf("averageScore" to newAvg, "totalRatings" to allRatings.size)
-                ).await()
-
-                // Notificar al dueño del plato
-                val ownerUserId = plate.addedByUserId
-                if (ownerUserId.isNotEmpty() && ownerUserId != user.uid) {
-                    val notifId = UUID.randomUUID().toString()
-                    firestore.collection("notifications")
-                        .document(ownerUserId)
-                        .collection("items")
-                        .document(notifId)
-                        .set(mapOf(
-                            "id" to notifId,
-                            "type" to "rating",
-                            "fromUserId" to user.uid,
-                            "fromUserName" to (user.displayName ?: "Alguien"),
-                            "plateId" to plateId,
-                            "plateName" to plate.name,
-                            "score" to avgScore,
-                            "isRead" to false,
-                            "createdAt" to System.currentTimeMillis()
-                        )).await()
-                }
-
-                // XP para quien valora y para el dueño del plato
-                RewardManager.awardXP(user.uid, RewardManager.XP_GIVE_RATING, firestore)
-                if (plate.addedByUserId.isNotEmpty() && plate.addedByUserId != user.uid) {
-                    RewardManager.awardXP(plate.addedByUserId, RewardManager.XP_RECEIVE_RATING, firestore)
-                }
-                RewardManager.checkAndAwardBadges(user.uid, firestore)
+                val oldCount = plate.totalRatings
+                val newCount = oldCount + 1
+                val newAvg = (plate.averageScore * oldCount + avgScore) / newCount
 
                 _uiState.value = _uiState.value.copy(
-                    ratings = allRatings,
+                    ratings = listOf(rating) + _uiState.value.ratings,
                     hasUserRated = true,
                     isSubmittingRating = false,
-                    plate = plate.copy(averageScore = newAvg, totalRatings = allRatings.size)
+                    plate = plate.copy(averageScore = newAvg, totalRatings = newCount)
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isSubmittingRating = false, error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
+            }
+        }
+    }
+
+    fun editRating(
+        plateId: String,
+        flavorScore: Float,
+        presentationScore: Float,
+        valueScore: Float,
+        comment: String
+    ) {
+        val user = auth.currentUser ?: return
+        val ratingId = "${plateId}_${user.uid}"
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSubmittingRating = true)
+            try {
+                val safeFlavor = flavorScore.coerceIn(1f, 10f)
+                val safePresentation = presentationScore.coerceIn(1f, 10f)
+                val safeValue = valueScore.coerceIn(1f, 10f)
+                val avgScore = (safeFlavor + safePresentation + safeValue) / 3.0
+                val cleanComment = comment.sanitized(InputLimits.RATING_COMMENT)
+                firestore.collection("ratings").document(ratingId).update(
+                    mapOf(
+                        "flavorScore" to safeFlavor,
+                        "presentationScore" to safePresentation,
+                        "valueScore" to safeValue,
+                        "averageScore" to avgScore,
+                        "comment" to cleanComment
+                    )
+                ).await()
+                val updatedRating = _uiState.value.userRating?.copy(
+                    flavorScore = safeFlavor,
+                    presentationScore = safePresentation,
+                    valueScore = safeValue,
+                    averageScore = avgScore,
+                    comment = cleanComment
+                )
+                _uiState.value = _uiState.value.copy(
+                    isSubmittingRating = false,
+                    // userRating se deriva automáticamente de ratings (no campo separado)
+                    ratings = _uiState.value.ratings.map { if (it.id == ratingId) updatedRating ?: it else it },
+                    successMessage = "¡Valoración actualizada!"
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isSubmittingRating = false,
+                    error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
+                )
             }
         }
     }
@@ -399,12 +427,14 @@ class PlateDetailViewModel @Inject constructor(
     }
 
     fun awardXpFromAd() {
-        val uid = auth.currentUser?.uid ?: return
+        if (auth.currentUser == null) return
         viewModelScope.launch {
             try {
-                RewardManager.awardXP(uid, 50, firestore)
-                _uiState.value = _uiState.value.copy(successMessage = "+50 XP añadidos a tu perfil!")
-            } catch (e: Exception) { /* silencioso */ }
+                functions.getHttpsCallable("awardAdXp").call().await()
+                _uiState.value = _uiState.value.copy(successMessage = "¡+50 XP ganados por ver el anuncio! ⭐")
+            } catch (e: Exception) {
+                android.util.Log.w("PlateDetail", "awardXpFromAd error: ${e.message}")
+            }
         }
     }
 }

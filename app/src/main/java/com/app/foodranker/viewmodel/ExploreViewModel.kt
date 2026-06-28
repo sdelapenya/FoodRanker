@@ -3,6 +3,7 @@ package com.app.foodranker.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,6 +52,10 @@ class ExploreViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ExploreUiState())
     val uiState: StateFlow<ExploreUiState> = _uiState
 
+    // Caché local de platos sin filtrar. Se recarga si está vacía o han pasado >60s.
+    private var allPlatesCache: List<Plate> = emptyList()
+    @Volatile private var cacheLoadedAt: Long = 0L
+
     private var searchJob: Job? = null
     private var searchUsersJob: Job? = null
 
@@ -58,27 +63,47 @@ class ExploreViewModel @Inject constructor(
 
     fun onQueryChange(query: String) {
         _uiState.value = _uiState.value.copy(query = query)
-        if (_uiState.value.searchMode == SearchMode.USERS) searchUsers() else search()
+        if (_uiState.value.searchMode == SearchMode.USERS) searchUsers() else applyFilters()
     }
 
     fun onCategoryChange(category: PlateCategory?) {
         _uiState.value = _uiState.value.copy(selectedCategory = category)
-        search()
+        applyFilters()
     }
 
     fun onCityChange(city: String) {
         _uiState.value = _uiState.value.copy(selectedCity = city)
-        search()
+        applyFilters()
     }
 
     fun onSortChange(sort: SortOption) {
         _uiState.value = _uiState.value.copy(sortBy = sort)
-        search()
+        applyFilters()
+    }
+
+    // Aplica filtros. Si el caché está obsoleto, hace fetch de Firestore primero.
+    // Usa su propio job para evitar la auto-cancelación que ocurría al llamar a search().
+    private fun applyFilters() {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            val cacheStale = System.currentTimeMillis() - cacheLoadedAt > 60_000L
+            if (allPlatesCache.isEmpty() || cacheStale) {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                delay(300)
+                performFetch()
+            } else {
+                delay(150)
+                applyLocalFilters()
+            }
+        }
     }
 
     fun setSearchMode(mode: SearchMode) {
         _uiState.value = _uiState.value.copy(searchMode = mode)
-        if (mode == SearchMode.USERS) searchUsers()
+        if (mode == SearchMode.USERS) {
+            searchJob?.cancel() // cancelar búsqueda de platos en curso
+            searchUsers()
+        }
     }
 
     fun searchUsers() {
@@ -93,7 +118,7 @@ class ExploreViewModel @Inject constructor(
                 } else {
                     firestore.collection("users")
                         .orderBy("name")
-                        .startAt(q).endAt("$q")
+                        .startAt(q).endAt(q + "")
                         .limit(20).get().await()
                 }
                 val users = snapshot.documents.mapNotNull { doc ->
@@ -106,8 +131,11 @@ class ExploreViewModel @Inject constructor(
                     )
                 }.filter { it.name.isNotEmpty() }
                 _uiState.value = _uiState.value.copy(userResults = users, isLoading = false)
-            } catch (_: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
+                )
             }
         }
     }
@@ -117,59 +145,48 @@ class ExploreViewModel @Inject constructor(
         searchJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             delay(300)
-            try {
-                val state = _uiState.value
-
-                // Cargamos los platos sin filtros en Firestore y filtramos en local
-                // para evitar índices compuestos. Excluimos platos con 3+ reportes.
-                val snapshot = firestore.collection("plates")
-                    .limit(100)
-                    .get()
-                    .await()
-
-                var plates = snapshot.documents
-                    .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                    .filter { it.reportCount < 3 }
-
-                // Filtro por categoría (local)
-                if (state.selectedCategory != null) {
-                    plates = plates.filter { it.category == state.selectedCategory }
-                }
-
-                // Filtro por ciudad (local)
-                if (state.selectedCity.isNotBlank()) {
-                    plates = plates.filter {
-                        it.city.contains(state.selectedCity, ignoreCase = true)
-                    }
-                }
-
-                // Filtro por nombre/restaurante/ciudad (local)
-                if (state.query.isNotBlank()) {
-                    plates = plates.filter {
-                        it.name.contains(state.query, ignoreCase = true) ||
-                                it.restaurantName.contains(state.query, ignoreCase = true) ||
-                                it.city.contains(state.query, ignoreCase = true)
-                    }
-                }
-
-                // Ordenación (local)
-                plates = when (state.sortBy) {
-                    SortOption.SCORE   -> plates.sortedByDescending { it.averageScore }
-                    SortOption.RECENT  -> plates.sortedByDescending { it.createdAt }
-                    SortOption.RATINGS -> plates.sortedByDescending { it.totalRatings }
-                    SortOption.LIKES   -> plates.sortedByDescending { it.likes }
-                }
-
-                _uiState.value = _uiState.value.copy(
-                    results = plates,
-                    isLoading = false
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
-                )
-            }
+            performFetch()
         }
+    }
+
+    private suspend fun performFetch() {
+        try {
+            val snapshot = firestore.collection("plates")
+                .orderBy("averageScore", Query.Direction.DESCENDING)
+                .limit(100)
+                .get()
+                .await()
+
+            allPlatesCache = snapshot.documents
+                .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                .filter { it.reportCount < 3 }
+            cacheLoadedAt = System.currentTimeMillis()
+
+            applyLocalFilters()
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
+            )
+        }
+    }
+
+    private fun applyLocalFilters() {
+        val state = _uiState.value
+        var plates = allPlatesCache
+        if (state.selectedCategory != null) plates = plates.filter { it.category == state.selectedCategory }
+        if (state.selectedCity.isNotBlank()) plates = plates.filter { it.city.contains(state.selectedCity, ignoreCase = true) }
+        if (state.query.isNotBlank()) plates = plates.filter {
+            it.name.contains(state.query, ignoreCase = true) ||
+            it.restaurantName.contains(state.query, ignoreCase = true) ||
+            it.city.contains(state.query, ignoreCase = true)
+        }
+        plates = when (state.sortBy) {
+            SortOption.SCORE   -> plates.sortedByDescending { it.averageScore }
+            SortOption.RECENT  -> plates.sortedByDescending { it.createdAt }
+            SortOption.RATINGS -> plates.sortedByDescending { it.totalRatings }
+            SortOption.LIKES   -> plates.sortedByDescending { it.likes }
+        }
+        _uiState.value = _uiState.value.copy(results = plates, isLoading = false)
     }
 }

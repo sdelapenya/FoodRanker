@@ -1,0 +1,44 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "plates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "averageScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "plates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "city", "order": "ASCENDING" },
+        { "fieldPath": "averageScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "plates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "addedByUserId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "city", "order": "ASCENDING" },
+        { "fieldPath": "xp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "xp", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

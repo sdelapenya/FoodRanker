@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,9 +40,15 @@ import androidx.compose.animation.core.*
 fun ExploreScreen(
     onNavigateBack: () -> Unit,
     onPlateClick: (String) -> Unit,
+    onUserClick: (String) -> Unit = {},
+    startInUsersMode: Boolean = false,
     viewModel: ExploreViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(startInUsersMode) {
+        if (startInUsersMode) viewModel.setSearchMode(com.app.foodranker.viewmodel.SearchMode.USERS)
+    }
     var showSortMenu by remember { mutableStateOf(false) }
     var isGridView  by remember { mutableStateOf(false) }
 
@@ -60,7 +67,7 @@ fun ExploreScreen(
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
-                                Icons.Default.ArrowBack,
+                                Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Volver",
                                 tint = TextPrimary
                             )
@@ -207,7 +214,7 @@ fun ExploreScreen(
                             }
                         }
                         items(uiState.userResults, key = { it.id }) { user ->
-                            UserResultCard(user = user, onClick = { onPlateClick(user.id) })
+                            UserResultCard(user = user, onClick = { onUserClick(user.id) })
                         }
                     }
                 }
@@ -243,6 +250,16 @@ fun ExploreScreen(
             ) { gridView ->
             if (gridView) {
                 // Vista cuadrícula
+                if (uiState.results.isEmpty()) {
+                    EmptyStateCentered(
+                        title = if (uiState.query.isNotEmpty()) "Sin resultados" else "Nada que mostrar aquí",
+                        message = if (uiState.query.isNotEmpty())
+                            "Prueba con otro término o revisa la ortografía de «${uiState.query}»."
+                        else "Cambia de categoría o usa la búsqueda para descubrir platos.",
+                        modifier = Modifier.fillMaxSize().padding(vertical = 24.dp),
+                        icon = if (uiState.query.isNotEmpty()) Icons.Outlined.SearchOff else Icons.Outlined.Search
+                    )
+                } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
@@ -266,6 +283,7 @@ fun ExploreScreen(
                             ExploreGridCard(plate = plate, onClick = { onPlateClick(plate.id) })
                         }
                     }
+                }
                 }
             } else {
                 // Vista lista (gridView == false)
@@ -311,15 +329,6 @@ fun ExploreScreen(
             }
             } // fin AnimatedContent gridView
             } // fin else (no loading)
-
-            if (!uiState.isLoading && uiState.results.isEmpty() && isGridView) {
-                EmptyStateCentered(
-                    title = "Nada que mostrar aquí",
-                    message = "Cambia de categoría o usa la búsqueda.",
-                    modifier = Modifier.padding(vertical = 24.dp),
-                    icon = Icons.Outlined.Search
-                )
-            }
         }
     }
 }

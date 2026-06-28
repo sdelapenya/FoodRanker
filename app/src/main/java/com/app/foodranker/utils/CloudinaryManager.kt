@@ -28,7 +28,8 @@ object CloudinaryManager {
         context: Context,
         imageUri: Uri,
         onSuccess: (String) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
+        onProgress: (percent: Int) -> Unit = {}
     ) {
         val preset = BuildConfig.CLOUDINARY_UPLOAD_PRESET.trim()
         val request = MediaManager.get()
@@ -45,15 +46,22 @@ object CloudinaryManager {
         uploadRequest
             .callback(object : UploadCallback {
                 override fun onStart(requestId: String) {}
-                override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {}
+                override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {
+                    if (totalBytes > 0) onProgress(((bytes * 100) / totalBytes).toInt())
+                }
                 override fun onSuccess(requestId: String, resultData: Map<*, *>) {
                     val url = resultData["secure_url"] as? String ?: ""
+                    if (url.isBlank()) { onError("No se pudo obtener la URL de la imagen"); return }
                     onSuccess(url)
                 }
                 override fun onError(requestId: String, error: ErrorInfo) {
                     onError(error.description)
                 }
-                override fun onReschedule(requestId: String, error: ErrorInfo) {}
+                // onReschedule ocurre con mala red. Sin este callback la coroutine
+                // que espera onSuccess/onError quedaría suspendida para siempre.
+                override fun onReschedule(requestId: String, error: ErrorInfo) {
+                    onError(error.description)
+                }
             })
             .dispatch(context)
     }

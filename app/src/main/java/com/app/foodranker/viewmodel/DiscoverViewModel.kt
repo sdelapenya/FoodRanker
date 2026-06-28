@@ -1,27 +1,29 @@
 package com.app.foodranker.viewmodel
 
-import android.content.Context
 import com.app.foodranker.BuildConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.Query
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.Rating
+import com.app.foodranker.data.repository.NotificationRepository
+import com.app.foodranker.data.repository.PlateRepository
 import com.app.foodranker.utils.InputLimits
 import com.app.foodranker.utils.InputLimits.sanitized
 import com.app.foodranker.utils.ConnectivityObserver
+import com.app.foodranker.utils.DailyMissionManager
 import com.app.foodranker.utils.MealDBSeeder
-import com.app.foodranker.utils.NotificationHelper
+import com.app.foodranker.utils.ReferralManager
+import com.app.foodranker.utils.RemoteConfigManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
@@ -29,27 +31,33 @@ import javax.inject.Inject
 
 data class DiscoverUiState(
     val plates: List<Plate> = emptyList(),
+    val nearbyPlates: List<Plate> = emptyList(),
+    val followingPlates: List<Plate> = emptyList(),
+    val selectedTab: Int = 0,
+    val userCity: String = "",
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val isLoadingFollowing: Boolean = false,
+    val hasMorePlates: Boolean = true,
     val unreadNotificationCount: Int = 0,
     val seedingProgress: Pair<Int, Int>? = null,
     val reportFeedback: String? = null,
     val ratingFeedback: String? = null,
     val savedPlateIds: Set<String> = emptySet(),
-    val isLoadingMore: Boolean = false,
-    val hasMorePlates: Boolean = true,
-    val feedMode: FeedMode = FeedMode.FOR_YOU,
-    val followingPlates: List<Plate> = emptyList(),
-    val isLoadingFollowing: Boolean = false
+    val dailyMissionProgress: Int = 0,
+    val dailyMissionGoal: Int = 3,
+    val voteStreak: Int = 0
 )
-
-enum class FeedMode { FOR_YOU, FOLLOWING }
 
 @HiltViewModel
 class DiscoverViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    @ApplicationContext private val context: Context,
-    private val connectivityObserver: ConnectivityObserver
+    private val connectivityObserver: ConnectivityObserver,
+    private val plateRepository: PlateRepository,
+    private val referralManager: ReferralManager,
+    private val dailyMissionManager: DailyMissionManager,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverUiState())
@@ -59,16 +67,51 @@ class DiscoverViewModel @Inject constructor(
 
     val currentUserId: String get() = auth.currentUser?.uid ?: ""
 
-    private var notifListener: ListenerRegistration? = null
     @Volatile private var lastDocument: DocumentSnapshot? = null
     private val PAGE_SIZE = 20L
-    @Volatile private var isFirstNotifLoad = true
     @Volatile private var lastLoadTime = 0L
 
-    fun setFeedMode(mode: FeedMode) {
-        _uiState.value = _uiState.value.copy(feedMode = mode)
-        if (mode == FeedMode.FOLLOWING && _uiState.value.followingPlates.isEmpty()) {
-            loadFollowingPlates()
+    init {
+        viewModelScope.launch {
+            notificationRepository.unreadCount.collect { count ->
+                _uiState.value = _uiState.value.copy(unreadNotificationCount = count)
+            }
+        }
+    }
+
+    fun applyInviteCode(code: String) {
+        viewModelScope.launch {
+            try { referralManager.applyReferralCode(code) }
+            catch (e: Exception) {
+                android.util.Log.w("DiscoverVM", "applyInviteCode error: ${e.message}")
+            }
+        }
+    }
+
+    fun setTab(index: Int) {
+        _uiState.value = _uiState.value.copy(selectedTab = index)
+        when (index) {
+            1 -> if (_uiState.value.nearbyPlates.isEmpty()) loadNearbyPlates()
+            2 -> if (_uiState.value.followingPlates.isEmpty()) loadFollowingPlates()
+        }
+    }
+
+    fun loadNearbyPlates() {
+        val city = _uiState.value.userCity.ifEmpty { return }
+        viewModelScope.launch {
+            try {
+                // Requiere índice compuesto en Firebase Console:
+                // Collection: plates | Fields: city ASC, averageScore DESC
+                val plates = firestore.collection("plates")
+                    .whereEqualTo("city", city)
+                    .orderBy("averageScore", Query.Direction.DESCENDING)
+                    .limit(30).get().await()
+                    .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                    .filter { it.reportCount < 3 }
+                _uiState.value = _uiState.value.copy(nearbyPlates = plates)
+            } catch (e: Exception) {
+                android.util.Log.e("DiscoverVM", "Error loadNearbyPlates: ${e.message}")
+            }
         }
     }
 
@@ -77,9 +120,9 @@ class DiscoverViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingFollowing = true)
             try {
-                // Obtener IDs de usuarios seguidos
+                // Obtener IDs de usuarios seguidos (hasta 90)
                 val followsSnap = firestore.collection("follows")
-                    .whereEqualTo("followerId", userId).limit(30).get().await()
+                    .whereEqualTo("followerId", userId).limit(90).get().await()
                 val followingIds = followsSnap.documents.mapNotNull { it.getString("followingId") }
 
                 if (followingIds.isEmpty()) {
@@ -87,14 +130,20 @@ class DiscoverViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Cargar platos de esos usuarios
-                val platesSnap = firestore.collection("plates")
-                    .whereIn("addedByUserId", followingIds.take(30))
-                    .orderBy("createdAt", Query.Direction.DESCENDING)
-                    .limit(30).get().await()
-                val plates = platesSnap.documents
-                    .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                    .filter { it.reportCount < 3 }
+                // whereIn acepta máximo 30 IDs — dividir en batches paralelos
+                val plates = coroutineScope {
+                    followingIds.chunked(30).map { batch ->
+                        async {
+                            firestore.collection("plates")
+                                .whereIn("addedByUserId", batch)
+                                .orderBy("createdAt", Query.Direction.DESCENDING)
+                                .limit(30).get().await()
+                                .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                        }
+                    }.flatMap { it.await() }
+                }.filter { it.reportCount < 3 }
+                    .sortedByDescending { it.createdAt }
+                    .take(90)
                 _uiState.value = _uiState.value.copy(followingPlates = plates, isLoadingFollowing = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoadingFollowing = false)
@@ -117,10 +166,13 @@ class DiscoverViewModel @Inject constructor(
                 lastDocument = docs.lastOrNull() ?: cursor
                 val more = docs.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                     .filter { it.reportCount < 3 }
+                // Seguimos paginando mientras Firestore devuelva páginas completas,
+                // aunque todos los docs de esta página estén filtrados por reportCount.
+                val hasMore = docs.size >= PAGE_SIZE
                 _uiState.value = _uiState.value.copy(
                     plates = _uiState.value.plates + more,
                     isLoadingMore = false,
-                    hasMorePlates = docs.size >= PAGE_SIZE
+                    hasMorePlates = hasMore
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoadingMore = false)
@@ -129,135 +181,13 @@ class DiscoverViewModel @Inject constructor(
     }
 
     fun seedFromMealDB() {
-        val userId = currentUserId.ifEmpty { return }
+        if (!BuildConfig.DEBUG) return
+        if (currentUserId.isEmpty()) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(seedingProgress = Pair(0, 112))
-            var inserted = 0
-
-            val mealDbCategories = listOf(
-                "Seafood" to com.app.foodranker.data.model.PlateCategory.SEAFOOD,
-                "Pasta"   to com.app.foodranker.data.model.PlateCategory.PASTA,
-                "Beef"    to com.app.foodranker.data.model.PlateCategory.STEAK,
-                "Dessert" to com.app.foodranker.data.model.PlateCategory.DESSERT,
-                "Breakfast" to com.app.foodranker.data.model.PlateCategory.BREAKFAST,
-                "Chicken" to com.app.foodranker.data.model.PlateCategory.OTHER,
-                "Starter" to com.app.foodranker.data.model.PlateCategory.TAPAS,
-                "Lamb"    to com.app.foodranker.data.model.PlateCategory.STEAK,
-                "Miscellaneous" to com.app.foodranker.data.model.PlateCategory.OTHER,
-                "Pork"    to com.app.foodranker.data.model.PlateCategory.STEAK,
-                "Vegan"   to com.app.foodranker.data.model.PlateCategory.SALAD,
-                "Vegetarian" to com.app.foodranker.data.model.PlateCategory.SALAD,
-                "Side"    to com.app.foodranker.data.model.PlateCategory.TAPAS,
-                "Goat"    to com.app.foodranker.data.model.PlateCategory.STEAK
-            )
-            val total = mealDbCategories.size * 8
-            _uiState.value = _uiState.value.copy(seedingProgress = Pair(0, total))
-
-            // Prefetch Pexels images por categoría (alta resolución 1880px)
-            val pexelsPool = mutableMapOf<com.app.foodranker.data.model.PlateCategory, MutableList<String>>()
-            val pexelsQueries = mapOf(
-                com.app.foodranker.data.model.PlateCategory.SEAFOOD   to "seafood dish restaurant",
-                com.app.foodranker.data.model.PlateCategory.PASTA     to "pasta italian dish",
-                com.app.foodranker.data.model.PlateCategory.STEAK     to "grilled meat steak",
-                com.app.foodranker.data.model.PlateCategory.DESSERT   to "dessert cake sweet",
-                com.app.foodranker.data.model.PlateCategory.BREAKFAST to "breakfast food plate",
-                com.app.foodranker.data.model.PlateCategory.TAPAS     to "appetizer starter food",
-                com.app.foodranker.data.model.PlateCategory.SALAD     to "salad vegetarian bowl",
-                com.app.foodranker.data.model.PlateCategory.OTHER     to "gourmet food dish"
-            )
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                pexelsQueries.forEach { (cat, q) ->
-                    try {
-                        val encoded = java.net.URLEncoder.encode(q, "UTF-8")
-                        val conn = java.net.URL("https://api.pexels.com/v1/search?query=$encoded&per_page=15&orientation=portrait")
-                            .openConnection() as java.net.HttpURLConnection
-                        conn.setRequestProperty("Authorization", com.app.foodranker.BuildConfig.PEXELS_API_KEY)
-                        conn.connectTimeout = 8_000; conn.readTimeout = 8_000
-                        if (conn.responseCode == 200) {
-                            val photos = org.json.JSONObject(conn.inputStream.bufferedReader().readText())
-                                .optJSONArray("photos") ?: return@forEach
-                            val urls = mutableListOf<String>()
-                            for (i in 0 until photos.length()) {
-                                val src = photos.getJSONObject(i).optJSONObject("src")
-                                val url = src?.optString("large2x") ?: src?.optString("large") ?: continue
-                                if (url.isNotBlank()) urls.add(url)
-                            }
-                            if (urls.isNotEmpty()) pexelsPool[cat] = urls.toMutableList()
-                        }
-                        conn.disconnect()
-                    } catch (e: Exception) { android.util.Log.w("Seeder", "Pexels $cat: ${e.message}") }
-                }
+            MealDBSeeder.seed { current, total ->
+                _uiState.value = _uiState.value.copy(seedingProgress = Pair(current, total))
             }
-
-            for ((catName, plateCat) in mealDbCategories) {
-                try {
-                    val listJson = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        java.net.URL("https://www.themealdb.com/api/json/v1/1/filter.php?c=$catName").readText()
-                    }
-                    val mealIds = org.json.JSONObject(listJson).optJSONArray("meals")?.let { arr ->
-                        (0 until arr.length()).map { arr.getJSONObject(it).getString("idMeal") }
-                    }?.shuffled()?.take(8) ?: continue
-
-                    for (mealId in mealIds) {
-                        try {
-                            val detailJson = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                java.net.URL("https://www.themealdb.com/api/json/v1/1/lookup.php?i=$mealId").readText()
-                            }
-                            val meal = org.json.JSONObject(detailJson).optJSONArray("meals")?.getJSONObject(0) ?: continue
-                            val area = meal.optString("strArea", "International")
-                            val desc = meal.optString("strInstructions", "")
-                                .replace("\r\n", " ").replace("\n", " ").trim()
-                                .take(220).let { if (it.length == 220) "$it..." else it }
-                            val imgUrl = pexelsPool[plateCat]?.removeFirstOrNull()
-                                ?: meal.optString("strMealThumb", "")
-                            val ratings = kotlin.random.Random.nextInt(20, 380)
-                            val score   = (kotlin.random.Random.nextDouble(7.3, 9.85) * 10).toInt() / 10.0
-                            val city = when(area) {
-                                "Italian"->"Roma";"French"->"París";"Japanese"->"Tokio"
-                                "Mexican"->"Ciudad de México";"Indian"->"Mumbai";"Chinese"->"Shanghái"
-                                "British"->"Londres";"American"->"Nueva York";"Spanish"->"Madrid"
-                                "Greek"->"Atenas";"Thai"->"Bangkok";"Moroccan"->"Marrakech"
-                                "Turkish"->"Estambul";"Portuguese"->"Lisboa";"Croatian"->"Dubrovnik"
-                                else-> listOf("Roma","Londres","París","Tokio","Nueva York").random()
-                            }
-                            val country = when(area) {
-                                "Italian"->"Italia";"French"->"Francia";"Japanese"->"Japón"
-                                "Mexican"->"México";"Indian"->"India";"Chinese"->"China"
-                                "British"->"Reino Unido";"American"->"EE.UU.";"Spanish"->"España"
-                                "Greek"->"Grecia";"Thai"->"Tailandia";"Moroccan"->"Marruecos"
-                                "Turkish"->"Turquía";"Portuguese"->"Portugal";"Croatian"->"Croacia"
-                                else-> listOf("Italia","Francia","Japón","España","EE.UU.").random()
-                            }
-                            val restaurant = when(area){
-                                "Italian"->"Trattoria del Centro";"French"->"Brasserie Centrale"
-                                "Japanese"->"Izakaya Yuki";"Mexican"->"Cantina El Pueblo"
-                                "Indian"->"Spice Garden";"Chinese"->"Golden Dragon"
-                                "British"->"The Crown Pub";"American"->"Downtown Diner"
-                                "Spanish"->"Taberna El Rincón";"Greek"->"Taverna Kyria"
-                                "Thai"->"Bangkok Kitchen";"Moroccan"->"Riad Zahra"
-                                else->"Local Restaurant"
-                            }
-                            // Reglas Firestore requieren: averageScore=0, totalRatings=0, likes=0, reportCount=0 en create
-                            val plate = com.app.foodranker.data.model.Plate(
-                                id="mdb_$mealId", name=meal.optString("strMeal"),
-                                description=desc, category=plateCat,
-                                restaurantName=restaurant,
-                                city=city, country=country, imageUrl=imgUrl,
-                                addedByUserId=userId, addedByUserName="FoodRanker Team",
-                                averageScore=0.0, totalRatings=0, likes=0, reportCount=0,
-                                createdAt=System.currentTimeMillis() - kotlin.random.Random.nextLong(0, 90L*24*3600*1000)
-                            )
-                            val plateRef = firestore.collection("plates").document(plate.id)
-                            plateRef.set(plate).await()
-                            // Las reglas solo permiten update de averageScore+totalRatings juntos
-                            plateRef.update(mapOf("averageScore" to score, "totalRatings" to ratings)).await()
-                            inserted++
-                            _uiState.value = _uiState.value.copy(seedingProgress = Pair(inserted, total))
-                        } catch (e: Exception) { android.util.Log.e("Seeder", "meal $mealId: ${e.message}") }
-                    }
-                } catch (e: Exception) { android.util.Log.e("Seeder", "cat $catName: ${e.message}") }
-            }
-            android.util.Log.d("Seeder", "Completo: $inserted platos")
             _uiState.value = _uiState.value.copy(seedingProgress = null)
             loadPlates()
         }
@@ -272,7 +202,16 @@ class DiscoverViewModel @Inject constructor(
         lastDocument = null
         lastLoadTime = System.currentTimeMillis()
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, hasMorePlates = true)
+            val missionProgress = dailyMissionManager.getProgress()
+            val missionGoal = RemoteConfigManager.dailyMissionGoal
+            val streak = dailyMissionManager.getStreak()
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                hasMorePlates = true,
+                dailyMissionProgress = missionProgress,
+                dailyMissionGoal = missionGoal,
+                voteStreak = streak
+            )
             try {
                 val snapshot = firestore.collection("plates")
                     .orderBy("averageScore", Query.Direction.DESCENDING)
@@ -284,7 +223,6 @@ class DiscoverViewModel @Inject constructor(
                 val plates = docs
                     .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                     .filter { it.reportCount < 3 }
-                    .shuffled()
 
                 _uiState.value = _uiState.value.copy(
                     plates = plates,
@@ -292,16 +230,36 @@ class DiscoverViewModel @Inject constructor(
                     hasMorePlates = docs.size >= PAGE_SIZE
                 )
 
-                // Cargar saves en segundo plano — si falla no bloquea el feed
+                // Load saves + user city in parallel
                 val userId = currentUserId
                 if (userId.isNotEmpty()) {
-                    try {
-                        val savedIds = firestore.collection("saves")
-                            .whereEqualTo("userId", userId).get().await()
-                            .documents.mapNotNull { it.getString("plateId") }.toSet()
-                        _uiState.value = _uiState.value.copy(savedPlateIds = savedIds)
-                    } catch (e: Exception) {
-                        android.util.Log.w("DiscoverVM", "No se pudieron cargar saves: ${e.message}")
+                    coroutineScope {
+                        val savesDeferred = async {
+                            try {
+                                firestore.collection("saves")
+                                    .whereEqualTo("userId", userId).limit(500).get().await()
+                                    .documents.mapNotNull { it.getString("plateId") }.toSet()
+                            } catch (e: Exception) {
+                                android.util.Log.w("DiscoverVM", "No se pudieron cargar saves: ${e.message}")
+                                null
+                            }
+                        }
+                        val cityDeferred = async {
+                            try {
+                                firestore.collection("users").document(userId)
+                                    .get().await().getString("city") ?: ""
+                            } catch (e: Exception) {
+                                android.util.Log.w("DiscoverVM", "No se pudo cargar ciudad: ${e.message}")
+                                ""
+                            }
+                        }
+                        savesDeferred.await()?.let { savedIds ->
+                            _uiState.value = _uiState.value.copy(savedPlateIds = savedIds)
+                        }
+                        val city = cityDeferred.await()
+                        if (city.isNotEmpty()) {
+                            _uiState.value = _uiState.value.copy(userCity = city)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -354,26 +312,24 @@ class DiscoverViewModel @Inject constructor(
             ?: return
         val isCurrentlyLiked = userId in plate.likedByUsers
 
-        val updated = plate.copy(
+        applyPlateUpdate(plateId, plate.copy(
             likes = if (isCurrentlyLiked) plate.likes - 1 else plate.likes + 1,
             likedByUsers = if (isCurrentlyLiked) plate.likedByUsers - userId
                            else plate.likedByUsers + userId
-        )
-        applyPlateUpdate(plateId, updated)
+        ))
 
         viewModelScope.launch {
-            try {
-                val ref = firestore.collection("plates").document(plateId)
-                if (isCurrentlyLiked) {
-                    ref.update("likedByUsers", FieldValue.arrayRemove(userId), "likes", FieldValue.increment(-1)).await()
-                    com.app.foodranker.utils.AnalyticsManager.logPlateUnliked(plateId)
-                } else {
-                    ref.update("likedByUsers", FieldValue.arrayUnion(userId), "likes", FieldValue.increment(1)).await()
+            val result = plateRepository.toggleLike(plateId, userId)
+            if (result.isFailure) {
+                applyPlateUpdate(plateId, plate)
+            } else {
+                val nowLiked = result.getOrDefault(false)
+                if (nowLiked) {
                     com.app.foodranker.utils.AnalyticsManager.logPlateLiked(plateId)
                     sendLikeNotification(plateId, plate, userId)
+                } else {
+                    com.app.foodranker.utils.AnalyticsManager.logPlateUnliked(plateId)
                 }
-            } catch (e: Exception) {
-                applyPlateUpdate(plateId, plate)
             }
         }
     }
@@ -399,43 +355,39 @@ class DiscoverViewModel @Inject constructor(
                 val ratingId = "${plateId}_${user.uid}"
                 val rating = Rating(
                     id = ratingId, plateId = plateId, userId = user.uid,
-                    userName = user.displayName ?: "Usuario",
+                    userName = (user.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME),
                     userPhotoUrl = user.photoUrl?.toString() ?: "",
                     flavorScore = safeFlavor, presentationScore = safePresentation,
                     valueScore = safeValue, averageScore = avgScore,
-                    comment = comment.sanitized(InputLimits.RATING_COMMENT)
+                    comment = comment.sanitized(InputLimits.RATING_COMMENT),
+                    createdAt = System.currentTimeMillis()
                 )
                 firestore.collection("ratings").document(ratingId).set(rating).await()
 
+                // Score, XP, badges y notificación los actualiza onRatingCreated (Cloud Function).
+                // Calculamos el score localmente solo para el optimistic update de la UI.
                 val plate = _uiState.value.plates.find { it.id == plateId }
                     ?: _uiState.value.followingPlates.find { it.id == plateId }
                     ?: return@launch
-                val allRatings = firestore.collection("ratings")
-                    .whereEqualTo("plateId", plateId).get().await()
-                    .documents.mapNotNull { it.toObject(Rating::class.java) }
-                val newAvg = allRatings.map { it.averageScore }.average()
-                firestore.collection("plates").document(plateId)
-                    .update("averageScore", newAvg, "totalRatings", allRatings.size).await()
+                val oldCount = plate.totalRatings
+                val newCount = oldCount + 1
+                val newAvg = (plate.averageScore * oldCount + avgScore) / newCount
+                applyPlateUpdate(plateId, plate.copy(averageScore = newAvg, totalRatings = newCount))
 
-                val updated = plate.copy(averageScore = newAvg, totalRatings = allRatings.size)
-                applyPlateUpdate(plateId, updated)
-
-                val ownerUserId = plate.addedByUserId
-                if (ownerUserId.isNotEmpty() && ownerUserId != user.uid) {
-                    val notifId = UUID.randomUUID().toString()
-                    firestore.collection("notifications").document(ownerUserId).collection("items")
-                        .document(notifId).set(mapOf(
-                            "id" to notifId, "type" to "rating",
-                            "fromUserId" to user.uid,
-                            "fromUserName" to (user.displayName ?: "Alguien"),
-                            "plateId" to plateId, "plateName" to plate.name,
-                            "score" to avgScore, "isRead" to false,
-                            "createdAt" to System.currentTimeMillis()
-                        )).await()
-                    com.app.foodranker.utils.RewardManager.awardXP(ownerUserId, com.app.foodranker.utils.RewardManager.XP_RECEIVE_RATING, firestore)
+                // Daily mission tracking
+                val newProgress = dailyMissionManager.incrementVote()
+                val newStreak = dailyMissionManager.getStreak()
+                val goal = _uiState.value.dailyMissionGoal
+                _uiState.value = _uiState.value.copy(
+                    dailyMissionProgress = newProgress,
+                    voteStreak = newStreak
+                )
+                if (newProgress == goal) {
+                    val streakMsg = if (newStreak >= 2) " · Racha: ${newStreak} días 🔥" else ""
+                    _uiState.value = _uiState.value.copy(
+                        ratingFeedback = "🎯 ¡Misión completada! Vota $goal platos al día para ganar XP$streakMsg"
+                    )
                 }
-                com.app.foodranker.utils.RewardManager.awardXP(user.uid, com.app.foodranker.utils.RewardManager.XP_GIVE_RATING, firestore)
-                com.app.foodranker.utils.RewardManager.checkAndAwardBadges(user.uid, firestore)
             } catch (e: Exception) {
                 android.util.Log.e("DiscoverVM", "Error submitRating: ${e.message}")
             }
@@ -461,57 +413,13 @@ class DiscoverViewModel @Inject constructor(
     private fun applyPlateUpdate(plateId: String, updated: Plate) {
         _uiState.value = _uiState.value.copy(
             plates = _uiState.value.plates.map { if (it.id == plateId) updated else it },
+            nearbyPlates = _uiState.value.nearbyPlates.map { if (it.id == plateId) updated else it },
             followingPlates = _uiState.value.followingPlates.map { if (it.id == plateId) updated else it }
         )
     }
 
     fun startListeningForNotifications(userId: String) {
-        notifListener?.remove()
-        isFirstNotifLoad = true
-        notifListener = firestore.collection("notifications")
-            .document(userId).collection("items")
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(50)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
-                val unread = snapshot.documents.count { it.get("isRead") != true }
-                _uiState.value = _uiState.value.copy(unreadNotificationCount = unread)
-                if (!isFirstNotifLoad) {
-                    snapshot.documentChanges.filter { it.type == DocumentChange.Type.ADDED }
-                        .forEach { change ->
-                            val data = change.document.data
-                            val type = data["type"] as? String ?: return@forEach
-                            val fromUser = data["fromUserName"] as? String ?: "Alguien"
-                            val plateName = data["plateName"] as? String ?: "tu plato"
-                            val plateId = data["plateId"] as? String
-                            val (title, body) = when (type) {
-                                "like" -> "❤️ Nuevo me gusta" to "$fromUser le ha dado like a \"$plateName\""
-                                "rating" -> {
-                                    val score = data["score"] as? Double ?: 0.0
-                                    "⭐ Nueva valoración" to "$fromUser ha valorado \"$plateName\" con ${"%.1f".format(score)}"
-                                }
-                                else -> return@forEach
-                            }
-                            NotificationHelper.show(context, title, body, plateId)
-                        }
-                }
-                isFirstNotifLoad = false
-            }
-    }
-
-    fun markNotificationsRead(userId: String) {
-        viewModelScope.launch {
-            try {
-                val snapshot = firestore.collection("notifications")
-                    .document(userId).collection("items")
-                    .whereEqualTo("isRead", false)
-                    .limit(100).get().await()
-                if (snapshot.documents.isEmpty()) return@launch
-                val batch = firestore.batch()
-                snapshot.documents.forEach { batch.update(it.reference, "isRead", true) }
-                batch.commit().await()
-            } catch (e: Exception) { /* silencioso */ }
-        }
+        notificationRepository.startListening(userId)
     }
 
     fun reportPlate(plateId: String, reason: String) {
@@ -520,31 +428,30 @@ class DiscoverViewModel @Inject constructor(
         val cleanReason = reason.sanitized(InputLimits.REPORT_REASON)
         viewModelScope.launch {
             try {
-                // Verificar si el usuario ya reportó este plato
-                val existing = firestore.collection("reports")
-                    .whereEqualTo("plateId", plateId)
-                    .whereEqualTo("reportedByUserId", userId)
-                    .limit(1).get().await()
-
-                if (!existing.isEmpty) {
-                    _uiState.value = _uiState.value.copy(reportFeedback = "Ya has reportado este plato anteriormente")
-                    return@launch
-                }
-
-                val reportId = UUID.randomUUID().toString()
-                firestore.collection("reports").document(reportId).set(mapOf(
-                    "id" to reportId,
-                    "plateId" to plateId,
-                    "reportedByUserId" to userId,
-                    "reason" to cleanReason,
-                    "createdAt" to System.currentTimeMillis()
-                )).await()
-
-                // Incrementar contador de reportes en el plato
-                firestore.collection("plates").document(plateId)
-                    .update("reportCount", FieldValue.increment(1)).await()
-
-                _uiState.value = _uiState.value.copy(reportFeedback = "Reporte enviado. Gracias por ayudarnos a mantener la comunidad.")
+                // ID determinístico: un usuario solo puede tener un reporte por plato.
+                // La transacción lee el doc y el contador en el mismo bloque atómico,
+                // eliminando el TOCTOU del patrón check-then-increment previo.
+                val reportId = "${userId}_${plateId}"
+                val reportRef = firestore.collection("reports").document(reportId)
+                val plateRef = firestore.collection("plates").document(plateId)
+                val alreadyReported = firestore.runTransaction { tx ->
+                    if (tx.get(reportRef).exists()) return@runTransaction true
+                    tx.set(reportRef, mapOf(
+                        "id" to reportId,
+                        "plateId" to plateId,
+                        "reportedByUserId" to userId,
+                        "reason" to cleanReason,
+                        "createdAt" to System.currentTimeMillis()
+                    ))
+                    tx.update(plateRef, "reportCount", FieldValue.increment(1))
+                    false
+                }.await()
+                _uiState.value = _uiState.value.copy(
+                    reportFeedback = if (alreadyReported)
+                        "Ya has reportado este plato anteriormente"
+                    else
+                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
+                )
             } catch (e: Exception) {
                 android.util.Log.e("DiscoverVM", "Error al reportar: ${e.message}")
             }
@@ -559,8 +466,4 @@ class DiscoverViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(ratingFeedback = null)
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        notifListener?.remove()
-    }
 }

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,14 +11,12 @@ plugins {
 }
 
 
-fun localProp(key: String): String =
-    rootProject.file("local.properties")
-        .takeIf { it.exists() }
-        ?.readLines()
-        ?.firstOrNull { it.startsWith("$key=") }
-        ?.substringAfter("=")
-        ?.trim()
-        ?: ""
+fun localProp(key: String): String {
+    val props = Properties()
+    rootProject.file("local.properties").takeIf { it.exists() }
+        ?.inputStream()?.use { props.load(it) }
+    return props.getProperty(key, "")
+}
 
 android {
     namespace = "com.app.foodranker"
@@ -80,7 +80,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.compose.material:material-icons-extended:1.7.0")
+    implementation("androidx.compose.material:material-icons-extended")
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -121,9 +121,7 @@ dependencies {
 
     // Notificaciones push
     implementation("com.google.firebase:firebase-messaging-ktx")
-
-    // Captura de pantalla (para tarjeta visual)
-    implementation("androidx.compose.ui:ui-graphics:1.7.0")
+    implementation("com.google.firebase:firebase-functions-ktx")
 
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.0.0")
@@ -131,14 +129,15 @@ dependencies {
     // Cloudinary
     implementation("com.cloudinary:cloudinary-android:2.3.1")
 
-    implementation("androidx.compose.animation:animation:1.6.0")
-    implementation("androidx.compose.animation:animation-core:1.6.0")
+    implementation("androidx.compose.animation:animation")
+    implementation("androidx.compose.animation:animation-core")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("com.android.billingclient:billing-ktx:7.0.0")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Testing
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -10,7 +10,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.data.model.FoodNotification
 import com.app.foodranker.ui.theme.*
@@ -35,6 +37,7 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         containerColor = BackgroundLight,
@@ -43,7 +46,18 @@ fun NotificationsScreen(
                 title = { Text("Notificaciones", fontWeight = FontWeight.Bold, color = TextPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                    }
+                },
+                actions = {
+                    if (uiState.notifications.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.clearAll() }) {
+                            Icon(
+                                Icons.Default.DeleteSweep,
+                                contentDescription = "Limpiar notificaciones",
+                                tint = TextSecondary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
@@ -70,7 +84,7 @@ fun NotificationsScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                itemsIndexed(uiState.notifications) { index, notif ->
+                itemsIndexed(uiState.notifications, key = { _, notif -> notif.id }) { index, notif ->
                     var visible by remember { mutableStateOf(false) }
                     LaunchedEffect(notif.id) {
                         kotlinx.coroutines.delay(index * 40L)
@@ -83,8 +97,14 @@ fun NotificationsScreen(
                         NotificationItem(
                             notification = notif,
                             onClick = {
-                                // Solo navegamos al plato si sigue existiendo (no en rechazos).
-                                if (notif.type != "moderation_rejected" && notif.plateId.isNotEmpty()) {
+                                if (notif.type == "moderation_rejected") {
+                                    // El plato fue eliminado — mostrar aviso en lugar de navegar
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Este plato fue rechazado y eliminado. Puedes publicar uno nuevo.",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                } else if (notif.plateId.isNotEmpty()) {
                                     onNavigateToPlate(notif.plateId)
                                 }
                             }
@@ -123,8 +143,9 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
         }
 
         Column(modifier = Modifier.weight(1f)) {
+            val bodyText = remember(notification.id) { buildAnnotatedText(notification) }
             Text(
-                buildAnnotatedText(notification),
+                bodyText,
                 fontSize = 14.sp,
                 color = TextPrimary,
                 fontWeight = if (!notification.isRead) FontWeight.SemiBold else FontWeight.Normal
@@ -174,9 +195,18 @@ private fun timeAgo(timestamp: Long): String {
     val diff = System.currentTimeMillis() - timestamp
     return when {
         diff < TimeUnit.MINUTES.toMillis(1)  -> "Ahora mismo"
-        diff < TimeUnit.HOURS.toMillis(1)    -> "Hace ${TimeUnit.MILLISECONDS.toMinutes(diff)} min"
-        diff < TimeUnit.DAYS.toMillis(1)     -> "Hace ${TimeUnit.MILLISECONDS.toHours(diff)} h"
-        diff < TimeUnit.DAYS.toMillis(7)     -> "Hace ${TimeUnit.MILLISECONDS.toDays(diff)} días"
-        else -> SimpleDateFormat("dd MMM", Locale("es")).format(Date(timestamp))
+        diff < TimeUnit.HOURS.toMillis(1) -> {
+            val m = TimeUnit.MILLISECONDS.toMinutes(diff)
+            if (m == 1L) "Hace 1 minuto" else "Hace $m min"
+        }
+        diff < TimeUnit.DAYS.toMillis(1) -> {
+            val h = TimeUnit.MILLISECONDS.toHours(diff)
+            if (h == 1L) "Hace 1 hora" else "Hace $h h"
+        }
+        diff < TimeUnit.DAYS.toMillis(7) -> {
+            val d = TimeUnit.MILLISECONDS.toDays(diff)
+            if (d == 1L) "Hace 1 día" else "Hace $d días"
+        }
+        else -> SimpleDateFormat("dd MMM", Locale.forLanguageTag("es")).format(Date(timestamp))
     }
 }

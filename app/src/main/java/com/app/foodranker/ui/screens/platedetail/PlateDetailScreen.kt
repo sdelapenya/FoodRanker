@@ -23,9 +23,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,8 +38,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,6 +54,7 @@ import com.app.foodranker.ui.components.PlateDetailSkeleton
 import com.app.foodranker.ui.screens.addplate.FoodTextField
 import com.app.foodranker.ui.screens.addplate.ScoreSlider
 import com.app.foodranker.ui.theme.*
+import com.app.foodranker.ui.theme.categoryGradient
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.AdManager
@@ -63,7 +69,10 @@ fun PlateDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     var showRatingSheet by remember { mutableStateOf(false) }
+    var showEditRatingSheet by remember { mutableStateOf(false) }
     var showShareMenu by remember { mutableStateOf(false) }
     var showShareCard by remember { mutableStateOf(false) }
     var showCollectionSheet by remember { mutableStateOf(false) }
@@ -73,12 +82,18 @@ fun PlateDetailScreen(
 
     LaunchedEffect(Unit) { viewModel.loadUserCollections() }
 
-    // El interstitial se contabiliza una sola vez al abrir la pantalla.
-    // La carga de datos la gestiona el observer ON_RESUME (más abajo).
+    // El interstitial se muestra al SALIR de la pantalla para no interrumpir
+    // al usuario antes de que haya visto el contenido.
+    var shouldShowAdOnExit by remember { mutableStateOf(false) }
     LaunchedEffect(plateId) {
-        if (AdManager.recordPlateDetailView()) {
-            val activity = context as? android.app.Activity
-            if (activity != null) AdManager.showInterstitial(activity) {}
+        shouldShowAdOnExit = AdManager.recordPlateDetailView()
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            if (shouldShowAdOnExit) {
+                val activity = (context as? android.app.Activity)
+                if (activity != null) AdManager.showInterstitial(activity) {}
+            }
         }
     }
     LaunchedEffect(uiState.plate) { if (uiState.plate != null) contentVisible = true }
@@ -86,12 +101,12 @@ fun PlateDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(uiState.error) {
         val msg = uiState.error ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(msg)
+        snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long)
         viewModel.clearError()
     }
     LaunchedEffect(uiState.successMessage) {
         val msg = uiState.successMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(msg)
+        snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long)
         viewModel.clearSuccessMessage()
     }
 
@@ -119,7 +134,7 @@ fun PlateDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
                     }
                 },
                 actions = {
@@ -249,7 +264,7 @@ fun PlateDetailScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(Brush.verticalGradient(plate.category.detailGradient())),
+                                                .background(Brush.verticalGradient(plate.category.categoryGradient())),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -330,7 +345,31 @@ fun PlateDetailScreen(
                                     }
                                     if (plate.description.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        Text(plate.description, fontSize = 14.sp, color = TextSecondary)
+                                        var descExpanded by remember { mutableStateOf(false) }
+                                        var descOverflows by remember { mutableStateOf(false) }
+                                        Text(
+                                            plate.description,
+                                            fontSize = 14.sp,
+                                            color = TextSecondary,
+                                            maxLines = if (descExpanded) Int.MAX_VALUE else 4,
+                                            overflow = TextOverflow.Ellipsis,
+                                            onTextLayout = { result ->
+                                                if (!descExpanded) descOverflows = result.hasVisualOverflow
+                                            }
+                                        )
+                                        if (descOverflows || descExpanded) {
+                                            TextButton(
+                                                onClick = { descExpanded = !descExpanded },
+                                                contentPadding = PaddingValues(0.dp)
+                                            ) {
+                                                Text(
+                                                    if (descExpanded) "Ver menos" else "Ver más",
+                                                    color = OrangePrimary,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
                                     }
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Row(
@@ -369,12 +408,20 @@ fun PlateDetailScreen(
                                     color = SuccessGreen.copy(alpha = 0.1f)
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(16.dp),
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Ya has valorado este plato", color = SuccessGreen, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            "Ya has valorado este plato",
+                                            color = SuccessGreen,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        TextButton(onClick = { showEditRatingSheet = true }) {
+                                            Text("Editar", color = OrangePrimary, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
@@ -420,6 +467,7 @@ fun PlateDetailScreen(
                                         onClick = {
                                             viewModel.addComment(plateId, commentText) {
                                                 commentText = ""
+                                                focusManager.clearFocus()
                                             }
                                         },
                                         enabled = commentText.isNotBlank() && !uiState.isSubmittingComment
@@ -427,7 +475,7 @@ fun PlateDetailScreen(
                                         if (uiState.isSubmittingComment) {
                                             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = OrangePrimary)
                                         } else {
-                                            Icon(Icons.Default.Send, contentDescription = "Enviar", tint = OrangePrimary)
+                                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = OrangePrimary)
                                         }
                                     }
                                 }
@@ -512,7 +560,12 @@ fun PlateDetailScreen(
                                         animationSpec = tween(300)
                                     ) + fadeIn(tween(300))
                                 ) {
-                                    RatingItem(rating = rating)
+                                    RatingItem(
+                                        rating = rating,
+                                        onEdit = if (rating.userId == viewModel.currentUserId) {
+                                            { showEditRatingSheet = true }
+                                        } else null
+                                    )
                                 }
                             }
                         }
@@ -593,25 +646,30 @@ fun PlateDetailScreen(
         }
     }
 
-    if (showShareCard && uiState.plate != null) {
+    val shareCardPlate = uiState.plate
+    if (showShareCard && shareCardPlate != null) {
         androidx.compose.ui.window.Dialog(onDismissRequest = { showShareCard = false }) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                com.app.foodranker.ui.components.ShareCard(plate = uiState.plate!!)
+                com.app.foodranker.ui.components.ShareCard(plate = shareCardPlate, cityRank = uiState.cityRank)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(onClick = { showShareCard = false },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                             brush = androidx.compose.ui.graphics.SolidColor(Color.White.copy(alpha = 0.5f))
                         )
                     ) { Text("Cancelar") }
                     Button(
                         onClick = {
                             showShareCard = false
-                            uiState.plate?.let { ShareManager.sharePlateWithImageUrl(context, it) }
+                            uiState.plate?.let { plate ->
+                                coroutineScope.launch {
+                                    ShareManager.sharePlateWithImageUrl(context, plate)
+                                }
+                            }
                             com.app.foodranker.utils.AnalyticsManager.logPlateShared("image")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
@@ -621,13 +679,14 @@ fun PlateDetailScreen(
         }
     }
 
+    val zoomImageUrl = uiState.plate?.imageUrl?.takeIf { it.isNotEmpty() }
     AnimatedVisibility(
-        visible = showImageZoom && uiState.plate?.imageUrl?.isNotEmpty() == true,
+        visible = showImageZoom && zoomImageUrl != null,
         enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)) + fadeIn(tween(200)),
         exit = scaleOut(tween(180)) + fadeOut(tween(180))
     ) {
-        if (uiState.plate?.imageUrl?.isNotEmpty() == true) {
-            ImageZoomViewer(imageUrl = uiState.plate!!.imageUrl, onDismiss = { showImageZoom = false })
+        if (zoomImageUrl != null) {
+            ImageZoomViewer(imageUrl = zoomImageUrl, onDismiss = { showImageZoom = false })
         }
     }
 
@@ -638,7 +697,28 @@ fun PlateDetailScreen(
                 viewModel.submitRating(plateId, flavor, presentation, value, comment)
                 showRatingSheet = false
             },
-            isLoading = uiState.isSubmittingRating
+            isLoading = uiState.isSubmittingRating,
+            currentScore = uiState.plate?.averageScore ?: 0.0,
+            plateName = uiState.plate?.name ?: ""
+        )
+    }
+
+    if (showEditRatingSheet && uiState.userRating != null) {
+        val ur = uiState.userRating!!
+        RatingBottomSheet(
+            onDismiss = { showEditRatingSheet = false },
+            onSubmit = { flavor, presentation, value, comment ->
+                viewModel.editRating(plateId, flavor, presentation, value, comment)
+                showEditRatingSheet = false
+            },
+            isLoading = uiState.isSubmittingRating,
+            currentScore = uiState.plate?.averageScore ?: 0.0,
+            plateName = uiState.plate?.name ?: "",
+            initialFlavor = ur.flavorScore,
+            initialPresentation = ur.presentationScore,
+            initialValue = ur.valueScore,
+            initialComment = ur.comment,
+            isEditMode = true
         )
     }
 }
@@ -697,20 +777,6 @@ private fun ImageZoomViewer(imageUrl: String, onDismiss: () -> Unit) {
     }
 }
 
-private fun PlateCategory.detailGradient() = when (this) {
-    PlateCategory.PASTA     -> listOf(Color(0xFFE8A838), Color(0xFF6B3A00))
-    PlateCategory.SUSHI     -> listOf(Color(0xFF2D7AAF), Color(0xFF0A1628))
-    PlateCategory.BURGER    -> listOf(Color(0xFFBF4828), Color(0xFF3A0A00))
-    PlateCategory.PIZZA     -> listOf(Color(0xFFD44030), Color(0xFF3A0500))
-    PlateCategory.TAPAS     -> listOf(Color(0xFFBF6840), Color(0xFF3A1800))
-    PlateCategory.RAMEN     -> listOf(Color(0xFFD47828), Color(0xFF3A1200))
-    PlateCategory.STEAK     -> listOf(Color(0xFF8B4040), Color(0xFF1A0505))
-    PlateCategory.SEAFOOD   -> listOf(Color(0xFF2090B0), Color(0xFF001828))
-    PlateCategory.DESSERT   -> listOf(Color(0xFFD46898), Color(0xFF3A0828))
-    PlateCategory.BREAKFAST -> listOf(Color(0xFFD4A828), Color(0xFF3A2800))
-    PlateCategory.SALAD     -> listOf(Color(0xFF4A9848), Color(0xFF081A05))
-    PlateCategory.OTHER     -> listOf(Color(0xFF787888), Color(0xFF101018))
-}
 
 @Composable
 fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit) {
@@ -827,7 +893,7 @@ fun LikeBadge(
 }
 
 @Composable
-fun RatingItem(rating: Rating) {
+fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
@@ -858,7 +924,15 @@ fun RatingItem(rating: Rating) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(rating.userName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
-                    Text("★ ${"%.1f".format(rating.averageScore)}", fontWeight = FontWeight.Bold, color = OrangePrimary, fontSize = 14.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("★ ${"%.1f".format(rating.averageScore)}", fontWeight = FontWeight.Bold, color = OrangePrimary, fontSize = 14.sp)
+                        if (onEdit != null) {
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Default.Edit, contentDescription = "Editar valoración", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MiniScore("😋", rating.flavorScore)
@@ -867,7 +941,31 @@ fun RatingItem(rating: Rating) {
                 }
                 if (rating.comment.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(rating.comment, fontSize = 13.sp, color = TextSecondary)
+                    var commentExpanded by remember { mutableStateOf(false) }
+                    var commentOverflows by remember { mutableStateOf(false) }
+                    Text(
+                        rating.comment,
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                        maxLines = if (commentExpanded) Int.MAX_VALUE else 3,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { result ->
+                            if (!commentExpanded) commentOverflows = result.hasVisualOverflow
+                        }
+                    )
+                    if (commentOverflows || commentExpanded) {
+                        TextButton(
+                            onClick = { commentExpanded = !commentExpanded },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(
+                                if (commentExpanded) "Ver menos" else "Ver más",
+                                color = OrangePrimary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -884,13 +982,23 @@ fun MiniScore(emoji: String, score: Float) {
 fun RatingBottomSheet(
     onDismiss: () -> Unit,
     onSubmit: (Float, Float, Float, String) -> Unit,
-    isLoading: Boolean
+    isLoading: Boolean,
+    currentScore: Double = 0.0,
+    plateName: String = "",
+    initialFlavor: Float = 5f,
+    initialPresentation: Float = 5f,
+    initialValue: Float = 5f,
+    initialComment: String = "",
+    isEditMode: Boolean = false
 ) {
-    var flavorScore by remember { mutableFloatStateOf(5f) }
-    var presentationScore by remember { mutableFloatStateOf(5f) }
-    var valueScore by remember { mutableFloatStateOf(5f) }
-    var comment by remember { mutableStateOf("") }
+    var flavorScore by remember { mutableFloatStateOf(initialFlavor) }
+    var presentationScore by remember { mutableFloatStateOf(initialPresentation) }
+    var valueScore by remember { mutableFloatStateOf(initialValue) }
+    var comment by remember { mutableStateOf(initialComment) }
 
+    val myScore = (flavorScore + presentationScore + valueScore) / 3f
+
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -904,10 +1012,51 @@ fun RatingBottomSheet(
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("⭐ Valorar este plato", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary)
+            Text(
+                if (isEditMode) "✏️ Editar valoración"
+                else if (plateName.isNotEmpty()) "⭐ Valorar: $plateName"
+                else "⭐ Valorar este plato",
+                fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary
+            )
             ScoreSlider("Sabor", "😋", flavorScore) { flavorScore = it }
             ScoreSlider("Presentación", "🎨", presentationScore) { presentationScore = it }
             ScoreSlider("Precio/Calidad", "💰", valueScore) { valueScore = it }
+
+            // Live preview card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1F19))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Tu nota final", color = Color.White.copy(alpha = 0.65f), fontSize = 11.sp)
+                        Text(
+                            "${"%.1f".format(myScore)} / 10",
+                            color = OrangePrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        )
+                    }
+                    if (currentScore > 0.0) {
+                        val diff = myScore - currentScore.toFloat()
+                        val (impactIcon, impactText, impactColor) = when {
+                            diff > 0.15f -> Triple("📈", "Subiría el plato", Color(0xFF4CAF50))
+                            diff < -0.15f -> Triple("📉", "Bajaría el plato", Color(0xFFE53935))
+                            else -> Triple("➡️", "Mantendría la nota", Color(0xFF90A4AE))
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(impactIcon, fontSize = 18.sp)
+                            Text(impactText, color = impactColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
+
             FoodTextField(
                 value = comment,
                 onValueChange = { comment = it },
@@ -919,7 +1068,10 @@ fun RatingBottomSheet(
                 showCounter = true
             )
             Button(
-                onClick = { onSubmit(flavorScore, presentationScore, valueScore, comment) },
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onSubmit(flavorScore, presentationScore, valueScore, comment)
+                },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 enabled = !isLoading,
                 shape = RoundedCornerShape(14.dp),
@@ -928,7 +1080,10 @@ fun RatingBottomSheet(
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
-                    Text("Publicar valoración 🚀", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        if (isEditMode) "Actualizar valoración ✏️" else "Publicar valoración 🚀",
+                        fontWeight = FontWeight.Bold, color = Color.White
+                    )
                 }
             }
         }

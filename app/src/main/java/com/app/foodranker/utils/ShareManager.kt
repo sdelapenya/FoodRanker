@@ -8,9 +8,7 @@ import androidx.core.content.FileProvider
 import com.app.foodranker.data.model.Plate
 import java.io.File
 import java.io.FileOutputStream
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 object ShareManager {
@@ -65,40 +63,41 @@ object ShareManager {
         }
     }
 
-    // Compartir imagen descargada de Cloudinary + texto (para Stories)
-    fun sharePlateWithImageUrl(context: Context, plate: Plate) {
+    // Compartir imagen descargada de Cloudinary + texto.
+    // Se declara suspend para que el caller la lance desde su propio scope
+    // (viewModelScope o LaunchedEffect) y respete el ciclo de vida.
+    suspend fun sharePlateWithImageUrl(context: Context, plate: Plate) {
         if (plate.imageUrl.isEmpty()) { sharePlateText(context, plate); return }
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val url = java.net.URL(plate.imageUrl)
-                val bitmap = android.graphics.BitmapFactory.decodeStream(url.openStream()) ?: run {
-                    withContext(Dispatchers.Main) { sharePlateText(context, plate) }
-                    return@launch
-                }
-                // Overlay: añadir branding en la parte inferior
-                val mutable = bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
-                val canvas = android.graphics.Canvas(mutable)
-                val paint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.argb(180, 0, 0, 0)
-                    isAntiAlias = true
-                }
-                val h = mutable.height.toFloat()
-                val w = mutable.width.toFloat()
-                canvas.drawRect(0f, h * 0.8f, w, h, paint)
-                val textPaint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.WHITE
-                    textSize = h * 0.045f
-                    isAntiAlias = true
-                    typeface = android.graphics.Typeface.DEFAULT_BOLD
-                }
-                canvas.drawText(plate.name, w * 0.05f, h * 0.87f, textPaint)
-                textPaint.textSize = h * 0.035f
-                textPaint.typeface = android.graphics.Typeface.DEFAULT
-                canvas.drawText("★ ${"%.1f".format(plate.averageScore)}  •  FoodRanker", w * 0.05f, h * 0.94f, textPaint)
-                withContext(Dispatchers.Main) { sharePlateWithImage(context, plate, mutable) }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) { sharePlateText(context, plate) }
+        try {
+            val bitmap = withContext(Dispatchers.IO) {
+                android.graphics.BitmapFactory.decodeStream(
+                    java.net.URL(plate.imageUrl).openStream()
+                )
+            } ?: run { sharePlateText(context, plate); return }
+
+            // Overlay: añadir branding en la parte inferior
+            val mutable = bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+            val canvas = android.graphics.Canvas(mutable)
+            val paint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(180, 0, 0, 0)
+                isAntiAlias = true
             }
+            val h = mutable.height.toFloat()
+            val w = mutable.width.toFloat()
+            canvas.drawRect(0f, h * 0.8f, w, h, paint)
+            val textPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = h * 0.045f
+                isAntiAlias = true
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText(plate.name, w * 0.05f, h * 0.87f, textPaint)
+            textPaint.textSize = h * 0.035f
+            textPaint.typeface = android.graphics.Typeface.DEFAULT
+            canvas.drawText("★ ${"%.1f".format(plate.averageScore)}  •  FoodRanker", w * 0.05f, h * 0.94f, textPaint)
+            sharePlateWithImage(context, plate, mutable)
+        } catch (e: Exception) {
+            sharePlateText(context, plate)
         }
     }
 

@@ -15,11 +15,11 @@ import javax.inject.Singleton
 class ConnectivityObserver @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val _isOnline = MutableStateFlow(checkCurrentConnectivity())
-    val isOnline: StateFlow<Boolean> = _isOnline
-
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    private val _isOnline = MutableStateFlow(checkCurrentConnectivity())
+    val isOnline: StateFlow<Boolean> = _isOnline
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) { _isOnline.value = true }
@@ -33,6 +33,11 @@ class ConnectivityObserver @Inject constructor(
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
         connectivityManager.registerNetworkCallback(request, callback)
+    }
+
+    fun unregister() {
+        try { connectivityManager.unregisterNetworkCallback(callback) }
+        catch (_: Exception) {}
     }
 
     private fun checkCurrentConnectivity(): Boolean {

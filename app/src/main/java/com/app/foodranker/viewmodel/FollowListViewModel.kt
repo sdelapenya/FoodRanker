@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.User
+import com.app.foodranker.ui.Screen
 import com.app.foodranker.utils.ErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ data class FollowListRow(
 data class FollowListUiState(
     val isLoading: Boolean = true,
     val title: String = "",
+    val listType: String = "followers",
     val users: List<FollowListRow> = emptyList(),
     val error: String? = null
 )
@@ -35,10 +37,10 @@ class FollowListViewModel @Inject constructor(
     private val profileUserId: String =
         savedStateHandle.get<String>("userId").orEmpty()
     private val listType: String =
-        savedStateHandle.get<String>("listType") ?: "followers"
+        savedStateHandle.get<String>("listType") ?: Screen.FollowList.LIST_FOLLOWERS
 
     private val _uiState = MutableStateFlow(
-        FollowListUiState(title = titleFor(listType))
+        FollowListUiState(title = titleFor(listType), listType = listType)
     )
     val uiState: StateFlow<FollowListUiState> = _uiState
 
@@ -54,7 +56,7 @@ class FollowListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val ids = if (listType == "following") {
+                val ids = if (listType == Screen.FollowList.LIST_FOLLOWING) {
                     firestore.collection("follows")
                         .whereEqualTo("followerId", profileUserId)
                         .limit(200).get().await()
@@ -87,12 +89,14 @@ class FollowListViewModel @Inject constructor(
                 _uiState.value = FollowListUiState(
                     isLoading = false,
                     title = titleFor(listType),
+                    listType = listType,
                     users = rows
                 )
             } catch (e: Exception) {
                 _uiState.value = FollowListUiState(
                     isLoading = false,
                     title = titleFor(listType),
+                    listType = listType,
                     error = ErrorMapper.toUserMessage(e)
                 )
             }
@@ -101,6 +105,6 @@ class FollowListViewModel @Inject constructor(
 
     companion object {
         fun titleFor(type: String) =
-            if (type == "following") "Siguiendo" else "Seguidores"
+            if (type == Screen.FollowList.LIST_FOLLOWING) "Siguiendo" else "Seguidores"
     }
 }
