@@ -34,7 +34,7 @@ fun TermsOfServiceScreen(onNavigateBack: () -> Unit) {
             contentPadding = PaddingValues(vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { Text("Última actualización: mayo 2025", fontSize = 12.sp, color = TextSecondary) }
+            item { Text("Última actualización: junio 2026", fontSize = 12.sp, color = TextSecondary) }
 
             item { PrivacySection("1. Aceptación de los términos",
                 "Al usar FoodRanker aceptas estos términos. Si no estás de acuerdo, no uses la aplicación. Nos reservamos el derecho de modificarlos en cualquier momento, notificándote previamente."

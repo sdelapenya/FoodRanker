@@ -71,6 +71,16 @@
                     android:host="user"
                     android:pathPrefix="/" />
             </intent-filter>
+            <!-- foodranker://plate/{id} — DeepLinkParser.kt ya lo soporta -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="foodranker"
+                    android:host="plate"
+                    android:pathPrefix="/" />
+            </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

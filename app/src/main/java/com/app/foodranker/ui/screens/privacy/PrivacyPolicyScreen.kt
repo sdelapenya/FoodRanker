@@ -39,7 +39,7 @@ fun PrivacyPolicyScreen(onNavigateBack: () -> Unit) {
         ) {
             item {
                 Text(
-                    "Última actualización: mayo 2025",
+                    "Última actualización: junio 2026",
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
