@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.functions.FirebaseFunctions
 import com.app.foodranker.data.model.LeagueEntry
 import com.app.foodranker.utils.ErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,7 +31,8 @@ data class LeagueUiState(
 @HiltViewModel
 class LeagueViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val functions: FirebaseFunctions
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LeagueUiState())
@@ -45,21 +47,28 @@ class LeagueViewModel @Inject constructor(
             try {
                 val userSnap = firestore.collection("users").document(userId).get().await()
                 val city = userSnap.getString("city") ?: ""
-                val weekKey = currentWeekKey()
 
                 if (city.isBlank()) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         city = "",
-                        weekKey = weekKey,
+                        weekKey = currentWeekKey(),
                         error = "Añade tu ciudad en el perfil para participar en la liga"
                     )
                     return@launch
                 }
 
-                // Debe coincidir con normalizeCity() de Cloud Functions (trim + lowercase)
-                val normalizedCity = city.trim().lowercase()
-                val leagueId = "${normalizedCity}_${weekKey}"
+                // El leagueId (ciudad normalizada + semana ISO) lo calcula siempre el
+                // servidor: evita que Kotlin y Cloud Functions reimplementen la misma
+                // lógica por separado y diverjan (causa raíz del bug de "liga vacía").
+                val result = functions.getHttpsCallable("getLeagueId")
+                    .call(mapOf("city" to city))
+                    .await()
+                @Suppress("UNCHECKED_CAST")
+                val data = result.data as Map<String, Any>
+                val leagueId = data["leagueId"] as String
+                val weekKey = data["weekKey"] as String
+
                 val snap = firestore.collection("leagues")
                     .document(leagueId)
                     .collection("entries")
@@ -96,9 +105,9 @@ class LeagueViewModel @Inject constructor(
 
     companion object {
         fun currentWeekKey(): String {
-            // ISO 8601 — debe coincidir exactamente con currentWeekKey() de Cloud Functions.
-            // UTC obligatorio: las CFs corren en UTC; usar el timezone local causaría
-            // un leagueId distinto para usuarios en UTC+ durante las horas nocturnas del domingo.
+            // Solo para mostrar la semana en la pantalla "añade tu ciudad" (sin liga
+            // todavía que consultar). El leagueId real siempre lo calcula el servidor
+            // vía la CF getLeagueId — ver LeagueViewModel.load().
             val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"), java.util.Locale.GERMANY)
             val year = cal.getWeekYear()
             val week = cal.get(Calendar.WEEK_OF_YEAR)

@@ -804,6 +804,29 @@ export const awardAdXp = onCall(
   }
 );
 
+// ── getLeagueId ──────────────────────────────────────────────────────────
+
+/**
+ * Callable function that returns the canonical leagues/{leagueId} document
+ * id for a given city, computed the same way addLeagueXP computes it
+ * server-side. The client calls this instead of reimplementing
+ * normalizeCity()/currentWeekKey() locally, so there's a single source of
+ * truth for the id and the two sides can never drift apart.
+ */
+export const getLeagueId = onCall(
+  { region: "europe-west1" },
+  async (request) => {
+    if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Must be authenticated");
+
+    const rawCity = (request.data?.city as string) ?? "";
+    const city = normalizeCity(rawCity);
+    if (!city) throw new HttpsError("invalid-argument", "city is required");
+
+    const weekKey = currentWeekKey();
+    return { leagueId: `${city}_${weekKey}`, city, weekKey };
+  }
+);
+
 // ── onPlateDeleted ────────────────────────────────────────────────────────
 
 /**
