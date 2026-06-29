@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,10 +32,22 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
     val context = LocalContext.current
     val billingViewModel: BillingViewModel = hiltViewModel()
     var watchingAd by remember { mutableStateOf(false) }
+    var isPurchasing by remember { mutableStateOf(false) }
     val isPremium          by billingViewModel.isPremium.collectAsState()
     val isBillingAvailable by billingViewModel.isAvailable.collectAsState()
     val price              by billingViewModel.price.collectAsState()
     var billingError  by remember { mutableStateOf<String?>(null) }
+
+    // Si el usuario cancela el diálogo nativo de Google Play y vuelve a esta pantalla,
+    // no hay callback de "compra cancelada" — reactivamos el botón al volver a ON_RESUME.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) isPurchasing = false
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Scaffold(
         topBar = {
@@ -161,18 +176,25 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 // Opción 2 — Suscripción real con Google Play Billing
                 Button(
                     onClick = {
+                        isPurchasing = true
                         val activity = context as? Activity
                         if (activity == null) {
                             billingError = "No se pudo iniciar la compra. Inténtalo de nuevo."
+                            isPurchasing = false
                         } else if (isBillingAvailable) {
                             val ok = billingViewModel.launchPurchase(activity)
-                            if (!ok) billingError = "No se pudo iniciar la compra. Inténtalo de nuevo."
+                            if (!ok) {
+                                billingError = "No se pudo iniciar la compra. Inténtalo de nuevo."
+                                isPurchasing = false
+                            }
                         } else {
                             billingError = "Las compras no están disponibles en este momento."
+                            isPurchasing = false
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(14.dp),
+                    enabled = !isPurchasing,
                     colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

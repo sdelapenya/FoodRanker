@@ -11,6 +11,10 @@ object RewardManager {
     const val XP_REFERRAL         = 100
 
     // ── Definición de niveles ──────────────────────────────────────
+    // Umbrales deben coincidir con getLevel() en functions/src/index.ts.
+    // El cliente siempre recalcula el nivel a partir de xp (no lee el campo
+    // `level` que guarda la Cloud Function); si los umbrales divergen, ese
+    // campo dejaría de ser coherente con lo que ve el usuario aquí.
     data class Level(
         val number: Int,
         val emoji: String,

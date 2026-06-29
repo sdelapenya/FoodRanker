@@ -244,7 +244,7 @@ class PlateDetailViewModel @Inject constructor(
                     }
                 )
             } catch (e: Exception) {
-                android.util.Log.e("PlateDetail", "addToCollection: ${e.message}")
+                _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
     }
@@ -304,7 +304,9 @@ class PlateDetailViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     comments = _uiState.value.comments.filter { it.id != commentId }
                 )
-            } catch (e: Exception) { /* silencioso — las rules rechazan si no es el autor */ }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
+            }
         }
     }
 
@@ -433,7 +435,7 @@ class PlateDetailViewModel @Inject constructor(
                 functions.getHttpsCallable("awardAdXp").call().await()
                 _uiState.value = _uiState.value.copy(successMessage = "¡+50 XP ganados por ver el anuncio! ⭐")
             } catch (e: Exception) {
-                android.util.Log.w("PlateDetail", "awardXpFromAd error: ${e.message}")
+                _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
     }

@@ -108,12 +108,20 @@ function normalizeCity(city: string): string {
  * Adds xpDelta to the caller's weekly league entry (creating it if needed).
  * Looks up the user's city fresh each time so league placement always
  * reflects the current profile city. No-op if the user has no city set.
+ *
+ * If sourceRatingRef is given, the city/weekKey actually used are stamped onto
+ * that rating doc (same batch, so it can't drift from the league write) as
+ * leagueCity/leagueWeekKey/leagueXpAmount. This lets a future clawback (e.g.
+ * if the plate this rating belongs to is later rejected by moderation) reverse
+ * the exact league entry/amount, even if the user's city changes meanwhile or
+ * the clawback happens to fall on a different ISO week.
  */
 async function addLeagueXP(
   userId: string,
   userName: string,
   userPhotoUrl: string,
-  xpDelta: number
+  xpDelta: number,
+  sourceRatingRef?: admin.firestore.DocumentReference
 ): Promise<void> {
   try {
     const userSnap = await db.collection("users").doc(userId).get();
@@ -126,7 +134,10 @@ async function addLeagueXP(
       .doc(`${city}_${wk}`)
       .collection("entries")
       .doc(userId);
-    await leagueEntryRef.set(
+
+    const batch = db.batch();
+    batch.set(
+      leagueEntryRef,
       {
         userId,
         userName,
@@ -138,11 +149,22 @@ async function addLeagueXP(
       },
       { merge: true }
     );
+    if (sourceRatingRef) {
+      batch.update(sourceRatingRef, {
+        leagueCity: city,
+        leagueWeekKey: wk,
+        leagueXpAmount: xpDelta,
+      });
+    }
+    await batch.commit();
   } catch (err) {
     logger.warn(`addLeagueXP failed for ${userId}:`, err);
   }
 }
 
+// Umbrales deben coincidir con RewardManager.LEVELS (app/src/main/java/com/app/foodranker/utils/RewardManager.kt).
+// El cliente recalcula el nivel a partir de xp para mostrarlo (no lee este campo), pero si los
+// umbrales divergen, el campo `level` guardado aquí dejaría de ser coherente con lo que ve el usuario.
 function getLevel(xp: number): number {
   if (xp >= 10000) return 6;
   if (xp >= 4000) return 5;
@@ -357,6 +379,45 @@ async function deleteRejectedPlate(
   plateName: string,
   reasons: string[]
 ) {
+  // Idempotent against retries of the whole moderatePlateImage invocation: if the
+  // plate doc is already gone, this rejection (clawback included) was already
+  // processed — nothing left to do.
+  const stillExists = (await plateRef.get()).exists;
+  if (!stillExists) return;
+
+  // Claw back league XP from anyone who voted on this plate while it was still
+  // pending (see addLeagueXP/onRatingCreated) — the plate turned out to be
+  // invalid, so those votes shouldn't have counted. Read+decrement BEFORE
+  // deleting anything below, so this can't race with onPlateDeleted's async
+  // cascade delete of the very rating docs read here.
+  try {
+    const ratingsSnap = await db.collection("ratings").where("plateId", "==", plateId).get();
+    const clawbackBatch = db.batch();
+    let hasClawback = false;
+    for (const doc of ratingsSnap.docs) {
+      const r = doc.data();
+      if (r.userId === authorId) continue;
+      const leagueCity = r.leagueCity as string | undefined;
+      const leagueWeekKey = r.leagueWeekKey as string | undefined;
+      const leagueXpAmount = r.leagueXpAmount as number | undefined;
+      if (!leagueCity || !leagueWeekKey || !leagueXpAmount) continue;
+      const leagueEntryRef = db
+        .collection("leagues")
+        .doc(`${leagueCity}_${leagueWeekKey}`)
+        .collection("entries")
+        .doc(r.userId as string);
+      clawbackBatch.set(
+        leagueEntryRef,
+        { xp: admin.firestore.FieldValue.increment(-leagueXpAmount), updatedAt: Date.now() },
+        { merge: true }
+      );
+      hasClawback = true;
+    }
+    if (hasClawback) await clawbackBatch.commit();
+  } catch (err) {
+    logger.warn(`League XP clawback failed for rejected plate ${plateId}:`, err);
+  }
+
   if (authorId) {
     const initialRatingRef = db.collection("ratings").doc(`${plateId}_${authorId}`);
     const batch = db.batch();
@@ -435,7 +496,9 @@ export const onRatingCreated = onDocumentCreated(
 
     // League XP reflects voting activity regardless of moderation status —
     // otherwise votes cast while the plate is still pending are silently lost.
-    await addLeagueXP(raterId, rating.userName ?? "Usuario", rating.userPhotoUrl ?? "", XP_GIVE_RATING);
+    // Pass snap.ref so the league city/weekKey actually used get stamped onto this
+    // rating doc — needed for clawback if the plate is later rejected (see deleteRejectedPlate).
+    await addLeagueXP(raterId, rating.userName ?? "Usuario", rating.userPhotoUrl ?? "", XP_GIVE_RATING, snap.ref);
 
     // Plate score, rater/owner XP, notifications and badges only apply once approved
     if (plateData.status !== "approved") {
@@ -883,36 +946,52 @@ export const deleteUserAccount = onCall(
       if (snap.size >= 500) await deleteQuery(query);
     };
 
-    try {
-      // 1. Ratings by user
-      await deleteQuery(db.collection("ratings").where("userId", "==", uid));
+    // Pasos 1-5 son limpieza de datos asociados: cada uno corre best-effort (loguea y
+    // sigue) para que un fallo puntual en una colección no impida borrar el perfil y
+    // la cuenta de Auth (pasos 6-7, los críticos para el derecho al olvido). El peor
+    // caso pasa de "cuenta a medio borrar que sigue activa" a "algún dato huérfano de
+    // bajo impacto" — ya documentado como limitación conocida de Firestore.
+    const step = async (label: string, fn: () => Promise<void>) => {
+      try {
+        await fn();
+      } catch (err) {
+        logger.warn(`deleteUserAccount step "${label}" failed for ${uid}:`, err);
+      }
+    };
 
-      // 2. User's plates — also cascade delete their ratings and comments
+    // 1. Ratings by user
+    await step("ratings by user", () => deleteQuery(db.collection("ratings").where("userId", "==", uid)));
+
+    // 2. User's plates — also cascade delete their ratings and comments
+    await step("user's plates", async () => {
       const platesSnap = await db.collection("plates").where("addedByUserId", "==", uid).get();
       for (const plateDoc of platesSnap.docs) {
         await deleteQuery(db.collection("ratings").where("plateId", "==", plateDoc.id));
         await deleteQuery(db.collection("comments").where("plateId", "==", plateDoc.id));
         await plateDoc.ref.delete();
       }
+    });
 
-      // 3. Comments, follows, saves, collections, reports
-      await deleteQuery(db.collection("comments").where("userId", "==", uid));
-      await deleteQuery(db.collection("follows").where("followerId", "==", uid));
-      await deleteQuery(db.collection("follows").where("followingId", "==", uid));
-      await deleteQuery(db.collection("saves").where("userId", "==", uid));
-      await deleteQuery(db.collection("collections").where("userId", "==", uid));
-      await deleteQuery(db.collection("reports").where("reportedByUserId", "==", uid));
+    // 3. Comments, follows, saves, collections, reports
+    await step("comments", () => deleteQuery(db.collection("comments").where("userId", "==", uid)));
+    await step("follows (follower)", () => deleteQuery(db.collection("follows").where("followerId", "==", uid)));
+    await step("follows (following)", () => deleteQuery(db.collection("follows").where("followingId", "==", uid)));
+    await step("saves", () => deleteQuery(db.collection("saves").where("userId", "==", uid)));
+    await step("collections", () => deleteQuery(db.collection("collections").where("userId", "==", uid)));
+    await step("reports", () => deleteQuery(db.collection("reports").where("reportedByUserId", "==", uid)));
 
-      // 4. League entries across all weeks (collection group query)
-      const leagueEntries = await db.collectionGroup("entries")
-        .where("userId", "==", uid).get();
+    // 4. League entries across all weeks (collection group query)
+    await step("league entries", async () => {
+      const leagueEntries = await db.collectionGroup("entries").where("userId", "==", uid).get();
       if (!leagueEntries.empty) {
         const lb = db.batch();
         leagueEntries.docs.forEach((doc) => lb.delete(doc.ref));
         await lb.commit();
       }
+    });
 
-      // 5. Notifications subcollection + parent document
+    // 5. Notifications subcollection + parent document
+    await step("notifications", async () => {
       const notifItems = await db.collection("notifications").doc(uid).collection("items").get();
       if (!notifItems.empty) {
         const nb = db.batch();
@@ -920,7 +999,9 @@ export const deleteUserAccount = onCall(
         await nb.commit();
       }
       await db.collection("notifications").doc(uid).delete();
+    });
 
+    try {
       // 6. User document
       await db.collection("users").doc(uid).delete();
 
