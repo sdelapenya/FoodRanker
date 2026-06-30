@@ -316,8 +316,13 @@ export const moderatePlateImage = onDocumentCreated(
       logger.info(`Plate ${plateId} approved. Match: ${matched.join(", ")}`);
       await approveplate(snap.ref, plateId, authorId);
     } catch (err) {
-      logger.error(`Error moderating ${plateId}, auto-approving:`, err);
-      await approveplate(snap.ref, plateId, authorId);
+      // Fail-closed: si Vision falla (URL inválida, recurso no-imagen, timeout...),
+      // NO aprobar sin moderar — imageUrl es enteramente controlado por el cliente,
+      // así que un fallo de Vision sería una vía trivial para publicar contenido sin
+      // pasar SafeSearch/food-check. Se rechaza igual que "not_food"/"no_image"; el
+      // autor puede volver a subir la foto si fue un fallo transitorio de red.
+      logger.error(`Error moderating ${plateId}, rejecting (fail-closed):`, err);
+      await deleteRejectedPlate(snap.ref, authorId, plateId, plateName, ["api_error"]);
     }
   }
 );
@@ -772,6 +777,7 @@ export const onCommentCreated = onDocumentCreated(
 
     const comment = snap.data();
     const userId: string = comment.userId;
+    const plateId: string | undefined = comment.plateId;
     if (!userId) {
       logger.warn(`Comment ${event.params.commentId}: missing userId`);
       return;
@@ -789,6 +795,33 @@ export const onCommentCreated = onDocumentCreated(
 
       if (!shouldProcess) {
         logger.info(`Comment ${event.params.commentId} already processed, skipping`);
+        return;
+      }
+
+      // El XP de comentarios solo se concede UNA VEZ por usuario y plato (igual que
+      // las valoraciones, que usan un ID determinista plateId_userId) — a diferencia
+      // de los ratings, los comentarios no tienen ID determinista (un usuario puede
+      // comentar varias veces), así que sin este límite se podría minar XP ilimitado
+      // comentando en bucle sobre el mismo plato. También se valida que el plato exista.
+      if (!plateId) {
+        logger.warn(`Comment ${event.params.commentId}: missing plateId, skipping XP`);
+        return;
+      }
+      const plateSnap = await db.collection("plates").doc(plateId).get();
+      if (!plateSnap.exists) {
+        logger.warn(`Comment ${event.params.commentId}: plate ${plateId} not found, skipping XP`);
+        return;
+      }
+
+      const markerRef = db.collection("plates").doc(plateId).collection("commentXpAwarded").doc(userId);
+      const shouldAward = await db.runTransaction(async (tx) => {
+        const markerSnap = await tx.get(markerRef);
+        if (markerSnap.exists) return false;
+        tx.set(markerRef, { awardedAt: Date.now() });
+        return true;
+      });
+      if (!shouldAward) {
+        logger.info(`Comment ${event.params.commentId}: user ${userId} already earned comment XP on plate ${plateId}, skipping`);
         return;
       }
 

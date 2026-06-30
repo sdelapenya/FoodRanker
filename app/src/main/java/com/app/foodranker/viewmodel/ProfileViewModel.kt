@@ -82,14 +82,12 @@ class ProfileViewModel @Inject constructor(
                                 userDoc.toObject(User::class.java) ?: User(
                                     id = firebaseUser.uid,
                                     name = firebaseUser.displayName ?: "Usuario",
-                                    email = firebaseUser.email ?: "",
                                     photoUrl = firebaseUser.photoUrl?.toString() ?: ""
                                 )
                             } else {
                                 val newUser = User(
                                     id = firebaseUser.uid,
                                     name = firebaseUser.displayName ?: "Usuario",
-                                    email = firebaseUser.email ?: "",
                                     photoUrl = firebaseUser.photoUrl?.toString() ?: ""
                                 )
                                 firestore.collection("users").document(firebaseUser.uid).set(newUser).await()

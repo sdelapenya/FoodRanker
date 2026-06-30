@@ -24,7 +24,7 @@ service cloud.firestore {
         // isPremium, xp, level, badges: solo Cloud Functions via Admin SDK.
         isOwner(userId)
         && changedKeys().hasOnly([
-          'name', 'email', 'bio', 'city', 'website', 'photoUrl', 'fcmToken',
+          'name', 'bio', 'city', 'website', 'photoUrl', 'fcmToken',
           'referralCode', 'referredByUserId'
         ])
         // referralCode solo se puede escribir si antes no existía

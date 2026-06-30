@@ -42,18 +42,20 @@ class AuthRepository @Inject constructor(
                 ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
 
             val displayName = (firebaseUser.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME)
-            val email = firebaseUser.email ?: ""
             val photoUrl = firebaseUser.photoUrl?.toString() ?: ""
 
             val userRef = firestore.collection("users").document(firebaseUser.uid)
             val snap = userRef.get().await()
 
+            // El email NO se guarda en Firestore (el doc users/{uid} es legible por
+            // cualquier usuario autenticado vía firestore.rules — guardar el email ahí
+            // lo expondría a todo el mundo). Ya está disponible vía FirebaseAuth
+            // (auth.currentUser?.email) para quien lo necesite localmente.
             if (!snap.exists()) {
                 // Primer login: creamos el documento completo del usuario
                 val newUser = User(
                     id = firebaseUser.uid,
                     name = displayName,
-                    email = email,
                     photoUrl = photoUrl
                 )
                 userRef.set(newUser).await()
@@ -63,7 +65,6 @@ class AuthRepository @Inject constructor(
                 userRef.update(
                     mapOf(
                         "name" to displayName,
-                        "email" to email,
                         "photoUrl" to photoUrl
                     )
                 ).await()
