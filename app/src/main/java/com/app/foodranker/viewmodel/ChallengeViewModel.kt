@@ -88,13 +88,17 @@ class ChallengeViewModel @Inject constructor(
                     return@launch
                 }
 
-                // XP por challenge lo otorgará una Cloud Function al detectar la participación
+                // XP por challenge lo otorgará una Cloud Function al detectar la participación.
+                // Releemos currentChallenge de _uiState.value (no la variable `challenge` capturada
+                // al entrar a la función) para no pisar un loadCurrentChallenge() concurrente que
+                // haya refrescado el estado mientras la transacción estaba en curso.
+                val latest = _uiState.value.currentChallenge?.takeIf { it.id == challenge.id } ?: challenge
                 _uiState.value = _uiState.value.copy(
                     isParticipating = true,
                     justCompleted = true,
-                    currentChallenge = challenge.copy(
-                        participantIds = challenge.participantIds + userId,
-                        participantCount = challenge.participantCount + 1
+                    currentChallenge = latest.copy(
+                        participantIds = latest.participantIds + userId,
+                        participantCount = latest.participantCount + 1
                     )
                 )
             } catch (e: Exception) {

@@ -20,12 +20,14 @@ import com.app.foodranker.utils.MealDBSeeder
 import com.app.foodranker.utils.ReferralManager
 import com.app.foodranker.utils.RemoteConfigManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 
@@ -202,9 +204,12 @@ class DiscoverViewModel @Inject constructor(
         lastDocument = null
         lastLoadTime = System.currentTimeMillis()
         viewModelScope.launch {
-            val missionProgress = dailyMissionManager.getProgress()
+            // getProgress()/getStreak() leen SharedPreferences (I/O de disco) — fuera del
+            // dispatcher Main para no bloquearlo en cada carga (cold start, refresh, etc.)
+            val (missionProgress, streak) = withContext(Dispatchers.IO) {
+                dailyMissionManager.getProgress() to dailyMissionManager.getStreak()
+            }
             val missionGoal = RemoteConfigManager.dailyMissionGoal
-            val streak = dailyMissionManager.getStreak()
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 hasMorePlates = true,

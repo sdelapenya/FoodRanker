@@ -33,13 +33,17 @@ class PlateRepository @Inject constructor(
 
     suspend fun getPlatesByCategory(category: PlateCategory): Result<List<Plate>> {
         return try {
+            val limit = 20L
             val snapshot = platesCollection
                 .whereEqualTo("category", category.name)
                 .orderBy("averageScore", Query.Direction.DESCENDING)
-                .limit(20)
+                .limit(limit + 5) // over-fetch para compensar los filtrados por reportCount
                 .get()
                 .await()
-            val plates = snapshot.documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+            val plates = snapshot.documents
+                .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                .filter { it.reportCount < 3 }
+                .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
             Result.failure(e)

@@ -110,7 +110,9 @@ function normalizeCity(city: string): string {
  * reflects the current profile city. No-op if the user has no city set.
  *
  * If sourceRatingRef is given, the city/weekKey actually used are stamped onto
- * that rating doc (same batch, so it can't drift from the league write) as
+ * that rating doc right after (best-effort, separate write — NOT atomic with the
+ * league increment above, deliberately: if the rating was concurrently deleted,
+ * the stamp write failing must not roll back the XP already granted) as
  * leagueCity/leagueWeekKey/leagueXpAmount. This lets a future clawback (e.g.
  * if the plate this rating belongs to is later rejected by moderation) reverse
  * the exact league entry/amount, even if the user's city changes meanwhile or
@@ -135,9 +137,9 @@ async function addLeagueXP(
       .collection("entries")
       .doc(userId);
 
-    const batch = db.batch();
-    batch.set(
-      leagueEntryRef,
+    // El incremento de liga es el efecto que importa de verdad: se escribe siempre,
+    // sin depender de que el rating de origen siga existiendo en este momento.
+    await leagueEntryRef.set(
       {
         userId,
         userName,
@@ -149,14 +151,23 @@ async function addLeagueXP(
       },
       { merge: true }
     );
+
     if (sourceRatingRef) {
-      batch.update(sourceRatingRef, {
-        leagueCity: city,
-        leagueWeekKey: wk,
-        leagueXpAmount: xpDelta,
-      });
+      // Best-effort y separado del incremento anterior: si el rating ya no existe
+      // (borrado de forma concurrente por deleteRejectedPlate o deleteUserAccount
+      // mientras esto corría), no hay nada que estampar ni clawback futuro posible
+      // para él — pero eso no debe tirar abajo el XP de liga ya concedido arriba
+      // (un único batch atómico haría justo eso si el update() fallase).
+      try {
+        await sourceRatingRef.update({
+          leagueCity: city,
+          leagueWeekKey: wk,
+          leagueXpAmount: xpDelta,
+        });
+      } catch (err) {
+        logger.warn(`addLeagueXP: no se pudo estampar leagueCity/leagueWeekKey en el rating (probablemente ya borrado):`, err);
+      }
     }
-    await batch.commit();
   } catch (err) {
     logger.warn(`addLeagueXP failed for ${userId}:`, err);
   }

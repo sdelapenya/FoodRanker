@@ -183,6 +183,7 @@ object MealDBSeeder {
                 totalRatings     = ratingCount,
                 likes            = Random.nextInt(5, ratingCount),
                 reportCount      = 0,
+                status           = com.app.foodranker.data.model.PlateStatus.APPROVED,
                 createdAt        = System.currentTimeMillis() - Random.nextLong(0, 90L * 24 * 3600 * 1000)
             )
         } catch (e: Exception) {

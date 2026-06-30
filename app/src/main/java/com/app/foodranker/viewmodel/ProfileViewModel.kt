@@ -348,8 +348,14 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    @Volatile private var isTogglingFollow = false
+
     fun toggleFollow(targetUserId: String) {
         val currentUserId = auth.currentUser?.uid ?: return
+        // Evita que un doble-tap rápido dispare dos coroutines que lean isFollowing
+        // antes de que la primera haya actualizado el estado, duplicando el +1/-1 local.
+        if (isTogglingFollow) return
+        isTogglingFollow = true
         viewModelScope.launch {
             try {
                 val followId = "${currentUserId}_${targetUserId}"
@@ -369,6 +375,8 @@ class ProfileViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Profile", "Error toggleFollow: ${e.message}")
+            } finally {
+                isTogglingFollow = false
             }
         }
     }

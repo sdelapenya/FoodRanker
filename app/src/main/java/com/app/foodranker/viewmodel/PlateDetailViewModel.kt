@@ -432,8 +432,17 @@ class PlateDetailViewModel @Inject constructor(
         if (auth.currentUser == null) return
         viewModelScope.launch {
             try {
-                functions.getHttpsCallable("awardAdXp").call().await()
-                _uiState.value = _uiState.value.copy(successMessage = "¡+50 XP ganados por ver el anuncio! ⭐")
+                val result = functions.getHttpsCallable("awardAdXp").call().await()
+                @Suppress("UNCHECKED_CAST")
+                val data = result.data as? Map<String, Any>
+                val granted = data?.get("granted") as? Boolean ?: false
+                _uiState.value = _uiState.value.copy(
+                    successMessage = if (granted) {
+                        "¡+50 XP ganados por ver el anuncio! ⭐"
+                    } else {
+                        "Ya has ganado XP por un anuncio hoy. Vuelve a intentarlo más tarde."
+                    }
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }

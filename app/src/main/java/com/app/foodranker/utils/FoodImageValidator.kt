@@ -55,7 +55,7 @@ object FoodImageValidator {
                     val violence = safeSearch.optString("violence", "UNKNOWN")
                     val racy     = safeSearch.optString("racy", "UNKNOWN")
                     if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("FoodValidator", "SafeSearch — adult:$adult violence:$violence racy:$racy")
-                    if (adult in REJECTED_LEVELS || violence in REJECTED_LEVELS) {
+                    if (adult in REJECTED_LEVELS || violence in REJECTED_LEVELS || racy in REJECTED_LEVELS) {
                         return@withContext Pair(false, "Contenido inapropiado detectado ⚠️\nEsta foto no cumple nuestras normas de comunidad")
                     }
                 }
