@@ -174,7 +174,7 @@ class AddPlateViewModel @Inject constructor(
                 val safeFlavor = flavorScore.coerceIn(1f, 10f)
                 val safePresentation = presentationScore.coerceIn(1f, 10f)
                 val safeValue = valueScore.coerceIn(1f, 10f)
-                val avgScore = (safeFlavor + safePresentation + safeValue) / 3.0
+                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
                 val plateId  = UUID.randomUUID().toString()
                 val ratingId = "${plateId}_${user.uid}"
 

@@ -356,7 +356,7 @@ class DiscoverViewModel @Inject constructor(
                 val safeFlavor = flavorScore.coerceIn(1f, 10f)
                 val safePresentation = presentationScore.coerceIn(1f, 10f)
                 val safeValue = valueScore.coerceIn(1f, 10f)
-                val avgScore = (safeFlavor + safePresentation + safeValue) / 3.0
+                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
                 val ratingId = "${plateId}_${user.uid}"
                 val rating = Rating(
                     id = ratingId, plateId = plateId, userId = user.uid,

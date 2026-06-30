@@ -377,9 +377,14 @@ async function approveplate(
   // a user who only ever rates their own plates never appears in the league.
   if (awarded) {
     const xpEarned = XP_PLATE_WITH_PHOTO + XP_GIVE_RATING;
-    await awardXP(authorId, xpEarned);
-    await checkAndAwardBadges(authorId);
-    await addLeagueXP(authorId, awarded.userName, awarded.userPhotoUrl, xpEarned);
+    // Las 3 operaciones tocan documentos independientes (users/{authorId}.xp,
+    // users/{authorId}.badges, leagues/{id}/entries/{authorId}) y cada una ya
+    // tiene su propio try/catch interno — no hay dependencia de orden entre ellas.
+    await Promise.all([
+      awardXP(authorId, xpEarned),
+      checkAndAwardBadges(authorId),
+      addLeagueXP(authorId, awarded.userName, awarded.userPhotoUrl, xpEarned),
+    ]);
   }
 }
 
@@ -904,6 +909,19 @@ export const getLeagueId = onCall(
 // ── onPlateDeleted ────────────────────────────────────────────────────────
 
 /**
+ * Deletes every doc matched by `query`, paginating in batches of 500
+ * (Firestore's batch-write limit) and recursing until the query is exhausted.
+ */
+async function deleteQueryBatch(query: admin.firestore.Query): Promise<void> {
+  const snap = await query.limit(500).get();
+  if (snap.empty) return;
+  const batch = db.batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+  if (snap.size >= 500) await deleteQueryBatch(query);
+}
+
+/**
  * Fires when a plate document is deleted by the owner (client-side, via rules).
  * Cascades deletion of all ratings and comments for that plate so they don't
  * remain as orphaned documents. The Admin SDK bypasses the
@@ -914,20 +932,11 @@ export const onPlateDeleted = onDocumentDeleted(
   async (event) => {
     const plateId = event.params.plateId;
 
-    const deleteQuery = async (query: admin.firestore.Query) => {
-      const snap = await query.limit(500).get();
-      if (snap.empty) return;
-      const batch = db.batch();
-      snap.docs.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-      if (snap.size >= 500) await deleteQuery(query);
-    };
-
     try {
       await Promise.all([
-        deleteQuery(db.collection("ratings").where("plateId", "==", plateId)),
-        deleteQuery(db.collection("comments").where("plateId", "==", plateId)),
-        deleteQuery(db.collection("saves").where("plateId", "==", plateId)),
+        deleteQueryBatch(db.collection("ratings").where("plateId", "==", plateId)),
+        deleteQueryBatch(db.collection("comments").where("plateId", "==", plateId)),
+        deleteQueryBatch(db.collection("saves").where("plateId", "==", plateId)),
       ]);
       logger.info(`Cascade delete complete for plate ${plateId}`);
     } catch (err) {
@@ -948,15 +957,6 @@ export const deleteUserAccount = onCall(
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Must be authenticated");
 
-    const deleteQuery = async (query: admin.firestore.Query) => {
-      const snap = await query.limit(500).get();
-      if (snap.empty) return;
-      const batch = db.batch();
-      snap.docs.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-      if (snap.size >= 500) await deleteQuery(query);
-    };
-
     // Pasos 1-5 son limpieza de datos asociados: cada uno corre best-effort (loguea y
     // sigue) para que un fallo puntual en una colección no impida borrar el perfil y
     // la cuenta de Auth (pasos 6-7, los críticos para el derecho al olvido). El peor
@@ -971,25 +971,25 @@ export const deleteUserAccount = onCall(
     };
 
     // 1. Ratings by user
-    await step("ratings by user", () => deleteQuery(db.collection("ratings").where("userId", "==", uid)));
+    await step("ratings by user", () => deleteQueryBatch(db.collection("ratings").where("userId", "==", uid)));
 
     // 2. User's plates — also cascade delete their ratings and comments
     await step("user's plates", async () => {
       const platesSnap = await db.collection("plates").where("addedByUserId", "==", uid).get();
       for (const plateDoc of platesSnap.docs) {
-        await deleteQuery(db.collection("ratings").where("plateId", "==", plateDoc.id));
-        await deleteQuery(db.collection("comments").where("plateId", "==", plateDoc.id));
+        await deleteQueryBatch(db.collection("ratings").where("plateId", "==", plateDoc.id));
+        await deleteQueryBatch(db.collection("comments").where("plateId", "==", plateDoc.id));
         await plateDoc.ref.delete();
       }
     });
 
     // 3. Comments, follows, saves, collections, reports
-    await step("comments", () => deleteQuery(db.collection("comments").where("userId", "==", uid)));
-    await step("follows (follower)", () => deleteQuery(db.collection("follows").where("followerId", "==", uid)));
-    await step("follows (following)", () => deleteQuery(db.collection("follows").where("followingId", "==", uid)));
-    await step("saves", () => deleteQuery(db.collection("saves").where("userId", "==", uid)));
-    await step("collections", () => deleteQuery(db.collection("collections").where("userId", "==", uid)));
-    await step("reports", () => deleteQuery(db.collection("reports").where("reportedByUserId", "==", uid)));
+    await step("comments", () => deleteQueryBatch(db.collection("comments").where("userId", "==", uid)));
+    await step("follows (follower)", () => deleteQueryBatch(db.collection("follows").where("followerId", "==", uid)));
+    await step("follows (following)", () => deleteQueryBatch(db.collection("follows").where("followingId", "==", uid)));
+    await step("saves", () => deleteQueryBatch(db.collection("saves").where("userId", "==", uid)));
+    await step("collections", () => deleteQueryBatch(db.collection("collections").where("userId", "==", uid)));
+    await step("reports", () => deleteQueryBatch(db.collection("reports").where("reportedByUserId", "==", uid)));
 
     // 4. League entries across all weeks (collection group query)
     await step("league entries", async () => {

@@ -320,7 +320,15 @@ class ProfileViewModel @Inject constructor(
     ) {
         val userId = auth.currentUser?.uid ?: return
         val cleanBio = bio.sanitized(InputLimits.BIO)
+        // Capitalizamos para que la ciudad se vea consistente en el cliente
+        // ("madrid" y "Madrid" se guardan igual) — el servidor sigue normalizando
+        // por separado (lowercase) al calcular el leagueId, así que esto no afecta
+        // a la lógica de liga, solo a cómo se muestra el texto.
         val cleanCity = city.sanitized(InputLimits.CITY)
+            .lowercase()
+            .split(" ")
+            .filter { it.isNotEmpty() }
+            .joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
         val cleanWebsite = website.sanitized(InputLimits.WEBSITE)
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSavingProfile = true)
