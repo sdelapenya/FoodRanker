@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.persistentCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
+import android.util.Log
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,7 +38,9 @@ object FirebaseModule {
                 )
                 .build()
         } catch (_: IllegalStateException) {
-            // Firestore ya arrancó: los settings no pueden cambiarse en este punto.
+            // Firestore ya arrancó antes de que Hilt aplicara los settings (race con
+            // FoodRankerMessagingService). La caché persistente no pudo configurarse.
+            Log.w("FirebaseModule", "Firestore settings skipped — already initialized (persistent cache inactive)")
         }
     }
 
