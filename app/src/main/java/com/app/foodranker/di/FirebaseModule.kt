@@ -23,13 +23,22 @@ object FirebaseModule {
     @Provides
     @Singleton
     fun provideFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance().also { db ->
-        db.firestoreSettings = FirebaseFirestoreSettings.Builder()
-            .setLocalCacheSettings(
-                persistentCacheSettings {
-                    setSizeBytes(50L * 1024 * 1024) // 50 MB
-                }
-            )
-            .build()
+        // FoodRankerMessagingService.saveCurrentToken() accede a FirebaseFirestore
+        // directamente (via getInstance) desde Application.onCreate() — antes de que
+        // Hilt haya construido este singleton — provocando que Firestore "arranque"
+        // antes de que lleguemos aquí. Si ya arrancó, setFirestoreSettings lanza
+        // IllegalStateException; la capturamos porque la caché por defecto es aceptable.
+        try {
+            db.firestoreSettings = FirebaseFirestoreSettings.Builder()
+                .setLocalCacheSettings(
+                    persistentCacheSettings {
+                        setSizeBytes(50L * 1024 * 1024) // 50 MB
+                    }
+                )
+                .build()
+        } catch (_: IllegalStateException) {
+            // Firestore ya arrancó: los settings no pueden cambiarse en este punto.
+        }
     }
 
     @Provides

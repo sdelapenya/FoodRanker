@@ -79,6 +79,7 @@ fun ProfileScreen(
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToTerms: () -> Unit = {},
     onNavigateToReferral: () -> Unit = {},
+    onNavigateToPremium: () -> Unit = {},
     onAccountDeleted: () -> Unit = onSignOut,
     viewModel: ProfileViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
@@ -417,6 +418,7 @@ fun ProfileScreen(
                             onPrivacy = onNavigateToPrivacy,
                             onTerms = onNavigateToTerms,
                             onReferral = onNavigateToReferral,
+                            onPremium = onNavigateToPremium,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
@@ -572,6 +574,7 @@ private fun ProfileAccountDangerZone(
     onPrivacy: () -> Unit,
     onTerms: () -> Unit,
     onReferral: () -> Unit = {},
+    onPremium: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -591,6 +594,37 @@ private fun ProfileAccountDangerZone(
             )
 
             HorizontalDivider(color = DividerColor.copy(alpha = 0.85f))
+
+            Surface(
+                onClick = onPremium,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFFFF8E1)
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp, horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            tint = StarYellow,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Column {
+                            Text("Hazte Premium", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("Sin anuncios y funciones exclusivas", fontSize = 11.sp, color = TextSecondary)
+                        }
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = StarYellow)
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
 
             Surface(
                 onClick = onReferral,

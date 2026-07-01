@@ -256,7 +256,8 @@ fun FoodRankerNavigation() {
                 },
                 onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
                 onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
-                onNavigateToReferral = { navController.navigate(Screen.Referral.route) }
+                onNavigateToReferral = { navController.navigate(Screen.Referral.route) },
+                onNavigateToPremium = { navController.navigate(Screen.Premium.route) }
             )
         }
 
