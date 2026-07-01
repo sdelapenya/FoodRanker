@@ -6,8 +6,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class FoodRankerMessagingService : FirebaseMessagingService() {
+
+    @Inject lateinit var firestore: FirebaseFirestore
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
@@ -19,7 +24,8 @@ class FoodRankerMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        saveToken(token)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        saveTokenForUser(firestore, userId, token)
     }
 
     companion object {
@@ -28,19 +34,16 @@ class FoodRankerMessagingService : FirebaseMessagingService() {
         fun saveCurrentToken() {
             val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
             FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-                saveTokenForUser(userId, token)
+                // Llamado tras auth: Hilt ya inicializó provideFirestore() con los settings,
+                // por lo que getInstance() devuelve el mismo singleton ya configurado.
+                saveTokenForUser(FirebaseFirestore.getInstance(), userId, token)
             }.addOnFailureListener { e ->
                 Log.w(TAG, "Error obteniendo token FCM: ${e.message}")
             }
         }
 
-        private fun saveToken(token: String) {
-            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-            saveTokenForUser(userId, token)
-        }
-
-        private fun saveTokenForUser(userId: String, token: String) {
-            FirebaseFirestore.getInstance()
+        private fun saveTokenForUser(firestore: FirebaseFirestore, userId: String, token: String) {
+            firestore
                 .collection("users")
                 .document(userId)
                 .update("fcmToken", token)

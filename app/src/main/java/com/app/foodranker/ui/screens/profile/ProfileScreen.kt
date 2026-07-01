@@ -566,6 +566,51 @@ private fun ProfileSocialChip(value: String, label: String, onClick: () -> Unit)
     }
 }
 
+@Composable
+private fun ProfileMenuRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String? = null,
+    iconTint: Color,
+    arrowTint: Color = TextSecondary,
+    backgroundColor: Color = OrangePrimary.copy(alpha = 0.06f),
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(22.dp)
+                )
+                Column {
+                    Text(title, fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                    if (subtitle != null) {
+                        Text(subtitle, fontSize = 11.sp, color = TextSecondary)
+                    }
+                }
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = arrowTint)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileAccountDangerZone(
@@ -598,121 +643,45 @@ private fun ProfileAccountDangerZone(
             HorizontalDivider(color = DividerColor.copy(alpha = 0.85f))
 
             if (!isPremium) {
-                Surface(
-                    onClick = onPremium,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFFFFF8E1)
-                ) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp, horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Icon(
-                                Icons.Default.Star,
-                                contentDescription = null,
-                                tint = StarYellow,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Column {
-                                Text("Hazte Premium", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                                Text("Sin anuncios y funciones exclusivas", fontSize = 11.sp, color = TextSecondary)
-                            }
-                        }
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = StarYellow)
-                    }
-                }
+                ProfileMenuRow(
+                    icon = Icons.Default.Star,
+                    title = "Hazte Premium",
+                    subtitle = "Sin anuncios y funciones exclusivas",
+                    iconTint = StarYellow,
+                    arrowTint = StarYellow,
+                    backgroundColor = Color(0xFFFFF8E1),
+                    onClick = onPremium
+                )
                 Spacer(Modifier.height(6.dp))
             }
 
-            Surface(
-                onClick = onReferral,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                color = Color(0xFFFFF3E0)
-            ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(
-                            Icons.Default.CardGiftcard,
-                            contentDescription = null,
-                            tint = OrangePrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Column {
-                            Text("Invita amigos", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                            Text("Comparte tu código y gana XP", fontSize = 11.sp, color = TextSecondary)
-                        }
-                    }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = OrangePrimary)
-                }
-            }
+            ProfileMenuRow(
+                icon = Icons.Default.CardGiftcard,
+                title = "Invita amigos",
+                subtitle = "Comparte tu código y gana XP",
+                iconTint = OrangePrimary,
+                arrowTint = OrangePrimary,
+                backgroundColor = Color(0xFFFFF3E0),
+                onClick = onReferral
+            )
 
             Spacer(Modifier.height(6.dp))
 
-            Surface(
-                onClick = onPrivacy,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                color = OrangePrimary.copy(alpha = 0.06f)
-            ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(
-                            Icons.Outlined.Lock,
-                            contentDescription = null,
-                            tint = OrangePrimary.copy(alpha = 0.85f),
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Text("Política de privacidad", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
-                    }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
-                }
-            }
+            ProfileMenuRow(
+                icon = Icons.Outlined.Lock,
+                title = "Política de privacidad",
+                iconTint = OrangePrimary.copy(alpha = 0.85f),
+                onClick = onPrivacy
+            )
 
-            Surface(
-                onClick = onTerms,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = OrangePrimary.copy(alpha = 0.06f)
-            ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.Article,
-                            contentDescription = null,
-                            tint = OrangePrimary.copy(alpha = 0.85f),
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Text("Términos de uso", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
-                    }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
-                }
-            }
+            Spacer(Modifier.height(6.dp))
+
+            ProfileMenuRow(
+                icon = Icons.AutoMirrored.Outlined.Article,
+                title = "Términos de uso",
+                iconTint = OrangePrimary.copy(alpha = 0.85f),
+                onClick = onTerms
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerColor.copy(alpha = 0.85f))
 
