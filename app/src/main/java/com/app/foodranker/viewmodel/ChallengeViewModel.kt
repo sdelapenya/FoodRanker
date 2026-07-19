@@ -3,10 +3,8 @@ package com.app.foodranker.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.WeeklyChallenge
-import com.app.foodranker.utils.RewardManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,28 +59,15 @@ class ChallengeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * El XP del reto solo se otorga al publicar un plato (AddPlateViewModel).
+     * Apuntarse desde el banner sin publicar ya no suma XP ni marca participante.
+     */
     fun participate() {
-        val userId = auth.currentUser?.uid ?: return
-        val challenge = _uiState.value.currentChallenge ?: return
-        if (_uiState.value.isParticipating) return
-
-        viewModelScope.launch {
-            try {
-                firestore.collection("challenges").document(challenge.id).update(
-                    mapOf(
-                        "participantIds" to FieldValue.arrayUnion(userId),
-                        "participantCount" to FieldValue.increment(1)
-                    )
-                ).await()
-                RewardManager.awardXP(userId, challenge.xpReward, firestore)
-                _uiState.value = _uiState.value.copy(isParticipating = true, justCompleted = true)
-            } catch (e: Exception) { }
-        }
+        // No-op: mantener API por si algún caller antiguo existe; el CTA real navega a AddPlate.
     }
 
     fun clearJustCompleted() {
         _uiState.value = _uiState.value.copy(justCompleted = false)
     }
-
-
 }

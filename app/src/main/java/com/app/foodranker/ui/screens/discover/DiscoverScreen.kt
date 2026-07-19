@@ -326,12 +326,24 @@ fun DiscoverScreen(
                 if (uiState.isLoading) {
                     CircularProgressIndicator(color = OrangePrimary)
                 } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    ) {
                         Text("🍽️", fontSize = 56.sp)
                         Spacer(Modifier.height(16.dp))
-                        Text("¡Añade el primer plato!", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Aún no hay platos aquí",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Spacer(Modifier.height(8.dp))
-                        Text("Pulsa + para empezar", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                        Text(
+                            "Sé el primero: publica una comida real con foto. Sin relleno inventado.",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }

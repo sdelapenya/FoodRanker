@@ -124,6 +124,10 @@ class DiscoverViewModel @Inject constructor(
     }
 
     fun seedFromMealDB() {
+        if (!com.app.foodranker.BuildConfig.DEBUG) {
+            android.util.Log.w("Discover", "seedFromMealDB bloqueado fuera de DEBUG")
+            return
+        }
         val userId = currentUserId.ifEmpty { return }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(seedingProgress = Pair(0, 112))
