@@ -91,7 +91,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                         fontSize = 22.sp
                     )
                     Text(
-                        "La experiencia gastronómica completa",
+                        "Apoya la app y quítate los anuncios",
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 14.sp
                     )
@@ -100,13 +100,11 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Beneficios
+            // Solo se anuncian beneficios que la app entrega hoy: los anuncios se ocultan
+            // (BannerAd) y el badge aparece en el perfil. No prometer funciones no implementadas.
             val benefits = listOf(
                 "Sin anuncios" to "Disfruta sin interrupciones",
-                "Estadísticas avanzadas" to "Analiza tus valoraciones en detalle",
-                "Platos ilimitados" to "Sin límite de publicaciones al día",
-                "Badge Premium" to "Destaca en la comunidad",
-                "Acceso anticipado" to "Nuevas funciones antes que nadie"
+                "Badge Premium" to "Destaca en la comunidad"
             )
 
             benefits.forEach { (title, subtitle) ->
@@ -152,7 +150,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                     Spacer(Modifier.height(8.dp))
                 }
 
-                // Opción 1 — Ver anuncio (gratis temporal)
+                // Opción 1 — Ver anuncio (24h sin anuncios, solo en este dispositivo)
                 OutlinedButton(
                     onClick = {
                         watchingAd = true
@@ -168,7 +166,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                     enabled = !watchingAd,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangePrimary)
                 ) {
-                    Text("📺 Ver anuncio — 24h Premium gratis", fontWeight = FontWeight.Bold)
+                    Text("📺 Ver anuncio — 24h sin anuncios", fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

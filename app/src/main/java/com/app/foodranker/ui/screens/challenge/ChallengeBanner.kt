@@ -1,13 +1,8 @@
 package com.app.foodranker.ui.screens.challenge
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,14 +23,6 @@ fun ChallengeBanner(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val challenge = uiState.currentChallenge ?: return
-
-    // Snackbar de completado
-    if (uiState.justCompleted) {
-        LaunchedEffect(Unit) {
-            kotlinx.coroutines.delay(3000)
-            viewModel.clearJustCompleted()
-        }
-    }
 
     Card(
         modifier = Modifier
@@ -75,39 +62,34 @@ fun ChallengeBanner(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (uiState.isParticipating) {
                         Surface(shape = RoundedCornerShape(8.dp), color = SuccessGreen) {
-                            Text("✓ Completado", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
+                            Text(
+                                "✓ Completado",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                            )
                         }
                     } else {
                         Button(
-                            onClick = { viewModel.participate(); onParticipate() },
+                            onClick = onParticipate,
                             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Text("+${challenge.xpReward} XP", color = OrangePrimary,
-                                fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                            Text(
+                                "Publicar · +${challenge.xpReward} XP",
+                                color = OrangePrimary,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 11.sp
+                            )
                         }
                     }
-                    Text("${challenge.participantCount} participantes",
-                        fontSize = 9.sp, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(top = 2.dp))
-                }
-            }
-
-            // Celebración al completar
-            if (uiState.justCompleted) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(SuccessGreen.copy(alpha = 0.92f)),
-                    contentAlignment = Alignment.Center
-                ) {
                     Text(
-                        "🎉 +${challenge.xpReward} XP ganados! ¡Reto completado!",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(12.dp)
+                        "${challenge.participantCount} participantes",
+                        fontSize = 9.sp,
+                        color = Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
             }

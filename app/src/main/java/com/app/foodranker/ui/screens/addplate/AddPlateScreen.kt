@@ -1,6 +1,5 @@
 package com.app.foodranker.ui.screens.addplate
 
-import android.app.Activity
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,7 +36,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.ui.theme.*
-import com.app.foodranker.utils.AdManager
 import com.app.foodranker.utils.InputLimits
 import com.app.foodranker.viewmodel.AddPlateState
 import com.app.foodranker.viewmodel.AddPlateViewModel
@@ -102,18 +100,11 @@ fun AddPlateScreen(
         )
     }
 
+    // Tras publicar: volver al feed sin interstitial (castigaba la acción más valiosa).
     LaunchedEffect(state) {
         if (state is AddPlateState.Success) {
-            val activity = context as? Activity
-            if (activity != null) {
-                AdManager.showInterstitial(
-                    activity = activity,
-                    onDismiss = { onSuccess(); viewModel.resetState() }
-                )
-            } else {
-                onSuccess()
-                viewModel.resetState()
-            }
+            onSuccess()
+            viewModel.resetState()
         }
     }
 

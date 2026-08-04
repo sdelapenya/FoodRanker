@@ -721,7 +721,7 @@ private fun RankingEmptyState(tab: Int, onExplore: () -> Unit, onExploreUsers: (
                 tab == 1 ->
                     "No hay platos en $userCity todavía.\n¡Sé el primero en añadir uno!"
                 tab == 2 -> "Sigue a otros foodies para ver sus platos aquí."
-                else -> "¡Añade el primer plato!"
+                else -> "Aún no hay platos aquí.\nSé el primero: publica una comida real con foto."
             },
             color = TextSecondary,
             fontSize = 15.sp,
