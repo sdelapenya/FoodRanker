@@ -59,7 +59,13 @@ android {
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProp("CLOUDINARY_CLOUD_NAME")}\"")
         // Subida sin secret en el APK: crea un upload preset "Unsigned" en Cloudinary y pon su nombre aquí.
         buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${localProp("CLOUDINARY_UPLOAD_PRESET")}\"")
-        buildConfigField("String", "VISION_API_KEY",  "\"${localProp("VISION_API_KEY")}\"")
+        // VISION_API_KEY eliminada a propósito: el cliente ya no llama a Vision.
+        // Lo hace la CF `validateFoodImage` con el service account, porque una key en
+        // BuildConfig acaba como literal en classes.dex (R8 no ofusca cadenas) y era
+        // extraíble del bundle publicado, con el gasto facturado a este proyecto.
+        // PEXELS_API_KEY solo la usa MealDBSeeder, que está tras `if (!BuildConfig.DEBUG) return`
+        // en DiscoverViewModel — R8 elimina la clase entera en release, así que no
+        // llega al binario (verificado buscándola en los dex del AAB).
         buildConfigField("String", "PEXELS_API_KEY",  "\"${localProp("PEXELS_API_KEY")}\"")
     }
 

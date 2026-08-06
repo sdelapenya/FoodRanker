@@ -327,6 +327,68 @@ export const moderatePlateImage = onDocumentCreated(
   }
 );
 
+/**
+ * validateFoodImage — callable
+ *
+ * Pre-filtro de UX para AddPlate: valida la foto elegida ANTES de subirla, para
+ * dar feedback inmediato al usuario. Existe para que la API key de Vision no
+ * tenga que viajar en el APK (antes el cliente llamaba a Vision directamente con
+ * una key en BuildConfig, extraíble descompilando el bundle y facturable a este
+ * proyecto). Aquí las credenciales son las del service account.
+ *
+ * NO es la autoridad de moderación: eso es `moderatePlateImage`, que corre al
+ * crear el plato y es fail-closed. Por eso esta función es deliberadamente
+ * fail-open — un fallo de Vision aquí no debe impedir al usuario continuar, ya
+ * que el plato pasará igualmente por la moderación real al publicarse.
+ *
+ * Reutiliza isImageProblematic/looksLikeFood, los mismos que usa
+ * moderatePlateImage, para que los umbrales no puedan divergir.
+ */
+export const validateFoodImage = onCall(
+  { region: "europe-west1" },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Must be authenticated");
+
+    const imageBase64 = request.data?.imageBase64;
+    if (typeof imageBase64 !== "string" || imageBase64.length === 0) {
+      throw new HttpsError("invalid-argument", "imageBase64 is required");
+    }
+    // El cliente reescala a 800px/JPEG 80 antes de codificar, así que ~7MB de
+    // base64 es holgado; por encima de eso no es una foto de plato razonable.
+    if (imageBase64.length > 7_000_000) {
+      throw new HttpsError("invalid-argument", "Image too large");
+    }
+
+    try {
+      const [result] = await getVisionClient().annotateImage({
+        image: { content: imageBase64 },
+        features: [
+          { type: "SAFE_SEARCH_DETECTION" },
+          { type: "LABEL_DETECTION", maxResults: 15 },
+        ],
+      });
+
+      const safeSearch = result.safeSearchAnnotation as SafeSearchResult | null;
+      if (safeSearch) {
+        const inappropriate = isImageProblematic(safeSearch);
+        if (inappropriate.rejected) {
+          return { ok: false, reason: "inappropriate" };
+        }
+      }
+
+      const { isFood } = looksLikeFood(result.labelAnnotations);
+      if (!isFood) return { ok: false, reason: "not_food" };
+
+      return { ok: true };
+    } catch (err) {
+      // Fail-open a propósito (ver doc arriba): moderatePlateImage modera de verdad.
+      logger.warn(`validateFoodImage: Vision falló para ${uid}, se permite continuar:`, err);
+      return { ok: true, reason: "check_skipped" };
+    }
+  }
+);
+
 async function approveplate(
   plateRef: admin.firestore.DocumentReference,
   plateId: string,

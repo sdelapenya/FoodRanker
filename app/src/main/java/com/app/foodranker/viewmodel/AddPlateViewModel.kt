@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.data.model.Rating
@@ -43,6 +44,7 @@ sealed class AddPlateState {
 class AddPlateViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
+    private val functions: FirebaseFunctions,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -72,7 +74,7 @@ class AddPlateViewModel @Inject constructor(
         formImageValidating = true
         formImageValidationError = null
         viewModelScope.launch {
-            val (ok, error) = FoodImageValidator.validate(appContext, uri)
+            val (ok, error) = FoodImageValidator.validate(appContext, uri, functions)
             formImageValidating = false
             if (!ok) {
                 formImageValidationError = error
