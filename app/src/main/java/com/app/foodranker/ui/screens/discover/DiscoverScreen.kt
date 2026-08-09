@@ -45,7 +45,6 @@ import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.ui.components.BannerAdView
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.ui.theme.categoryGradient
-import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
 import com.app.foodranker.viewmodel.AuthViewModel
 import com.app.foodranker.viewmodel.DiscoverViewModel

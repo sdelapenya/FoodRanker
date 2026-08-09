@@ -283,12 +283,18 @@ class DiscoverViewModel @Inject constructor(
         val userId = currentUserId.ifEmpty { return }
         val saveId = "${userId}_${plateId}"
         val isSaved = plateId in _uiState.value.savedPlateIds
-        // Optimistic update
+        // Update optimista: icono y mensaje van juntos y de inmediato. Firestore
+        // tiene caché persistente, así que sin red el write queda encolado y su
+        // await() no resuelve hasta que el servidor confirma — si el mensaje
+        // esperase a eso, offline el icono se marcaría y el usuario no vería
+        // ninguna confirmación. Si el write acaba fallando, se revierte abajo.
         _uiState.value = _uiState.value.copy(
             savedPlateIds = if (isSaved)
                 _uiState.value.savedPlateIds - plateId
             else
-                _uiState.value.savedPlateIds + plateId
+                _uiState.value.savedPlateIds + plateId,
+            saveFeedback = if (isSaved) "Eliminado de guardados"
+                           else "🔖 Guardado en tu colección"
         )
         viewModelScope.launch {
             try {
@@ -299,12 +305,6 @@ class DiscoverViewModel @Inject constructor(
                     "plateId" to plateId,
                     "createdAt" to System.currentTimeMillis()
                 )).await()
-                // Se confirma después de que la escritura cuaje, no en el update
-                // optimista: así el mensaje no afirma algo que aún podría fallar.
-                _uiState.value = _uiState.value.copy(
-                    saveFeedback = if (isSaved) "Eliminado de guardados"
-                                   else "🔖 Guardado en tu colección"
-                )
             } catch (e: Exception) {
                 // Revertir
                 _uiState.value = _uiState.value.copy(

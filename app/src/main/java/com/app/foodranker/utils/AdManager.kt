@@ -3,9 +3,11 @@ package com.app.foodranker.utils
 import android.app.Activity
 import android.content.Context
 import java.util.concurrent.atomic.AtomicInteger
+import com.app.foodranker.BuildConfig
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.rewarded.RewardedAd
@@ -31,6 +33,22 @@ object AdManager {
     }
 
     fun initialize(context: Context) {
+        // En debug, marcar este dispositivo como de prueba para que AdMob sirva
+        // anuncios de test. Sin esto el móvil de desarrollo recibe anuncios reales
+        // y cualquier pulsación cuenta como tráfico inválido, motivo habitual de
+        // suspensión de cuenta. Los IDs salen de local.properties (fuera de git);
+        // si está vacío no se toca la configuración.
+        if (BuildConfig.DEBUG) {
+            val ids = BuildConfig.ADMOB_TEST_DEVICE_IDS
+                .split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+            if (ids.isNotEmpty()) {
+                MobileAds.setRequestConfiguration(
+                    RequestConfiguration.Builder().setTestDeviceIds(ids).build()
+                )
+            }
+        }
         MobileAds.initialize(context)
     }
 

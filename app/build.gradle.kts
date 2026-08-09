@@ -67,6 +67,11 @@ android {
         // en DiscoverViewModel — R8 elimina la clase entera en release, así que no
         // llega al binario (verificado buscándola en los dex del AAB).
         buildConfigField("String", "PEXELS_API_KEY",  "\"${localProp("PEXELS_API_KEY")}\"")
+        // IDs de dispositivo de prueba de AdMob, separados por comas. Van en
+        // local.properties (fuera de git) porque son de cada máquina/móvil, no del
+        // proyecto. Solo se aplican en debug: pinchar anuncios reales en tus propias
+        // pruebas es tráfico inválido y AdMob suspende cuentas por ello.
+        buildConfigField("String", "ADMOB_TEST_DEVICE_IDS", "\"${localProp("ADMOB_TEST_DEVICE_IDS")}\"")
     }
 
 

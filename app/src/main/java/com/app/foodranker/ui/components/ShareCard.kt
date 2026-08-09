@@ -1,6 +1,5 @@
 package com.app.foodranker.ui.components
 
-import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
