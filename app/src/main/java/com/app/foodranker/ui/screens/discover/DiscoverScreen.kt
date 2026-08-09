@@ -1,6 +1,8 @@
 package com.app.foodranker.ui.screens.discover
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,6 +46,7 @@ import com.app.foodranker.ui.components.BannerAdView
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.ui.theme.categoryGradient
 import com.app.foodranker.utils.formatCompact
+import com.app.foodranker.utils.votesLabel
 import com.app.foodranker.viewmodel.AuthViewModel
 import com.app.foodranker.viewmodel.DiscoverViewModel
 import com.app.foodranker.viewmodel.LeagueViewModel
@@ -117,18 +120,14 @@ fun DiscoverScreen(
         viewModel.clearReportFeedback()
     }
 
-    // Save feedback
-    var prevSavedIds by remember { mutableStateOf<Set<String>?>(null) }
-    LaunchedEffect(uiState.savedPlateIds) {
-        val prev = prevSavedIds
-        prevSavedIds = uiState.savedPlateIds
-        if (prev == null) return@LaunchedEffect
-        val added   = uiState.savedPlateIds - prev
-        val removed = prev - uiState.savedPlateIds
-        when {
-            added.isNotEmpty()   -> snackbarHostState.showSnackbar("🔖 Guardado en tu colección", duration = SnackbarDuration.Short)
-            removed.isNotEmpty() -> snackbarHostState.showSnackbar("Eliminado de guardados", duration = SnackbarDuration.Short)
-        }
+    // Save feedback — evento explícito del ViewModel, no un diff de savedPlateIds:
+    // ese set lo escribe también la carga inicial, así que al abrir Discover con
+    // platos ya guardados el diff los leía como "acabas de guardar" y soltaba el
+    // snackbar sin que el usuario hubiera tocado nada.
+    LaunchedEffect(uiState.saveFeedback) {
+        val msg = uiState.saveFeedback ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Short)
+        viewModel.clearSaveFeedback()
     }
 
     // Reload on resume
@@ -561,7 +560,15 @@ private fun CountdownTickerRow(countdownText: String, tickerMessage: String, vot
             }
             AnimatedContent(
                 targetState = tickerMessage,
-                transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(300)) },
+                // El fadeIn espera a que termine el fadeOut. Si solapan, los dos
+                // mensajes se dibujan a la vez en la misma posición y el texto se
+                // ve emborronado (AnimatedContent no los separa por sí solo).
+                // SizeTransform en snap: si no, el ancho se anima entre mensajes de
+                // distinta longitud y el ellipsis parpadea.
+                transitionSpec = {
+                    fadeIn(tween(250, delayMillis = 250)) togetherWith
+                        fadeOut(tween(250)) using SizeTransform { _, _ -> snap() }
+                },
                 label = "ticker"
             ) { msg ->
                 Row(
@@ -681,7 +688,7 @@ private fun RankedPlateCard(
                 )
                 val subtitle = buildString {
                     if (plate.restaurantName.isNotEmpty()) append("${plate.restaurantName} · ")
-                    append("${plate.totalRatings.formatCompact()} votos")
+                    append(plate.totalRatings.votesLabel())
                     if (!plate.city.isNullOrEmpty()) append(" · ${plate.city}")
                     if (gapToTop != null && gapToTop < 1.5) {
                         append(" · a ${"%.1f".format(gapToTop)} del récord")

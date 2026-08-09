@@ -1,6 +1,7 @@
 package com.app.foodranker.ui.components
 
 import com.app.foodranker.utils.formatCompact
+import com.app.foodranker.utils.votesLabel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -145,7 +146,7 @@ fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
                     color = Color.Black.copy(alpha = 0.55f)
                 ) {
                     Text(
-                        "👥 ${plate.totalRatings.formatCompact()} votos",
+                        "👥 ${plate.totalRatings.votesLabel()}",
                         color = Color.White,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)

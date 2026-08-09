@@ -15,3 +15,10 @@ fun Int.formatCompact(): String = when {
         if (m >= 10) "${m.toInt()}M" else "%.1fM".format(m)
     }
 }
+
+/**
+ * "1 voto" / "2 votos" / "1,2K votos" — evita el "1 votos" que se veía antes.
+ * El singular se decide con el valor real, no con el texto ya formateado.
+ */
+fun Int.votesLabel(): String =
+    "${formatCompact()} ${if (this == 1) "voto" else "votos"}"

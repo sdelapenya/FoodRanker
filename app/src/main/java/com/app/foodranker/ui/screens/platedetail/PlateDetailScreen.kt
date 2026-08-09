@@ -57,6 +57,7 @@ import com.app.foodranker.ui.theme.*
 import com.app.foodranker.ui.theme.categoryGradient
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
+import com.app.foodranker.utils.votesLabel
 import com.app.foodranker.utils.AdManager
 import com.app.foodranker.viewmodel.PlateDetailViewModel
 
@@ -382,7 +383,7 @@ fun PlateDetailScreen(
                                             color = OrangePrimary
                                         ) {
                                             Text(
-                                                "★ ${"%.1f".format(plate.averageScore)}  ·  ${plate.totalRatings.formatCompact()} votos",
+                                                "★ ${"%.1f".format(plate.averageScore)}  ·  ${plate.totalRatings.votesLabel()}",
                                                 color = Color.White,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,

@@ -32,6 +32,7 @@ import com.app.foodranker.ui.theme.TextPrimary
 import com.app.foodranker.ui.theme.TextSecondary
 import com.app.foodranker.ui.theme.cardGradient
 import com.app.foodranker.utils.formatCompact
+import com.app.foodranker.utils.votesLabel
 
 
 @Composable
@@ -269,7 +270,7 @@ fun PlateCardHorizontal(
                     fontSize = 16.sp,
                     color = OrangePrimary
                 )
-                Text("${plate.totalRatings.formatCompact()} votos", fontSize = 10.sp, color = TextSecondary)
+                Text(plate.totalRatings.votesLabel(), fontSize = 10.sp, color = TextSecondary)
                 if (onLike != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     LikeRowSmall(likes = plate.likes, isLiked = isLiked, onLike = onLike)

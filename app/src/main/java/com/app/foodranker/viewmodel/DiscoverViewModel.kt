@@ -46,6 +46,7 @@ data class DiscoverUiState(
     val reportFeedback: String? = null,
     val ratingFeedback: String? = null,
     val savedPlateIds: Set<String> = emptySet(),
+    val saveFeedback: String? = null,
     val dailyMissionProgress: Int = 0,
     val dailyMissionGoal: Int = 3,
     val voteStreak: Int = 0
@@ -298,16 +299,27 @@ class DiscoverViewModel @Inject constructor(
                     "plateId" to plateId,
                     "createdAt" to System.currentTimeMillis()
                 )).await()
+                // Se confirma después de que la escritura cuaje, no en el update
+                // optimista: así el mensaje no afirma algo que aún podría fallar.
+                _uiState.value = _uiState.value.copy(
+                    saveFeedback = if (isSaved) "Eliminado de guardados"
+                                   else "🔖 Guardado en tu colección"
+                )
             } catch (e: Exception) {
                 // Revertir
                 _uiState.value = _uiState.value.copy(
                     savedPlateIds = if (!isSaved)
                         _uiState.value.savedPlateIds - plateId
                     else
-                        _uiState.value.savedPlateIds + plateId
+                        _uiState.value.savedPlateIds + plateId,
+                    saveFeedback = "No se pudo actualizar tus guardados"
                 )
             }
         }
+    }
+
+    fun clearSaveFeedback() {
+        _uiState.value = _uiState.value.copy(saveFeedback = null)
     }
 
     fun toggleLike(plateId: String) {

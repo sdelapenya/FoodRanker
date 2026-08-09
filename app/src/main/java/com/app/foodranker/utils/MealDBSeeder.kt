@@ -151,6 +151,7 @@ object MealDBSeeder {
                 ?: return@withContext null
 
             val area = meal.optString("strArea", "International")
+            val place = areaToPlace(area)
 
             // Descripción más atractiva
             val rawDesc = meal.optString("strInstructions", "")
@@ -174,8 +175,8 @@ object MealDBSeeder {
                 category         = category,
                 restaurantName   = areaToRestaurant(area),
                 restaurantAddress = "",
-                city             = areaToCity(area),
-                country          = areaToCountry(area),
+                city             = place.first,
+                country          = place.second,
                 imageUrl         = imageUrl,
                 addedByUserId    = ownerUid,
                 addedByUserName  = "FoodRanker Team",
@@ -219,27 +220,44 @@ object MealDBSeeder {
         else         -> "Local Restaurant"
     }
 
-    private fun areaToCity(area: String) = when (area) {
-        "Italian" -> "Roma"; "French" -> "París"; "Japanese" -> "Tokio"
-        "Mexican" -> "Ciudad de México"; "Indian" -> "Mumbai"; "Chinese" -> "Shanghái"
-        "British" -> "Londres"; "American" -> "Nueva York"; "Spanish" -> "Madrid"
-        "Greek" -> "Atenas"; "Thai" -> "Bangkok"; "Moroccan" -> "Marrakech"
-        "Turkish" -> "Estambul"; "Portuguese" -> "Lisboa"; "Croatian" -> "Dubrovnik"
-        "Dutch" -> "Ámsterdam"; "Egyptian" -> "El Cairo"; "Filipino" -> "Manila"
-        "Jamaican" -> "Kingston"; "Malaysian" -> "Kuala Lumpur"; "Polish" -> "Varsovia"
-        "Russian" -> "Moscú"; "Tunisian" -> "Túnez"; "Vietnamese" -> "Hanói"
-        else -> listOf("Nueva York", "Londres", "París", "Tokio", "Ciudad de México").random()
-    }
+    // Ciudad y país SIEMPRE juntos. Antes eran dos `when` separados que en el `else`
+    // sorteaban de listas independientes, así que salían combinaciones imposibles
+    // ("París, Japón", "Nueva York, Italia") visibles en el ranking por ciudad.
+    private val AREA_TO_PLACE = mapOf(
+        "Italian" to ("Roma" to "Italia"),
+        "French" to ("París" to "Francia"),
+        "Japanese" to ("Tokio" to "Japón"),
+        "Mexican" to ("Ciudad de México" to "México"),
+        "Indian" to ("Mumbai" to "India"),
+        "Chinese" to ("Shanghái" to "China"),
+        "British" to ("Londres" to "Reino Unido"),
+        "American" to ("Nueva York" to "EE.UU."),
+        "Spanish" to ("Madrid" to "España"),
+        "Greek" to ("Atenas" to "Grecia"),
+        "Thai" to ("Bangkok" to "Tailandia"),
+        "Moroccan" to ("Marrakech" to "Marruecos"),
+        "Turkish" to ("Estambul" to "Turquía"),
+        "Portuguese" to ("Lisboa" to "Portugal"),
+        "Croatian" to ("Dubrovnik" to "Croacia"),
+        "Dutch" to ("Ámsterdam" to "Países Bajos"),
+        "Egyptian" to ("El Cairo" to "Egipto"),
+        "Filipino" to ("Manila" to "Filipinas"),
+        "Jamaican" to ("Kingston" to "Jamaica"),
+        "Malaysian" to ("Kuala Lumpur" to "Malasia"),
+        "Polish" to ("Varsovia" to "Polonia"),
+        "Russian" to ("Moscú" to "Rusia"),
+        "Tunisian" to ("Túnez" to "Túnez"),
+        "Vietnamese" to ("Hanói" to "Vietnam")
+    )
 
-    private fun areaToCountry(area: String) = when (area) {
-        "Italian" -> "Italia"; "French" -> "Francia"; "Japanese" -> "Japón"
-        "Mexican" -> "México"; "Indian" -> "India"; "Chinese" -> "China"
-        "British" -> "Reino Unido"; "American" -> "EE.UU."; "Spanish" -> "España"
-        "Greek" -> "Grecia"; "Thai" -> "Tailandia"; "Moroccan" -> "Marruecos"
-        "Turkish" -> "Turquía"; "Portuguese" -> "Portugal"; "Croatian" -> "Croacia"
-        "Dutch" -> "Países Bajos"; "Egyptian" -> "Egipto"; "Filipino" -> "Filipinas"
-        "Jamaican" -> "Jamaica"; "Malaysian" -> "Malasia"; "Polish" -> "Polonia"
-        "Russian" -> "Rusia"; "Tunisian" -> "Túnez"; "Vietnamese" -> "Vietnam"
-        else -> listOf("EE.UU.", "Francia", "Italia", "Reino Unido", "España").random()
-    }
+    private val FALLBACK_PLACES = listOf(
+        "Nueva York" to "EE.UU.",
+        "Londres" to "Reino Unido",
+        "París" to "Francia",
+        "Tokio" to "Japón",
+        "Ciudad de México" to "México"
+    )
+
+    private fun areaToPlace(area: String): Pair<String, String> =
+        AREA_TO_PLACE[area] ?: FALLBACK_PLACES.random()
 }
