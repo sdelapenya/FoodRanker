@@ -9,6 +9,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.foodranker.data.model.Venue
+import com.app.foodranker.data.repository.VenueRepository
+import com.app.foodranker.data.repository.VenueSuggestion
+import com.app.foodranker.utils.plateDocId
+import com.app.foodranker.utils.toDishSlug
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
@@ -38,6 +43,11 @@ sealed class AddPlateState {
     data class Loading(val uploadProgress: Int = -1) : AddPlateState()
     object Success : AddPlateState()
     data class Error(val message: String) : AddPlateState()
+    /**
+     * El plato ya existe en ese local. No es un fallo: es el caso que hace converger
+     * los rankings — en vez de crear un duplicado, se manda a valorar el que ya hay.
+     */
+    data class AlreadyExists(val plateId: String, val plateName: String) : AddPlateState()
 }
 
 @HiltViewModel
@@ -45,6 +55,7 @@ class AddPlateViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val functions: FirebaseFunctions,
+    private val venueRepository: VenueRepository,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -55,10 +66,8 @@ class AddPlateViewModel @Inject constructor(
     var formName by mutableStateOf("")
     var formDescription by mutableStateOf("")
     var formCategory by mutableStateOf(PlateCategory.OTHER)
-    var formRestaurantName by mutableStateOf("")
-    var formRestaurantAddress by mutableStateOf("")
-    var formCity by mutableStateOf("")
-    var formCountry by mutableStateOf("")
+    // Restaurante, ciudad y país ya no se teclean: salen del local resuelto
+    // (formVenue), que es la identidad canónica. Ver docs/VENUES.md.
     var formFlavorScore by mutableFloatStateOf(7f)
     var formPresentationScore by mutableFloatStateOf(7f)
     var formValueScore by mutableFloatStateOf(7f)
@@ -67,6 +76,84 @@ class AddPlateViewModel @Inject constructor(
     var formImageValidating by mutableStateOf(false)
     var formImageValidationError by mutableStateOf<String?>(null)
     var formCurrentStep by mutableIntStateOf(1)
+
+    // ── Local (identidad canónica) — ver docs/VENUES.md ───────────────────────
+    /** Local ya resuelto contra la CF. Sin esto no se puede publicar. */
+    var formVenue by mutableStateOf<Venue?>(null)
+        private set
+    var venueSuggestions by mutableStateOf<List<VenueSuggestion>>(emptyList())
+        private set
+    var isLoadingVenues by mutableStateOf(false)
+        private set
+    var venueError by mutableStateOf<String?>(null)
+        private set
+    /** Platos ya registrados en el local elegido, para no crear duplicados. */
+    var venueDishes by mutableStateOf<List<Plate>>(emptyList())
+        private set
+    var isLoadingVenueDishes by mutableStateOf(false)
+        private set
+
+    fun loadNearbyVenues() {
+        isLoadingVenues = true
+        venueError = null
+        viewModelScope.launch {
+            venueRepository.nearbyVenues()
+                .onSuccess { venueSuggestions = it }
+                .onFailure { venueError = "No se pudieron buscar locales cerca. Prueba a buscarlo por nombre." }
+            isLoadingVenues = false
+        }
+    }
+
+    fun searchVenues(query: String) {
+        isLoadingVenues = true
+        venueError = null
+        viewModelScope.launch {
+            venueRepository.searchVenues(query)
+                .onSuccess { venueSuggestions = it }
+                .onFailure { venueError = "No se pudo buscar el local. Revisa tu conexión." }
+            isLoadingVenues = false
+        }
+    }
+
+    /** Resuelve el local canónico y carga los platos que ya tiene registrados. */
+    fun selectVenue(suggestion: VenueSuggestion) {
+        isLoadingVenues = true
+        venueError = null
+        viewModelScope.launch {
+            venueRepository.resolveVenue(suggestion.placeId)
+                .onSuccess { venue ->
+                    formVenue = venue
+                    venueSuggestions = emptyList()
+                    loadVenueDishes(venue.id)
+                }
+                .onFailure { venueError = "No se pudo seleccionar ese local. Inténtalo de nuevo." }
+            isLoadingVenues = false
+        }
+    }
+
+    fun clearVenue() {
+        formVenue = null
+        venueDishes = emptyList()
+        venueSuggestions = emptyList()
+        venueError = null
+    }
+
+    private fun loadVenueDishes(venueId: String) {
+        isLoadingVenueDishes = true
+        viewModelScope.launch {
+            try {
+                venueDishes = firestore.collection("plates")
+                    .whereEqualTo("venueId", venueId)
+                    .limit(50).get().await()
+                    .documents.mapNotNull { it.toObject(Plate::class.java) }
+                    .sortedByDescending { it.totalRatings }
+            } catch (e: Exception) {
+                android.util.Log.w("AddPlateVM", "No se pudieron cargar los platos del local: ${e.message}")
+                venueDishes = emptyList()
+            }
+            isLoadingVenueDishes = false
+        }
+    }
 
     fun onImageSelected(uri: Uri?) {
         if (uri == null) return
@@ -87,10 +174,7 @@ class AddPlateViewModel @Inject constructor(
         formName = ""
         formDescription = ""
         formCategory = PlateCategory.OTHER
-        formRestaurantName = ""
-        formRestaurantAddress = ""
-        formCity = ""
-        formCountry = ""
+        clearVenue()
         formFlavorScore = 7f
         formPresentationScore = 7f
         formValueScore = 7f
@@ -106,10 +190,6 @@ class AddPlateViewModel @Inject constructor(
         name: String,
         description: String,
         category: PlateCategory,
-        restaurantName: String,
-        restaurantAddress: String,
-        city: String,
-        country: String,
         flavorScore: Float,
         presentationScore: Float,
         valueScore: Float,
@@ -121,16 +201,25 @@ class AddPlateViewModel @Inject constructor(
             return
         }
 
+        // El local ya viene resuelto por la CF: sus datos son los canónicos, no los
+        // que escriba el usuario. De ahí salen restaurante, ciudad, país y coordenadas.
+        val venue = formVenue ?: run {
+            _state.value = AddPlateState.Error("Elige primero el restaurante")
+            return
+        }
+
         val cleanName = name.sanitized(InputLimits.PLATE_NAME)
         val cleanDescription = description.sanitized(InputLimits.PLATE_DESCRIPTION)
-        val cleanRestaurant = restaurantName.sanitized(InputLimits.RESTAURANT_NAME)
-        val cleanAddress = restaurantAddress.sanitized(InputLimits.RESTAURANT_NAME)
-        val cleanCity = city.sanitized(InputLimits.CITY)
-        val cleanCountry = country.sanitized(InputLimits.COUNTRY)
         val cleanComment = comment.sanitized(InputLimits.RATING_COMMENT)
 
         if (cleanName.isBlank()) {
             _state.value = AddPlateState.Error("El nombre del plato es obligatorio")
+            return
+        }
+
+        val plateId = plateDocId(venue.id, cleanName)
+        if (plateId.isEmpty()) {
+            _state.value = AddPlateState.Error("Ese nombre de plato no es válido")
             return
         }
 
@@ -171,13 +260,25 @@ class AddPlateViewModel @Inject constructor(
                     _state.value = AddPlateState.Error("La foto es obligatoria")
                     return@launch
                 }
+
+                // El id es determinista, así que este plato puede existir ya en este
+                // local. Se comprueba ANTES de subir la imagen para no dejar una
+                // huérfana en Cloudinary por algo que no vamos a escribir.
+                val existing = firestore.collection("plates").document(plateId).get().await()
+                if (existing.exists()) {
+                    _state.value = AddPlateState.AlreadyExists(
+                        plateId = plateId,
+                        plateName = existing.getString("name") ?: cleanName
+                    )
+                    return@launch
+                }
+
                 val imageUrl = uploadImageToCloudinary(context, imageUri).also { uploadedImageUrl = it }
 
                 val safeFlavor = flavorScore.coerceIn(1f, 10f)
                 val safePresentation = presentationScore.coerceIn(1f, 10f)
                 val safeValue = valueScore.coerceIn(1f, 10f)
                 val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
-                val plateId  = UUID.randomUUID().toString()
                 val ratingId = "${plateId}_${user.uid}"
 
                 val safeUserName = (user.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME)
@@ -187,10 +288,15 @@ class AddPlateViewModel @Inject constructor(
                     name = cleanName,
                     description = cleanDescription,
                     category = category,
-                    restaurantName = cleanRestaurant,
-                    restaurantAddress = cleanAddress,
-                    city = cleanCity,
-                    country = cleanCountry,
+                    venueId = venue.id,
+                    dishSlug = cleanName.toDishSlug(),
+                    // Datos del local: canónicos, vienen de Places via resolveVenue
+                    restaurantName = venue.name,
+                    restaurantAddress = venue.address,
+                    city = venue.city,
+                    country = venue.country,
+                    latitude = venue.lat,
+                    longitude = venue.lng,
                     imageUrl = imageUrl,
                     addedByUserId = user.uid,
                     addedByUserName = safeUserName,

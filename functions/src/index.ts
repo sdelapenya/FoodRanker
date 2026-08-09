@@ -1,9 +1,14 @@
 import { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
+import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions";
 import * as admin from "firebase-admin";
 import { ImageAnnotatorClient, protos } from "@google-cloud/vision";
+
+// Clave de Places de SERVIDOR. Vive en Secret Manager, nunca en el repo ni en el APK.
+// Se pone con: npx firebase functions:secrets:set PLACES_SERVER_KEY
+const PLACES_SERVER_KEY = defineSecret("PLACES_SERVER_KEY");
 
 admin.initializeApp();
 
@@ -1039,6 +1044,105 @@ export const onPlateDeleted = onDocumentDeleted(
     }
   }
 );
+
+/**
+ * resolveVenue — callable
+ *
+ * Da de alta (o refresca) el local canónico `venues/{placeId}` a partir de un
+ * place_id de Google Places.
+ *
+ * El cliente NO escribe `venues` directamente: ese documento es la identidad del
+ * local que ven todos los usuarios, así que si fuera escribible desde la app
+ * cualquiera podría renombrar un sitio para todo el mundo. Aquí el nombre y la
+ * dirección vienen siempre de Places, consultados con una clave de servidor que no
+ * viaja en el APK.
+ *
+ * Se llama una vez por local NUEVO, no por plato: si el venue ya existe se devuelve
+ * tal cual sin gastar una consulta a Places.
+ */
+export const resolveVenue = onCall(
+  { region: "europe-west1", secrets: [PLACES_SERVER_KEY] },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Must be authenticated");
+
+    const placeId = request.data?.placeId;
+    if (typeof placeId !== "string" || placeId.length === 0 || placeId.length > 512) {
+      throw new HttpsError("invalid-argument", "placeId is required");
+    }
+
+    const venueRef = db.collection("venues").doc(placeId);
+    const existing = await venueRef.get();
+    if (existing.exists) {
+      return { venue: { id: existing.id, ...existing.data() }, cached: true };
+    }
+
+    let place: PlaceDetails;
+    try {
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+        {
+          headers: {
+            "X-Goog-Api-Key": PLACES_SERVER_KEY.value(),
+            "X-Goog-FieldMask":
+              "id,displayName,formattedAddress,location,addressComponents",
+          },
+        }
+      );
+      if (!res.ok) {
+        const body = await res.text();
+        logger.error(`Places Details ${res.status} para ${placeId}: ${body}`);
+        throw new HttpsError("not-found", "No se pudo resolver el local");
+      }
+      place = (await res.json()) as PlaceDetails;
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      logger.error(`Error consultando Places para ${placeId}:`, err);
+      throw new HttpsError("internal", "No se pudo resolver el local");
+    }
+
+    const city = pickAddressComponent(place, ["locality", "postal_town"]) ||
+      pickAddressComponent(place, ["administrative_area_level_2"]) || "";
+    const country = pickAddressComponent(place, ["country"]) || "";
+
+    const venue = {
+      id: placeId,
+      name: place.displayName?.text ?? "",
+      address: place.formattedAddress ?? "",
+      city,
+      cityNormalized: normalizeCity(city),
+      country,
+      lat: place.location?.latitude ?? 0,
+      lng: place.location?.longitude ?? 0,
+      plateCount: 0,
+      createdAt: Date.now(),
+    };
+
+    await venueRef.set(venue, { merge: true });
+    logger.info(`Venue dado de alta: ${placeId} — ${venue.name} (${venue.city})`);
+    return { venue, cached: false };
+  }
+);
+
+interface PlaceDetails {
+  id?: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  location?: { latitude?: number; longitude?: number };
+  addressComponents?: Array<{
+    longText?: string;
+    shortText?: string;
+    types?: string[];
+  }>;
+}
+
+/** Primer componente de dirección cuyo tipo esté en `types`. */
+function pickAddressComponent(place: PlaceDetails, types: string[]): string {
+  const comp = (place.addressComponents ?? []).find((c) =>
+    (c.types ?? []).some((t) => types.includes(t))
+  );
+  return comp?.longText ?? "";
+}
 
 /**
  * deleteUserAccount — callable

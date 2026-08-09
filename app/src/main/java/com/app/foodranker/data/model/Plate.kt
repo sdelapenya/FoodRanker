@@ -5,6 +5,14 @@ data class Plate(
     val name: String = "",
     val description: String = "",
     val category: PlateCategory = PlateCategory.OTHER,
+    /**
+     * place_id del local (doc id en `venues`). Junto con [dishSlug] forma el id de
+     * este documento: `{venueId}__{dishSlug}`, de modo que el mismo plato en el mismo
+     * local es siempre el mismo documento. Ver docs/VENUES.md.
+     */
+    val venueId: String = "",
+    /** nombre del plato normalizado — ver `String.toDishSlug()` */
+    val dishSlug: String = "",
     val restaurantName: String = "",
     val restaurantAddress: String = "",
     val city: String = "",

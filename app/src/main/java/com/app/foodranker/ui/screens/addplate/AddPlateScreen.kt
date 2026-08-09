@@ -45,6 +45,7 @@ import com.app.foodranker.viewmodel.AddPlateViewModel
 fun AddPlateScreen(
     onNavigateBack: () -> Unit,
     onSuccess: () -> Unit,
+    onNavigateToPlate: (String) -> Unit = {},
     viewModel: AddPlateViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -54,10 +55,6 @@ fun AddPlateScreen(
     val plateName        = viewModel.formName
     val description      = viewModel.formDescription
     val selectedCategory = viewModel.formCategory
-    val restaurantName   = viewModel.formRestaurantName
-    val restaurantAddress = viewModel.formRestaurantAddress
-    val city             = viewModel.formCity
-    val country          = viewModel.formCountry
     val flavorScore      = viewModel.formFlavorScore
     val presentationScore = viewModel.formPresentationScore
     val valueScore       = viewModel.formValueScore
@@ -75,7 +72,7 @@ fun AddPlateScreen(
     ) { uri -> viewModel.onImageSelected(uri) }
 
     // Confirm discard when form has data
-    val hasData = plateName.isNotEmpty() || imageUri != null || restaurantName.isNotEmpty()
+    val hasData = plateName.isNotEmpty() || imageUri != null || viewModel.formVenue != null
     var showDiscardDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = currentStep == 1 && hasData) {
@@ -106,6 +103,30 @@ fun AddPlateScreen(
             onSuccess()
             viewModel.resetState()
         }
+    }
+
+    // El plato ya existe en ese local. No es un error del usuario: es justo el caso
+    // que hace converger los rankings, así que se le ofrece valorar el que ya hay.
+    (state as? AddPlateState.AlreadyExists)?.let { existing ->
+        AlertDialog(
+            onDismissRequest = { viewModel.resetState() },
+            title = { Text("Ese plato ya está aquí") },
+            text = {
+                Text(
+                    "\"${existing.plateName}\" ya está registrado en este sitio. " +
+                        "Puedes valorarlo y tu nota cuenta para su ranking."
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.resetState()
+                    onNavigateToPlate(existing.plateId)
+                }) { Text("Valorarlo") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.resetState() }) { Text("Cambiar el nombre") }
+            }
+        )
     }
 
     Scaffold(
@@ -245,40 +266,19 @@ fun AddPlateScreen(
                 if (step == 2) {
                 item {
                     SectionCard(title = "📍 ¿Dónde lo probaste?") {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            FoodTextField(
-                                value = restaurantName,
-                                onValueChange = { viewModel.formRestaurantName = it },
-                                label = "Restaurante / Bar *",
-                                placeholder = "Nombre del local",
-                                maxLength = InputLimits.RESTAURANT_NAME
-                            )
-                            FoodTextField(
-                                value = restaurantAddress,
-                                onValueChange = { viewModel.formRestaurantAddress = it },
-                                label = "Dirección (opcional)",
-                                placeholder = "Calle, número, etc.",
-                                maxLength = InputLimits.RESTAURANT_NAME
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                FoodTextField(
-                                    value = city,
-                                    onValueChange = { viewModel.formCity = it },
-                                    label = "Ciudad *",
-                                    placeholder = "Madrid",
-                                    modifier = Modifier.weight(1f),
-                                    maxLength = InputLimits.CITY
-                                )
-                                FoodTextField(
-                                    value = country,
-                                    onValueChange = { viewModel.formCountry = it },
-                                    label = "País *",
-                                    placeholder = "España",
-                                    modifier = Modifier.weight(1f),
-                                    maxLength = InputLimits.COUNTRY
-                                )
-                            }
-                        }
+                        VenuePicker(
+                            venue = viewModel.formVenue,
+                            suggestions = viewModel.venueSuggestions,
+                            isLoading = viewModel.isLoadingVenues,
+                            error = viewModel.venueError,
+                            dishes = viewModel.venueDishes,
+                            isLoadingDishes = viewModel.isLoadingVenueDishes,
+                            onUseLocation = { viewModel.loadNearbyVenues() },
+                            onSearch = { viewModel.searchVenues(it) },
+                            onSelect = { viewModel.selectVenue(it) },
+                            onClear = { viewModel.clearVenue() },
+                            onExistingDishClick = onNavigateToPlate
+                        )
                     }
                 }
 
@@ -326,8 +326,9 @@ fun AddPlateScreen(
 
                 // ── BOTÓN PUBLICAR (paso 2) ───────────────────────────
                 item {
-                    val isValid = plateName.isNotBlank() && restaurantName.isNotBlank()
-                            && city.isNotBlank() && country.isNotBlank()
+                    // El local ya no se teclea: debe estar resuelto contra la CF, que es
+                    // lo que aporta ciudad, país y coordenadas canónicas.
+                    val isValid = plateName.isNotBlank() && viewModel.formVenue != null
                             && imageUri != null
                     val btnScale by animateFloatAsState(
                         targetValue = if (state is AddPlateState.Loading) 0.97f else 1f,
@@ -346,10 +347,6 @@ fun AddPlateScreen(
                                     name = plateName,
                                     description = description,
                                     category = selectedCategory,
-                                    restaurantName = restaurantName,
-                                    restaurantAddress = restaurantAddress,
-                                    city = city,
-                                    country = country,
                                     flavorScore = flavorScore,
                                     presentationScore = presentationScore,
                                     valueScore = valueScore,

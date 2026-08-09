@@ -72,6 +72,11 @@ android {
         // proyecto. Solo se aplican en debug: pinchar anuncios reales en tus propias
         // pruebas es tráfico inválido y AdMob suspende cuentas por ello.
         buildConfigField("String", "ADMOB_TEST_DEVICE_IDS", "\"${localProp("ADMOB_TEST_DEVICE_IDS")}\"")
+        // Clave de Places para el cliente: solo autocompletado y búsqueda de locales
+        // cercanos, que devuelven candidatos. Los datos canónicos del local los
+        // resuelve la CF resolveVenue con una clave de servidor aparte. Restringir
+        // esta por package + SHA-1 y ponerle tope de cuota (ver docs/VENUES.md).
+        buildConfigField("String", "PLACES_API_KEY", "\"${localProp("PLACES_API_KEY")}\"")
     }
 
 
@@ -118,6 +123,9 @@ dependencies {
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // Places — identidad canónica del local (ver docs/VENUES.md)
+    implementation(libs.places)
 
     // Hilt (inyección de dependencias)
     implementation("com.google.dagger:hilt-android:2.48")

@@ -40,6 +40,17 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
+    // ── VENUES ─────────────────────────────────────────────────
+    // Identidad canónica del local (doc id == place_id de Google Places).
+    // Lectura pública como los platos; escritura SOLO desde la Cloud Function
+    // resolveVenue via Admin SDK. El cliente nunca escribe aquí: este documento lo
+    // ven todos los usuarios, así que si fuera escribible desde la app cualquiera
+    // podría renombrar un local para toda la comunidad. Ver docs/VENUES.md.
+    match /venues/{venueId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ── PLATES ─────────────────────────────────────────────────
     match /plates/{plateId} {
       allow read: if true;
@@ -51,13 +62,23 @@ service cloud.firestore {
                     && request.resource.data.likes == 0
                     && request.resource.data.reportCount == 0
                     && request.resource.data.status == "pending"
+                    // Identidad canónica: el plato debe colgar de un local ya resuelto
+                    // por la CF resolveVenue, y su id ha de ser {venueId}__{dishSlug}
+                    // para que el deduplicado lo imponga Firestore (ver docs/VENUES.md).
+                    && request.resource.data.venueId is string
+                    && request.resource.data.venueId.size() > 0
+                    && request.resource.data.dishSlug is string
+                    && request.resource.data.dishSlug.size() > 0
+                    && plateId == request.resource.data.venueId + '__' + request.resource.data.dishSlug
+                    && exists(/databases/$(database)/documents/venues/$(request.resource.data.venueId))
                     && request.resource.data.keys().hasOnly([
                          'id', 'name', 'description', 'category',
                          'restaurantName', 'restaurantAddress',
                          'city', 'country', 'latitude', 'longitude',
                          'imageUrl', 'addedByUserId', 'addedByUserName',
                          'averageScore', 'totalRatings', 'createdAt',
-                         'likes', 'likedByUsers', 'reportCount', 'status'
+                         'likes', 'likedByUsers', 'reportCount', 'status',
+                         'venueId', 'dishSlug'
                        ]);
 
       allow update: if isSignedIn() && (

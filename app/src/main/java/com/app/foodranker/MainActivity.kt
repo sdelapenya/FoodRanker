@@ -358,6 +358,11 @@ fun FoodRankerNavigation() {
                     navController.navigate(Screen.Discover.route) {
                         popUpTo(Screen.Discover.route) { inclusive = false }
                     }
+                },
+                // El plato ya existía en ese local: en vez de crear un duplicado se
+                // va a valorarlo. Ver docs/VENUES.md.
+                onNavigateToPlate = { plateId ->
+                    navController.navigate(Screen.PlateDetail.createRoute(plateId))
                 }
             )
         }
