@@ -15,34 +15,29 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-Identidad canónica plato+local, **fase 1 escrita pero NO activa**. Diseño completo en
-[VENUES.md](VENUES.md).
+Identidad canónica plato+local, **fase 1 ACTIVA en producción** desde el 2026-08-10.
+Diseño completo en [VENUES.md](VENUES.md).
 
-Falta, en este orden:
+Ya hecho: clave de servidor creada, secreto `PLACES_SERVER_KEY` guardado (versión 1),
+`resolveVenue` desplegada en europe-west1 y reglas de Firestore publicadas **después**
+de la función, en ese orden.
 
-1. **Crear la clave de Places de SERVIDOR** en Google Cloud (proyecto `foodranker-51270`):
-   nombre `FoodRanker Places Server`, restricción de aplicación **Ninguno**, restricción
-   de API **Places API (New)**.
-2. **Guardarla como secreto** (lo hace Sergio, no debe pasar por el chat):
-   ```
-   cd e:\FoodRanker\functions
-   npx firebase functions:secrets:set PLACES_SERVER_KEY
-   ```
-3. **Tope de cuota diario** en Places API — pendiente, es la protección real si se filtra
-   una clave: https://console.cloud.google.com/apis/api/places.googleapis.com/quotas
-4. **Desplegar `resolveVenue` ANTES que las reglas.** Las reglas nuevas exigen que el
-   venue exista; si se despliegan primero, publicar un plato se vuelve imposible.
-   ```
-   npx firebase deploy --only functions:resolveVenue
-   npx firebase deploy --only firestore:rules
-   ```
-5. **Probar el ciclo completo**: elegir local → resolver → publicar plato → y repetir con
-   un nombre equivalente ("paella de marisco" vs "Paella De Marisco") para confirmar que
-   el id determinista los manda al MISMO documento en vez de duplicarlos. Ese es el test
-   que demuestra que la identidad canónica funciona.
+Falta:
+
+1. **Tope de cuota diario** en Places API — es la protección real si se filtra una clave:
+   https://console.cloud.google.com/apis/api/places.googleapis.com/quotas
+2. **Probar el ciclo completo en el móvil**: elegir local → resolver → publicar plato → y
+   repetir con un nombre equivalente ("paella de marisco" vs "Paella De Marisco") para
+   confirmar que el id determinista los manda al MISMO documento en vez de duplicarlos.
+   Ese es el test que demuestra que la identidad canónica funciona. **Sin probar todavía**:
+   `resolveVenue` está desplegada pero nunca se ha ejecutado con una llamada real.
 
 Ya verificado en móvil real: la búsqueda de locales (`searchNearby`) devuelve locales
 reales cercanos con dirección correcta. La clave de Android ya está en `local.properties`.
+
+⚠️ Las reglas nuevas exigen `venueId`, `dishSlug` y que el id del plato sea
+`{venueId}__{dishSlug}`. Cualquier APK anterior a `7bdf715` **no puede publicar platos**
+contra producción. Si el móvil falla al publicar, lo primero es reinstalar la build actual.
 
 ---
 
@@ -72,8 +67,7 @@ comprobado.
 ### Cloud Functions (europe-west1)
 `moderatePlateImage`, `onRatingCreated`, `onRatingUpdated`, `onNotificationCreated`,
 `onReferralCreated`, `onPlateDeleted`, `onCommentCreated`, `onChallengeUpdated`,
-`awardAdXp`, `deleteUserAccount`, `validateFoodImage`.
-**`resolveVenue` está escrita pero SIN desplegar.**
+`awardAdXp`, `deleteUserAccount`, `validateFoodImage`, `resolveVenue`.
 
 ---
 
@@ -170,6 +164,13 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
   inválido y suspende cuentas
 - **fail2ban en el servidor**: reintentar SSH en bucle banea la IP del PC y **tira las
   sesiones remotas de Cursor**. Solo jail `sshd`, puerto 22
+- **`firebase deploy` falla con "User code failed to load. Timeout after 10000"**: casi
+  nunca es el código. El CLI arranca el módulo y le pide la especificación por HTTP, y en
+  Windows esos 10 s se quedan cortos. Comprobar primero que carga
+  (`node -e "require('./lib/index.js')"`) y desplegar con `$env:FUNCTIONS_DISCOVERY_TIMEOUT="120"`
+- **Comandos del proyecto: PowerShell en el PC, no el bash del servidor.** Ya pasó pegar
+  `cd e:\FoodRanker\functions` en la sesión SSH: bash se come las barras invertidas
+  (`e:FoodRankerfunctions`) y el `npx` acaba corriendo donde no hay `firebase-tools`
 - **Scripts Admin SDK**: ADC temporal con el refresh_token de
   `~/.config/configstore/firebase-tools.json`, client_id
   `563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com`, secret
