@@ -1,78 +1,179 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-07-18  
-**Código (servidor):** `/home/sergio/lab/apps/FoodRanker`  
-**GitHub:** https://github.com/sdelapenya/FoodRanker  
-**También:** copia en disco duro portátil del PC de Sergio (no en este servidor)  
-**Auditorías:** `lab/marca-personal/apps-android/AUDITORIA-PLAY-*.md` + `AUDITORIA-PRODUCTO-USO-*.md`
+**Actualizado:** 2026-08-10
+**Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
+**GitHub:** https://github.com/sdelapenya/FoodRanker (público)
+**Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
 
-## Sync (importante)
+## Sync
 
-Cambios en el **servidor** no llegan solos al portátil. Flujo:
+Se desarrolla en PC **y** en servidor (Cursor), y las ramas divergen. Antes de tocar:
+`git status`, `git log --oneline -5` y comprobar `merge-base` con el otro remote.
+El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conflictos a mano).
 
-1. Commit + push a GitHub desde el servidor (cuando Sergio lo pida).
-2. En el PC: `git pull` en la carpeta del disco / clone local.
-3. No editar a ciegas en dos sitios sin pull previo.
+---
 
-## Qué funciona
+## LO SIGUIENTE (retomar aquí)
 
-- Core loop: Google Sign-In → Discover → like/rate/save → Add plate (Cloudinary) → Profile
-- Explore, comments, follows, reports, onboarding, splash
-- **XP/badges server-side** (Cloud Functions + Admin SDK; el cliente no los escribe)
-- Liga semanal por ciudad, con clawback de XP si el plato se rechaza
-- Ads (AdMob) en otros puntos; Google Play Billing implementado
-- Package `com.app.foodranker`; minify release configurado
+Identidad canónica plato+local, **fase 1 escrita pero NO activa**. Diseño completo en
+[VENUES.md](VENUES.md).
 
-## Producto — hecho 2026-07-18 (confianza)
+Falta, en este orden:
 
-- Challenge: CTA solo navega a publicar; **XP solo al publicar** (ya no farm sin post)
-- Sin interstitial tras publicar plato
-- Seed MealDB: UI long-press + **bloqueado fuera de DEBUG**
-- Empty state honesto (sin relleno inventado)
-- Home / Trending: rutas existen pero **no enlazadas** desde Discover
+1. **Crear la clave de Places de SERVIDOR** en Google Cloud (proyecto `foodranker-51270`):
+   nombre `FoodRanker Places Server`, restricción de aplicación **Ninguno**, restricción
+   de API **Places API (New)**.
+2. **Guardarla como secreto** (lo hace Sergio, no debe pasar por el chat):
+   ```
+   cd e:\FoodRanker\functions
+   npx firebase functions:secrets:set PLACES_SERVER_KEY
+   ```
+3. **Tope de cuota diario** en Places API — pendiente, es la protección real si se filtra
+   una clave: https://console.cloud.google.com/apis/api/places.googleapis.com/quotas
+4. **Desplegar `resolveVenue` ANTES que las reglas.** Las reglas nuevas exigen que el
+   venue exista; si se despliegan primero, publicar un plato se vuelve imposible.
+   ```
+   npx firebase deploy --only functions:resolveVenue
+   npx firebase deploy --only firestore:rules
+   ```
+5. **Probar el ciclo completo**: elegir local → resolver → publicar plato → y repetir con
+   un nombre equivalente ("paella de marisco" vs "Paella De Marisco") para confirmar que
+   el id determinista los manda al MISMO documento en vez de duplicarlos. Ese es el test
+   que demuestra que la identidad canónica funciona.
 
-## Merge de esta rama con main (2026-08-04)
+Ya verificado en móvil real: la búsqueda de locales (`searchNearby`) devuelve locales
+reales cercanos con dirección correcta. La clave de Android ya está en `local.properties`.
 
-Esta rama partía de `fccc93d`, sin los 13 commits de `main` (seguridad, liga, CFs).
-Al mergear se resolvió así:
+---
 
-- Challenge XP: se **eliminó** `ChallengeViewModel.participate()` en vez de dejarlo no-op.
-  `AddPlateViewModel.checkAndCompleteChallenge()` ya registraba la participación al publicar,
-  y la CF `onChallengeUpdated` otorga el XP. El banner ya no llama al ViewModel.
-- Premium: **no** se aplicó el stub “Próximamente”. La ruta ya no es huérfana (hay botón en
-  Perfil) y el Billing es real. En su lugar se recortó la lista de beneficios a los dos que la
-  app entrega hoy (sin anuncios, badge) — los otros tres no estaban implementados.
-- Seed DEBUG y empty state: `main` ya tenía equivalentes mejores; se conservó el tono honesto.
+## Estado actual
 
-## Qué NO está hecho
+### Producción está VACÍA a propósito
+0 platos, 0 ratings, 0 comments, 0 saves. Se borraron los 129 platos sembrados (ninguno
+era real) porque tenían geografía imposible ("París, Japón") y hacían que el perfil de
+Sergio dijera "85 platos publicados" como si fuera un bot. La app queda con el empty
+state honesto. **No volver a sembrar datos ficticios**: son puntuaciones inventadas en una
+app cuyo valor es que las puntuaciones sean creíbles.
 
-### Play (bloquea Store)
+### Qué funciona
+- Core loop: Google Sign-In → Discover → like/rate/save → publicar (Cloudinary) → Perfil
+- XP/badges server-side (Cloud Functions + Admin SDK; el cliente no los escribe)
+- Liga semanal por ciudad con clawback de XP si el plato se rechaza
+- Moderación de imagen fail-closed (Vision en servidor)
+- Billing implementado y **real** (el precio 2,99 €/mes lo devuelve Google Play)
+- Borrado de cuenta (lo exige Play)
 
-- Privacy/Terms URL HTTPS en Console
-- `@xml/gma_ad_services_config` ausente
-- Location permissions sin uso
-- API keys Vision/Pexels en BuildConfig
-- Listing: capturas, Data safety, UGC
-- `autoVerify="true"` en intent-filters https sin `assetlinks.json` publicado
+### Verificado en móvil real (Redmi Note 10S, Android 13) el 2026-08-09
+Login con Google completo (logout + login, sin `DEVELOPER_ERROR`), push FCM entregadas
+dos veces, token FCM conservado tras re-login, arranque sin crashes. Antes de esto el QA
+solo se había hecho en emulador **sin cuenta de Google**, así que nada de esto estaba
+comprobado.
 
-### Producto (siguiente valor)
+### Cloud Functions (europe-west1)
+`moderatePlateImage`, `onRatingCreated`, `onRatingUpdated`, `onNotificationCreated`,
+`onReferralCreated`, `onPlateDeleted`, `onCommentCreated`, `onChallengeUpdated`,
+`awardAdXp`, `deleteUserAccount`, `validateFoodImage`.
+**`resolveVenue` está escrita pero SIN desplegar.**
 
-- Discovery por ciudad / cerca
-- Identidad canónica plato+venue
-- City MVP con contenido real
+---
 
-### Ya resuelto en main (no volver a abrirlo)
+## Bloqueantes de Play Store
 
-- `isPremium` / XP escribibles por cliente en rules → **cerrado**: solo Admin SDK los escribe
-- XP/scores server-side → **hecho**: Cloud Functions en `europe-west1`
+### Código — resuelto
+- `gma_ad_services_config`: existe (lo aporta el AAR de AdMob)
+- Permisos de localización: se recuperaron **con uso real** (locales cercanos). Hay que
+  declararlos en Data safety
+- API keys en el binario: la de Vision se eliminó del APK (ahora la llamada la hace la CF
+  `validateFoodImage` con service account) y **la clave se borró de Google Cloud**. La de
+  Pexels nunca llegaba al binario: R8 elimina `MealDBSeeder` en release porque está tras
+  `if (!BuildConfig.DEBUG) return`
 
-## Próximo paso
+### Falta — todo de Play Console, no de código
+- URL HTTPS pública de privacidad y términos
+- Formulario de Data safety (email, fotos, ubicación, datos de uso)
+- Ficha: capturas, descripciones, icono, gráfico destacado
+- Cuestionario de clasificación de contenido
+- Declaración de contenido generado por usuarios (hay moderación y reportes, hay que
+  declararlos)
 
-1. Probar en móvil real: login Google, Billing, push FCM y AdMob nunca se probaron
-   (el QA se hizo en emulador sin cuenta de Google).
-2. AAB de release: regenerar tras este merge — el generado el 2026-07-02 es de `e4c0a87`.
-3. Producto: ciudad-first; Play P0 cuando toque publicar.
+### SHA-1 — OJO, esto rompería el lanzamiento
+| | SHA-1 |
+|---|---|
+| Registrado en Firebase | `00562c9f...8234c7` (debug) |
+| Debug | `00:56:2C:9F:18:0E:7F:6C:EB:03:BB:3F:7A:03:B5:CE:F9:82:34:C7` |
+| Release | `27:78:23:4B:D8:97:89:FE:86:23:28:F4:F7:65:10:23:15:E1:1A:59` |
 
-## Journal
+**La huella de release NO está registrada en Firebase.** Si se sube el AAB así, la app se
+instala pero **nadie puede iniciar sesión** (`DEVELOPER_ERROR`). Hay que añadirla en
+Firebase Console → Configuración del proyecto → Tus apps → Añadir huella, y descargar el
+`google-services.json` actualizado. Y cuando Play genere su clave de App Signing, añadir
+también esa tercera huella (a Firebase y a la clave de Places de Android).
 
-- `lab/marca-personal/docs/journal/2026-07-18-cursor-foodranker-confianza.md`
+### AAB
+El último generado es de antes de los commits de identidad canónica. **Regenerar antes de
+subir.** Keystore y credenciales en `local.properties` (fuera de git).
+
+---
+
+## No abrir de nuevo (ya decidido)
+
+- **No sembrar datos ficticios** — ver arriba
+- **No anunciar Premium que no existe**: `isPremium` solo controla `BannerAd` y el badge.
+  La lista de beneficios se recortó a los dos reales
+- **No aplicar el stub "Próximamente" a Premium**: el Billing es real y funciona
+- `ChallengeViewModel.participate()` está eliminado a propósito (era farming de XP sin
+  publicar). El XP del reto lo concede `onChallengeUpdated` al publicar
+- `isPremium`/`xp`/`level`/`badges`: solo Admin SDK. Nunca desde cliente
+- `ratings` tiene `allow delete: if false`
+
+---
+
+## Producto — valoración honesta (2026-08-09)
+
+Lo bueno: la ingeniería está por encima de la media indie (autoridad server-side,
+moderación fail-closed, borrado en cascada, auditorías de seguridad pasadas) y el diseño
+visual es coherente y comercial.
+
+El riesgo real no es la calidad, es la **densidad**: una app de rankings no vale nada sin
+masa crítica *en una ciudad*. Con un usuario, la Liga está vacía y el ranking no significa
+nada. Y la gamificación (XP, niveles, badges, ligas, misiones, rachas, referidos, premium)
+va por delante del valor probado: es un stack de retención completo sobre un bucle que
+ningún usuario real ha validado.
+
+El ángulo con potencial es el que ya está elegido: rankear **platos**, no restaurantes.
+Google Maps tiene ganado "¿es bueno este restaurante?"; nadie ha resuelto "¿qué pido
+aquí?". Por eso la identidad canónica plato+local no es un refactor cosmético: es la pieza
+que hace que la idea funcione.
+
+Recomendación: **City MVP** — un barrio, contenido real, veinte personas. Si esas veinte
+vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es código.
+
+---
+
+## Trampas conocidas (ahorran tiempo)
+
+- **ADB solo funciona en PowerShell**, no en Git Bash. Y Git Bash convierte `/sdcard/...`
+  en rutas de Windows: usar `//sdcard/...` o hacerlo desde PowerShell
+- **`local.properties`**: no añadir líneas con `Add-Content` sin salto previo. Ya pasó una
+  vez que `PLACES_API_KEY=` quedó pegado a `KEY_PASSWORD` y corrompió la contraseña del
+  keystore. Usar Edit sobre una línea existente
+- **Reglas de `plates`**: tienen lista blanca explícita de campos. Añadir un campo nuevo
+  sin tocarla hace fallar **toda** creación de platos
+- **R8 y BuildConfig**: leer el `BuildConfig.java` generado NO dice qué llega al binario.
+  Para saberlo, extraer el AAB y buscar en los `.dex`
+- **Emulador en frío**: da ANR por `lowmemorykiller` al arrancar mientras GMS y Play Store
+  se actualizan. No es un bug de la app — comprobar `logcat | grep lowmemorykiller` antes
+  de investigar
+- **Selector de fotos de MIUI**: hay que confirmar con "Hecho", no basta tocar la foto
+- **AdMob**: el Redmi está registrado como dispositivo de prueba vía
+  `ADMOB_TEST_DEVICE_IDS` en `local.properties`. Pulsar anuncios reales propios es tráfico
+  inválido y suspende cuentas
+- **fail2ban en el servidor**: reintentar SSH en bucle banea la IP del PC y **tira las
+  sesiones remotas de Cursor**. Solo jail `sshd`, puerto 22
+- **Scripts Admin SDK**: ADC temporal con el refresh_token de
+  `~/.config/configstore/firebase-tools.json`, client_id
+  `563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com`, secret
+  `j9iVZfS8kkCEFUPaAeJV0sAi`. Escribir el JSON **sin BOM**
+  (`New-Object System.Text.UTF8Encoding $false`) y borrarlo al terminar.
+  No sirve para `createCustomToken` (necesita service account) y el login por
+  email/password está deshabilitado en el proyecto
