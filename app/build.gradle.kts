@@ -126,6 +126,9 @@ dependencies {
 
     // Places — identidad canónica del local (ver docs/VENUES.md)
     implementation(libs.places)
+    // Ubicación: searchNearby (Places API New) necesita coordenadas explícitas, a
+    // diferencia del findCurrentPlace legacy que las resolvía por su cuenta.
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     // Hilt (inyección de dependencias)
     implementation("com.google.dagger:hilt-android:2.48")
