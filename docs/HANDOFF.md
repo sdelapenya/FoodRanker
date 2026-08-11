@@ -18,26 +18,42 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 Identidad canónica plato+local, **fase 1 ACTIVA en producción** desde el 2026-08-10.
 Diseño completo en [VENUES.md](VENUES.md).
 
-Ya hecho: clave de servidor creada, secreto `PLACES_SERVER_KEY` guardado (versión 1),
-`resolveVenue` desplegada en europe-west1 y reglas de Firestore publicadas **después**
-de la función, en ese orden.
+**Fase 1 verificada de punta a punta en el Redmi el 2026-08-11.** Ciclo completo probado:
+elegir local → `resolveVenue` → publicar → reintentar con otra grafía. Resultados:
 
-Falta:
+- `resolveVenue` respondió a la primera. Log: `Venue dado de alta: ChIJnZJ7qkXqQQ0RC8zo9tQxyIo
+  — Bar Casa Benito (Toledo)`. La clave de servidor funciona y `city` se extrae bien de
+  `addressComponents`.
+- El id determinista quedó `ChIJnZJ7qkXqQQ0RC8zo9tQxyIo__espaguetis-con-tomate`.
+- **El deduplicado funciona**: publicar "Espaguetis Con Tomate" en el mismo local cayó en ese
+  mismo documento y la app ofreció "Ese plato ya está aquí → Valorarlo" en vez de duplicar.
+  La comprobación pasa **antes** de subir a Cloudinary, así que un duplicado no deja imagen
+  huérfana.
+- Moderación: Vision aprobó la foto y el plato pasó a `status=approved` solo.
+- Los datos de prueba (plato, rating y venue) se borraron después. Producción vuelve a estar
+  a 0 en plates, ratings, comments, saves y venues.
 
-1. **Tope de cuota diario** en Places API — es la protección real si se filtra una clave:
-   https://console.cloud.google.com/apis/api/places.googleapis.com/quotas
-2. **Probar el ciclo completo en el móvil**: elegir local → resolver → publicar plato → y
-   repetir con un nombre equivalente ("paella de marisco" vs "Paella De Marisco") para
-   confirmar que el id determinista los manda al MISMO documento en vez de duplicarlos.
-   Ese es el test que demuestra que la identidad canónica funciona. **Sin probar todavía**:
-   `resolveVenue` está desplegada pero nunca se ha ejecutado con una llamada real.
+Topes de cuota de Places puestos el 2026-08-11: `SearchNearbyRequest`, `SearchTextRequest` y
+`GetPlaceRequest` a 500/día; `Autocomplete`, `GetPhotoMedia`, `SearchMedia` y
+`SearchReviewPosts` a **0** (la app no los usa; los dos últimos estaban en "Ilimitado").
+Las "per minute per user" se dejaron sin tocar a propósito: la clave de servidor cuenta
+todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `resolveVenue`.
 
-Ya verificado en móvil real: la búsqueda de locales (`searchNearby`) devuelve locales
-reales cercanos con dirección correcta. La clave de Android ya está en `local.properties`.
+### Pendiente de la identidad canónica
 
-⚠️ Las reglas nuevas exigen `venueId`, `dishSlug` y que el id del plato sea
-`{venueId}__{dishSlug}`. Cualquier APK anterior a `7bdf715` **no puede publicar platos**
-contra producción. Si el móvil falla al publicar, lo primero es reinstalar la build actual.
+1. **La dirección canónica queda en inglés.** `resolveVenue` no manda `languageCode` a Places,
+   así que se guardó `country: "Spain"` y `address: "... Toledo, Spain"` aunque la sugerencia
+   del SDK de Android decía "España". Lo ve todo el mundo en la ficha del plato.
+2. **App Check no está activo**: el log de la callable dice `{auth: VALID, app: MISSING}`.
+   Cualquiera con un token de sesión válido puede llamar a `resolveVenue`. Con los topes de
+   cuota el daño está acotado, pero conviene activarlo antes de tener usuarios.
+3. **Borrar un plato no revierte el XP del autor.** `onPlateDeleted` cascadea ratings,
+   comments y saves, pero los 55 XP (50 por publicar + 5 por valorar) se quedan. Tampoco
+   borra la imagen de Cloudinary.
+
+⚠️ Las reglas exigen `venueId`, `dishSlug` y que el id del plato sea `{venueId}__{dishSlug}`.
+Cualquier APK anterior a `7bdf715` **no puede publicar platos** contra producción. Si el móvil
+falla al publicar, lo primero es reinstalar la build actual.
 
 ---
 
@@ -164,6 +180,13 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
   inválido y suspende cuentas
 - **fail2ban en el servidor**: reintentar SSH en bucle banea la IP del PC y **tira las
   sesiones remotas de Cursor**. Solo jail `sshd`, puerto 22
+- **Capturas de pantalla por ADB**: `adb exec-out screencap -p > f.png` **corrompe el PNG** en
+  PowerShell (le mete BOM y recodifica). Hacer `adb shell screencap -p /sdcard/s.png` y
+  `adb pull`
+- **`adb` no está en el PATH**: vive en `C:\Users\User\AppData\Local\Android\Sdk\platform-tools`
+- **Al pilotar la app por ADB, el teclado tapa la mitad inferior**. Un `input tap` sobre una
+  categoría acaba escribiendo una letra en el campo de texto. Cerrar el teclado con
+  `input keyevent 4` antes de tocar nada de abajo
 - **`firebase deploy` falla con "User code failed to load. Timeout after 10000"**: casi
   nunca es el código. El CLI arranca el módulo y le pide la especificación por HTTP, y en
   Windows esos 10 s se quedan cortos. Comprobar primero que carga
