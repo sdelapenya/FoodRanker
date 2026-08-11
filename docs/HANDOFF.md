@@ -108,22 +108,46 @@ comprobado.
 - Declaración de contenido generado por usuarios (hay moderación y reportes, hay que
   declararlos)
 
-### SHA-1 — OJO, esto rompería el lanzamiento
+### SHA-1
 | | SHA-1 |
 |---|---|
-| Registrado en Firebase | `00562c9f...8234c7` (debug) |
 | Debug | `00:56:2C:9F:18:0E:7F:6C:EB:03:BB:3F:7A:03:B5:CE:F9:82:34:C7` |
 | Release | `27:78:23:4B:D8:97:89:FE:86:23:28:F4:F7:65:10:23:15:E1:1A:59` |
 
-**La huella de release NO está registrada en Firebase.** Si se sube el AAB así, la app se
-instala pero **nadie puede iniciar sesión** (`DEVELOPER_ERROR`). Hay que añadirla en
-Firebase Console → Configuración del proyecto → Tus apps → Añadir huella, y descargar el
-`google-services.json` actualizado. Y cuando Play genere su clave de App Signing, añadir
-también esa tercera huella (a Firebase y a la clave de Places de Android).
+**Las dos están registradas en Firebase desde el 2026-08-11.** La de release se leyó del
+keystore con `keytool` y se dio de alta con el CLI, sin pasar por la consola:
+
+```
+npx firebase apps:android:sha:list   1:350322634794:android:42b4b2e91a8df170c4d353
+npx firebase apps:android:sha:create 1:350322634794:android:42b4b2e91a8df170c4d353 <SHA1>
+npx firebase apps:sdkconfig ANDROID  1:350322634794:android:42b4b2e91a8df170c4d353 --out <fichero>
+```
+
+`app/google-services.json` se regeneró: añade un `oauth_client` nuevo para la huella de
+release (`350322634794-eg19d602...`), y el diff es solo esas 8 líneas.
+
+⚠️ **`app/google-services.json` está en `.gitignore`**, así que ese cambio vive **solo en este
+PC**. El clon del servidor sigue con el fichero viejo y compilaría una release sin login.
+Copiarlo a mano, o volver a bajarlo con `apps:sdkconfig`.
+
+### Falta de las huellas — no se puede hacer desde aquí
+1. **La clave de Places de ANDROID hay que restringirla también a la huella de release.** Si
+   solo admite la de debug, en la build de release la búsqueda de locales falla. `gcloud` no
+   está instalado en el PC, así que es trabajo de la Cloud Console:
+   APIs y servicios → Credenciales → la clave de Android → Restricciones de aplicación.
+2. **Cuando Play genere su clave de App Signing** aparecerá una **tercera** huella. Hay que
+   añadirla en Firebase (`apps:android:sha:create`) **y** en la clave de Places. Sin eso, la
+   app que descargan los usuarios de Play no es la que tú firmaste y el login vuelve a
+   romperse.
 
 ### AAB
-El último generado es de antes de los commits de identidad canónica. **Regenerar antes de
-subir.** Keystore y credenciales en `local.properties` (fuera de git).
+Regenerado el 2026-08-11 desde el commit `9e06590`, ya con la identidad canónica y el
+`google-services.json` nuevo: `app/build/outputs/bundle/release/app-release.aab`, 14,73 MB.
+Verificado con `jarsigner -verify`: `jar verified`, firmado por `CN=Sergio de la Peña`.
+Keystore y credenciales en `local.properties` (fuera de git).
+
+Ojo con `local.properties`: los valores llevan **escapes de Java** (`E\:\\FoodRanker\\...`).
+Al leerlo desde PowerShell hay que desescapar `\:` y `\\` o la ruta del keystore no resuelve.
 
 ---
 
