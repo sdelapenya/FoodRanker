@@ -41,9 +41,11 @@ todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `
 
 ### Pendiente de la identidad canónica
 
-1. **La dirección canónica queda en inglés.** `resolveVenue` no manda `languageCode` a Places,
-   así que se guardó `country: "Spain"` y `address: "... Toledo, Spain"` aunque la sugerencia
-   del SDK de Android decía "España". Lo ve todo el mundo en la ficha del plato.
+1. ~~La dirección canónica queda en inglés~~ — **arreglado el 2026-08-11**: `resolveVenue`
+   manda `languageCode=es` (constante `PLACES_LANGUAGE`). Verificado resolviendo el mismo
+   local otra vez: ahora guarda `country: "España"`. Si algún día la app deja de ser solo en
+   castellano, hay que **decidir** en qué idioma vive la identidad canónica, no localizarla
+   por usuario: eso obligaría a duplicar venues, que es lo que esta colección evita.
 2. **App Check no está activo**: el log de la callable dice `{auth: VALID, app: MISSING}`.
    Cualquiera con un token de sesión válido puede llamar a `resolveVenue`. Con los topes de
    cuota el daño está acotado, pero conviene activarlo antes de tener usuarios.

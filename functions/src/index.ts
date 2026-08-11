@@ -10,6 +10,9 @@ import { ImageAnnotatorClient, protos } from "@google-cloud/vision";
 // Se pone con: npx firebase functions:secrets:set PLACES_SERVER_KEY
 const PLACES_SERVER_KEY = defineSecret("PLACES_SERVER_KEY");
 
+// Idioma en el que se guarda la identidad canónica de los locales. Ver resolveVenue.
+const PLACES_LANGUAGE = "es";
+
 admin.initializeApp();
 
 setGlobalOptions({ region: "europe-west1", maxInstances: 10 });
@@ -1079,8 +1082,14 @@ export const resolveVenue = onCall(
 
     let place: PlaceDetails;
     try {
+      // languageCode es obligatorio aquí: sin él Places responde en inglés y el venue
+      // queda guardado como "Toledo, Spain" para TODO el mundo, porque este documento
+      // es único y compartido. No se puede localizar por usuario sin duplicar venues,
+      // así que se fija al idioma de la app. Si algún día deja de ser solo castellano,
+      // habrá que decidir en qué idioma vive la identidad canónica, no traducirla aquí.
       const res = await fetch(
-        `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}` +
+          `?languageCode=${PLACES_LANGUAGE}`,
         {
           headers: {
             "X-Goog-Api-Key": PLACES_SERVER_KEY.value(),
