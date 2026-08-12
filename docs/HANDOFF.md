@@ -15,6 +15,26 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+**Estado del móvil (2026-08-12): el Redmi tiene instalada la BUILD DE RELEASE**, firmada con
+la clave de producción, puesta a mano a las 09:20. No es la debug. Está **sin sesión iniciada**,
+porque para instalarla hubo que desinstalar la debug.
+
+**Lo primero al retomar: verificar la release en el móvil.** Es lo único que queda antes de
+poder subir a Play con confianza. Dos comprobaciones, y las dos dependen de la firma:
+
+1. **Login con Google sin `DEVELOPER_ERROR`** → valida que la huella de release está bien
+   registrada en Firebase y que el `google-services.json` nuevo es el que lleva el APK.
+2. **La búsqueda de locales devuelve resultados** → valida que la clave de Places de Android
+   admite la huella de release.
+
+Si el login falla con `DEVELOPER_ERROR`, el problema es la huella en Firebase o un
+`google-services.json` viejo. Si entra pero no salen locales, es la restricción de la clave de
+Places. Son dos síntomas distintos y no hay que confundirlos.
+
+Decidir antes de empezar: **quién hace el login**. Sergio prefirió dejarlo abierto la última vez.
+
+---
+
 Identidad canónica plato+local, **fase 1 ACTIVA en producción** desde el 2026-08-10.
 Diseño completo en [VENUES.md](VENUES.md).
 
@@ -131,10 +151,11 @@ PC**. El clon del servidor sigue con el fichero viejo y compilaría una release 
 Copiarlo a mano, o volver a bajarlo con `apps:sdkconfig`.
 
 ### Falta de las huellas — no se puede hacer desde aquí
-1. **La clave de Places de ANDROID hay que restringirla también a la huella de release.** Si
-   solo admite la de debug, en la build de release la búsqueda de locales falla. `gcloud` no
-   está instalado en el PC, así que es trabajo de la Cloud Console:
-   APIs y servicios → Credenciales → la clave de Android → Restricciones de aplicación.
+1. ~~Restringir la clave de Places de Android a la huella de release~~ — **ya estaba hecho**.
+   Comprobado en la Cloud Console el 2026-08-12: la clave de Android tiene las **dos** filas
+   `com.app.foodranker` (debug y release) y la restricción de API en Places API (New).
+   `gcloud` no está instalado en el PC, así que esto **no se puede verificar desde la terminal**:
+   hay que mirarlo en la consola y no darlo por pendiente sin haberlo mirado.
 2. **Cuando Play genere su clave de App Signing** aparecerá una **tercera** huella. Hay que
    añadirla en Firebase (`apps:android:sha:create`) **y** en la clave de Places. Sin eso, la
    app que descargan los usuarios de Play no es la que tú firmaste y el login vuelve a
@@ -201,6 +222,13 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
   se actualizan. No es un bug de la app — comprobar `logcat | grep lowmemorykiller` antes
   de investigar
 - **Selector de fotos de MIUI**: hay que confirmar con "Hecho", no basta tocar la foto
+- **MIUI bloquea las instalaciones NUEVAS por ADB** (`INSTALL_FAILED_USER_RESTRICTED`), pero
+  deja pasar las **actualizaciones** del mismo paquete y firma. Por eso `gradlew installDebug`
+  funciona y meter la release (otra firma, tras desinstalar) no. No es problema de ruta:
+  se probó también `pm install` desde `/data/local/tmp`, con `-i com.android.vending` y con
+  `--user 0`, y da el mismo error. Solución: instalarlo a mano desde Archivos → Descargas,
+  o activar *Ajustes → Ajustes adicionales → Opciones de desarrollador → Instalar vía USB*
+  (Xiaomi suele exigir cuenta Mi y SIM con datos para dejar activarlo)
 - **AdMob**: el Redmi está registrado como dispositivo de prueba vía
   `ADMOB_TEST_DEVICE_IDS` en `local.properties`. Pulsar anuncios reales propios es tráfico
   inválido y suspende cuentas
