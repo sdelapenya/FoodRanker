@@ -12,11 +12,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       // Crear perfil: valores por defecto obligatorios para evitar XP/Premium falsos
+      // Ojo con el booleano premium: el modelo Kotlin lo llama `isPremium`, pero el
+      // mapper de Firestore le quita el prefijo `is` al getter y en el documento el
+      // campo acaba siendo `premium`. Comprobamos las dos grafías con get(campo, false)
+      // para no depender de ese detalle: falte el campo o venga con cualquiera de los
+      // dos nombres, nadie puede crearse premium.
       allow create: if isOwner(userId)
                     && request.resource.data.id == userId
                     && request.resource.data.xp == 0
                     && request.resource.data.level == 1
-                    && request.resource.data.isPremium == false
+                    && request.resource.data.get('premium', false) == false
+                    && request.resource.data.get('isPremium', false) == false
                     && request.resource.data.referralCount == 0;
 
       allow update: if (

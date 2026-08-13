@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-08-10
+**Actualizado:** 2026-08-12
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -15,23 +15,56 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-**Estado del móvil (2026-08-12): el Redmi tiene instalada la BUILD DE RELEASE**, firmada con
-la clave de producción, puesta a mano a las 09:20. No es la debug. Está **sin sesión iniciada**,
-porque para instalarla hubo que desinstalar la debug.
+**La build de RELEASE está verificada de punta a punta en el Redmi (2026-08-12).** Ya no
+queda nada de código pendiente para subir a Play: lo que falta es **todo de Play Console**
+(ver "Bloqueantes de Play Store" más abajo).
 
-**Lo primero al retomar: verificar la release en el móvil.** Es lo único que queda antes de
-poder subir a Play con confianza. Dos comprobaciones, y las dos dependen de la firma:
+Lo verificado en la release firmada con la clave de producción:
 
-1. **Login con Google sin `DEVELOPER_ERROR`** → valida que la huella de release está bien
-   registrada en Firebase y que el `google-services.json` nuevo es el que lleva el APK.
-2. **La búsqueda de locales devuelve resultados** → valida que la clave de Places de Android
-   admite la huella de release.
+- **Login con Google: OK, sin `DEVELOPER_ERROR`.** La huella de release está bien registrada
+  en Firebase y el `google-services.json` que lleva el APK es el nuevo.
+- **Búsqueda de locales: OK.** `searchNearby` devolvió `Bar Casa Benito —
+  C. Quintanas, 38, 45950 Toledo, España`. La clave de Places de Android admite la huella
+  de release. Cero errores de Places en el log.
+- **Moderación de imagen: OK y de verdad.** Una foto que no era comida fue **rechazada**
+  ("No hemos detectado comida en esta foto") y una de un plato pasó. La CF
+  `validateFoodImage` responde bien desde la release.
+- **AdMob: OK.** El `BannerAd` renderiza (anuncio de prueba, el Redmi está en
+  `ADMOB_TEST_DEVICE_IDS`).
+- **FCM: OK.** El `fcmToken` quedó guardado en el documento del usuario nuevo.
 
-Si el login falla con `DEVELOPER_ERROR`, el problema es la huella en Firebase o un
-`google-services.json` viejo. Si entra pero no salen locales, es la restricción de la clave de
-Places. Son dos síntomas distintos y no hay que confundirlos.
+⚠️ **El AAB del 2026-08-11 sigue siendo válido.** El único arreglo de esta sesión fue en
+`firestore.rules`, no en el binario. No hay que regenerarlo.
 
-Decidir antes de empezar: **quién hace el login**. Sergio prefirió dejarlo abierto la última vez.
+### El bloqueante que se encontró y se arregló: ningún usuario nuevo podía registrarse
+
+Al entrar con una cuenta de Google que **nunca había entrado**, el login de Google se
+completaba pero la app moría en "No tienes permisos para realizar esta acción" y el log
+decía `Write failed at users/{uid}: PERMISSION_DENIED`.
+
+Causa: `AuthRepository` crea el perfil con `userRef.set(newUser)`, pasando el data class
+`User`. El mapper de Firestore deriva el nombre del campo del getter de Kotlin, y a un
+`Boolean` llamado `isPremium` (getter `isPremium()`) **le quita el prefijo `is`**: en el
+documento el campo se llama **`premium`**. La regla exigía
+`request.resource.data.isPremium == false`, un campo que no existe en el payload → la
+condición falla → `PERMISSION_DENIED`. `xp`, `level`, `referralCount` e `id` no llevan
+prefijo y se serializan igual, por eso fallaba solo esa línea.
+
+Comprobado sobre producción, no deducido: el documento de usuario que ya existía tiene el
+campo `premium` y **no tiene** ningún `isPremium`; y las reglas desplegadas el 2026-08-10
+llevaban `isPremium` tal cual.
+
+**Por qué no se había visto nunca**: hay **dos cuentas de Google** en el Redmi. Las pruebas
+de login anteriores se hicieron con la que ya tenía documento, así que iban por la rama
+`update`, que sí funciona. La rama `create` no se había ejecutado desde que se escribió la
+regla. Habría afectado al **100 % de los usuarios reales**.
+
+Arreglo (desplegado el 2026-08-12): la regla comprueba las dos grafías con
+`get(campo, false)`, así no depende de ese detalle del serializador y sigue impidiendo que
+nadie se cree premium. **No se tocó el modelo a propósito**: anotarlo con `@PropertyName`
+haría que los usuarios nuevos guardaran `isPremium` mientras el documento antiguo tiene
+`premium` (dos formatos en la misma colección, más una migración), y además obligaría a
+regenerar el AAB.
 
 ---
 
@@ -72,6 +105,16 @@ todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `
 3. **Borrar un plato no revierte el XP del autor.** `onPlateDeleted` cascadea ratings,
    comments y saves, pero los 55 XP (50 por publicar + 5 por valorar) se quedan. Tampoco
    borra la imagen de Cloudinary.
+4. **`createdAt` del usuario se queda a 0.** `AuthRepository` crea el perfil con el data
+   class `User`, que tiene `createdAt: Long = 0L`, y nunca lo rellena: todo usuario nuevo
+   queda con fecha de alta 1970. Visto en el documento creado el 2026-08-12. No es
+   bloqueante, pero arreglarlo obliga a **regenerar el AAB**, así que conviene juntarlo con
+   el próximo cambio de binario en vez de hacer una build solo para esto.
+5. **La regla `create` de `users` no tiene lista blanca de campos**, al contrario que
+   `plates`. `xp`, `level`, `premium` y `referralCount` están fijados, pero el documento
+   antiguo tiene además `followers`, `following`, `totalRatings` y `totalPlatesAdded`, que
+   nadie valida: un cliente manipulado podría crearse su perfil con `totalPlatesAdded`
+   inflado. Preexistente, no se tocó en esta sesión.
 
 ⚠️ Las reglas exigen `venueId`, `dishSlug` y que el id del plato sea `{venueId}__{dishSlug}`.
 Cualquier APK anterior a `7bdf715` **no puede publicar platos** contra producción. Si el móvil
@@ -82,7 +125,10 @@ falla al publicar, lo primero es reinstalar la build actual.
 ## Estado actual
 
 ### Producción está VACÍA a propósito
-0 platos, 0 ratings, 0 comments, 0 saves. Se borraron los 129 platos sembrados (ninguno
+0 platos, 0 ratings, 0 comments, 0 saves, 0 venues (comprobado el 2026-08-12). En `users`
+hay **2 documentos**: las dos cuentas de Google del Redmi. El segundo lo creó la
+verificación del 2026-08-12 y se deja a propósito, para que la sesión del móvil siga
+iniciada. Se borraron los 129 platos sembrados (ninguno
 era real) porque tenían geografía imposible ("París, Japón") y hacían que el perfil de
 Sergio dijera "85 platos publicados" como si fuera un bot. La app queda con el empty
 state honesto. **No volver a sembrar datos ficticios**: son puntuaciones inventadas en una
@@ -151,11 +197,12 @@ PC**. El clon del servidor sigue con el fichero viejo y compilaría una release 
 Copiarlo a mano, o volver a bajarlo con `apps:sdkconfig`.
 
 ### Falta de las huellas — no se puede hacer desde aquí
-1. ~~Restringir la clave de Places de Android a la huella de release~~ — **ya estaba hecho**.
-   Comprobado en la Cloud Console el 2026-08-12: la clave de Android tiene las **dos** filas
-   `com.app.foodranker` (debug y release) y la restricción de API en Places API (New).
-   `gcloud` no está instalado en el PC, así que esto **no se puede verificar desde la terminal**:
-   hay que mirarlo en la consola y no darlo por pendiente sin haberlo mirado.
+1. ~~Restringir la clave de Places de Android a la huella de release~~ — **hecho y ahora
+   verificado ejecutándolo**. Ya constaba en la Cloud Console el 2026-08-12 (la clave de
+   Android tiene las **dos** filas `com.app.foodranker`, debug y release, y la restricción de
+   API en Places API (New)), y ese mismo día la build de release **devolvió locales de verdad**
+   en el paso 2 de AddPlate. `gcloud` no está instalado en el PC, así que la configuración de
+   la clave no se puede leer desde la terminal; la prueba práctica es esta.
 2. **Cuando Play genere su clave de App Signing** aparecerá una **tercera** huella. Hay que
    añadirla en Firebase (`apps:android:sha:create`) **y** en la clave de Places. Sin eso, la
    app que descargan los usuarios de Play no es la que tú firmaste y el login vuelve a
@@ -241,6 +288,31 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
 - **Al pilotar la app por ADB, el teclado tapa la mitad inferior**. Un `input tap` sobre una
   categoría acaba escribiendo una letra en el campo de texto. Cerrar el teclado con
   `input keyevent 4` antes de tocar nada de abajo
+- **`input keyevent 4` solo cierra el teclado si el teclado está abierto**; si no, es un
+  "atrás" normal y te saca de la pantalla, perdiendo la foto ya elegida en AddPlate.
+  Comprobar antes con `dumpsys input_method | Select-String mInputShown`
+- **`input text "dos palabras"` se corta en el primer espacio**: se escribió solo
+  "Espaguetis" de "Espaguetis de prueba". Usar `%s` en vez de espacios
+- **No adivinar coordenadas de una captura: leer `uiautomator dump`.** El FAB central "Subir"
+  no está en el centro de la pantalla, está en **x≈401** (el `<node>` de "Subir" sale con
+  `bounds=[0,0][0,0]`, pero su contenedor pulsable es `[275,2050][528,2177]`). Se perdieron
+  varios taps buscándolo en x=540
+- **El `uiautomator dump` se corta en y=2177** aunque la pantalla tenga 2400 px. Los botones
+  de la franja inferior (el "Hecho" del photopicker, los tabs) aparecen con la `y` recortada:
+  hay que tocar ~25 px por debajo del `bounds` que dice el dump
+- **Para probar el paso 2 de AddPlate hace falta una foto que Vision acepte** (la moderación
+  es fail-closed y rechaza lo que no sea comida). En vez de ir probando las fotos personales
+  del móvil, bajar una con la `PEXELS_API_KEY` de `local.properties`, `adb push` a
+  `/sdcard/Pictures/`, `MEDIA_SCANNER_SCAN_FILE`, y borrarla al terminar. Wikimedia devuelve
+  **429** a este tipo de descargas, no perder tiempo con ella
+- **Leer las reglas realmente desplegadas** (no fiarse del fichero local) con la API de
+  Firebase Rules: `GET firebaserules.googleapis.com/v1/projects/<proj>/releases/cloud.firestore`
+  → `rulesetName`, y luego `GET /v1/<rulesetName>` trae el contenido. El access token se saca
+  del refresh_token de `firebase-tools.json` contra `oauth2.googleapis.com/token`
+- **En PowerShell, `$env:VAR` NO persiste entre llamadas de herramienta**: cada comando abre
+  un shell nuevo. Un token hay que pedirlo y usarlo en la **misma** invocación
+- **El analizador de comandos bloquea `-split '/'`** (lo lee como una ruta a borrar). Para
+  partir rutas usar otra cosa, o imprimir el `name` completo
 - **`firebase deploy` falla con "User code failed to load. Timeout after 10000"**: casi
   nunca es el código. El CLI arranca el módulo y le pide la especificación por HTTP, y en
   Windows esos 10 s se quedan cortos. Comprobar primero que carga
