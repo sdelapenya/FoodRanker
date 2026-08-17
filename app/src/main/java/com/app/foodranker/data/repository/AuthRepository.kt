@@ -52,11 +52,14 @@ class AuthRepository @Inject constructor(
             // lo expondría a todo el mundo). Ya está disponible vía FirebaseAuth
             // (auth.currentUser?.email) para quien lo necesite localmente.
             if (!snap.exists()) {
-                // Primer login: creamos el documento completo del usuario
+                // Primer login: creamos el documento completo del usuario.
+                // createdAt hay que pasarlo a mano: el default del modelo es 0L y, si no
+                // se rellena aquí, todo usuario nuevo queda con fecha de alta en 1970.
                 val newUser = User(
                     id = firebaseUser.uid,
                     name = displayName,
-                    photoUrl = photoUrl
+                    photoUrl = photoUrl,
+                    createdAt = System.currentTimeMillis()
                 )
                 userRef.set(newUser).await()
             } else {

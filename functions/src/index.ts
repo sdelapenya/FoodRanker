@@ -5,10 +5,18 @@ import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions";
 import * as admin from "firebase-admin";
 import { ImageAnnotatorClient, protos } from "@google-cloud/vision";
+import { createHash } from "node:crypto";
 
 // Clave de Places de SERVIDOR. Vive en Secret Manager, nunca en el repo ni en el APK.
 // Se pone con: npx firebase functions:secrets:set PLACES_SERVER_KEY
 const PLACES_SERVER_KEY = defineSecret("PLACES_SERVER_KEY");
+
+// Credenciales de Cloudinary para BORRAR imágenes (onPlateDeleted). La app solo sube,
+// y lo hace con un upload preset "unsigned", así que estas nunca viajan en el APK.
+// Se ponen con: npx firebase functions:secrets:set CLOUDINARY_API_KEY (etc.)
+const CLOUDINARY_CLOUD_NAME = defineSecret("CLOUDINARY_CLOUD_NAME");
+const CLOUDINARY_API_KEY = defineSecret("CLOUDINARY_API_KEY");
+const CLOUDINARY_API_SECRET = defineSecret("CLOUDINARY_API_SECRET");
 
 // Idioma en el que se guarda la identidad canónica de los locales. Ver resolveVenue.
 const PLACES_LANGUAGE = "es";
@@ -201,7 +209,9 @@ async function awardXP(userId: string, amount: number): Promise<void> {
       const snap = await tx.get(ref);
       if (!snap.exists) return;
       const current = (snap.get("xp") as number) || 0;
-      const updated = current + amount;
+      // amount puede ser negativo (revertAuthorXP al borrar un plato). El suelo en 0
+      // evita que un usuario acabe con XP negativo si el historial no cuadra.
+      const updated = Math.max(0, current + amount);
       tx.update(ref, { xp: updated, level: getLevel(updated) });
     });
     logger.debug(`XP +${amount} → ${userId}`);
@@ -452,13 +462,18 @@ async function approveplate(
   // a user who only ever rates their own plates never appears in the league.
   if (awarded) {
     const xpEarned = XP_PLATE_WITH_PHOTO + XP_GIVE_RATING;
+    // El ref del rating propio del autor se pasa a addLeagueXP para que estampe en él
+    // leagueCity/leagueWeekKey/leagueXpAmount. Sin ese sello, el XP de liga de la
+    // publicación es irreversible: addLeagueXP usa currentWeekKey(), así que
+    // onPlateDeleted no tendría forma de saber de qué semana descontar.
+    const authorRatingRef = db.collection("ratings").doc(`${plateId}_${authorId}`);
     // Las 3 operaciones tocan documentos independientes (users/{authorId}.xp,
     // users/{authorId}.badges, leagues/{id}/entries/{authorId}) y cada una ya
     // tiene su propio try/catch interno — no hay dependencia de orden entre ellas.
     await Promise.all([
       awardXP(authorId, xpEarned),
       checkAndAwardBadges(authorId),
-      addLeagueXP(authorId, awarded.userName, awarded.userPhotoUrl, xpEarned),
+      addLeagueXP(authorId, awarded.userName, awarded.userPhotoUrl, xpEarned, authorRatingRef),
     ]);
   }
 }
@@ -1025,15 +1040,221 @@ async function deleteQueryBatch(query: admin.firestore.Query): Promise<void> {
 }
 
 /**
+ * Devuelve al autor el XP que se le concedió por un plato que acaba de borrarse.
+ *
+ * Sin esto, publicar y borrar en bucle era farming de XP: los 50 por publicar y los 5
+ * por la valoración propia se quedaban para siempre en un plato que ya no existe.
+ *
+ * Se revierte solo lo del autor. A quien valoró el plato NO se le quita nada, ni XP
+ * global ni de liga, y es deliberado: valoró de buena fe, y si el borrado le restara
+ * puntos el dueño de un plato podría sabotear la liga de otros borrándolo. Es la
+ * diferencia con el clawback de `deleteRejectedPlate`, donde el plato resultó inválido.
+ *
+ * Los badges tampoco se revocan: varios (`first_plate`, `top10`) premian un hito ya
+ * alcanzado y quitarlos al borrar un plato sería peor experiencia que dejarlos.
+ *
+ * PRECONDICIÓN: el plato estaba `approved`. El XP de publicación lo concede
+ * `approveplate`, así que un plato que nunca llegó a aprobarse no dio nada que
+ * devolver. Lo comprueba quien llama (ver `onPlateDeleted`).
+ */
+async function revertAuthorXP(plateId: string, authorId: string): Promise<void> {
+  // Hay que leer los ratings ANTES de la cascada: el rating propio del autor lleva
+  // estampados leagueCity/leagueWeekKey/leagueXpAmount (los pone addLeagueXP) y son
+  // la única forma de saber de qué semana de liga descontar.
+  const ratingsSnap = await db.collection("ratings").where("plateId", "==", plateId).get();
+
+  let othersRatings = 0;
+  let leagueCity: string | undefined;
+  let leagueWeekKey: string | undefined;
+  let leagueXpAmount: number | undefined;
+
+  for (const doc of ratingsSnap.docs) {
+    if ((doc.get("userId") as string) === authorId) {
+      leagueCity = doc.get("leagueCity") as string | undefined;
+      leagueWeekKey = doc.get("leagueWeekKey") as string | undefined;
+      leagueXpAmount = doc.get("leagueXpAmount") as number | undefined;
+    } else if (doc.get("processed") === true) {
+      // Solo cuentan las procesadas: onRatingCreated concede los 10 al autor DESPUÉS
+      // de marcar `processed`, y se sale antes si el plato aún no estaba aprobado.
+      // Una valoración recibida mientras el plato estaba pendiente no dio XP, así que
+      // restarla aquí cobraría de más.
+      othersRatings += 1;
+    }
+  }
+
+  // 50 por publicar + 5 por la valoración propia + 10 por cada valoración recibida.
+  const xpToRevert =
+    XP_PLATE_WITH_PHOTO + XP_GIVE_RATING + othersRatings * XP_RECEIVE_RATING;
+  await awardXP(authorId, -xpToRevert);
+
+  if (leagueCity && leagueWeekKey && leagueXpAmount) {
+    const leagueEntryRef = db
+      .collection("leagues")
+      .doc(`${leagueCity}_${leagueWeekKey}`)
+      .collection("entries")
+      .doc(authorId);
+    await leagueEntryRef.set(
+      {
+        xp: admin.firestore.FieldValue.increment(-leagueXpAmount),
+        updatedAt: Date.now(),
+      },
+      { merge: true }
+    );
+  } else {
+    // Platos aprobados antes de que la aprobación estampara el sello de liga: el XP
+    // global sí se revierte, el de liga no se puede localizar. La liga se resetea cada
+    // semana, así que el desajuste se corrige solo.
+    logger.warn(
+      `Plato ${plateId} sin sello de liga en el rating del autor: XP global revertido, liga no`
+    );
+  }
+
+  logger.info(`XP revertido al borrar ${plateId}: -${xpToRevert} a ${authorId}`);
+}
+
+/**
+ * Saca el `public_id` de Cloudinary de una URL de entrega.
+ *
+ * Formato que devuelve la subida (`secure_url`):
+ *   https://res.cloudinary.com/<cloud>/image/upload/v1712345678/foodranker/plates/abc.jpg
+ * y el public_id es `foodranker/plates/abc` — sin el segmento de versión y sin extensión.
+ *
+ * Devuelve `null` si la URL no es de Cloudinary o no tiene la forma esperada, para que
+ * quien llama no intente firmar un destroy contra algo que no controlamos.
+ */
+export function cloudinaryPublicIdFromUrl(url: string): string | null {
+  if (!url.startsWith("https://res.cloudinary.com/")) return null;
+  const marker = "/image/upload/";
+  const at = url.indexOf(marker);
+  if (at === -1) return null;
+
+  let path = url.slice(at + marker.length);
+  // Quita la query (?_a=..., que a veces añade el SDK) y el fragmento.
+  path = path.split("?")[0].split("#")[0];
+  // Quita el segmento de versión `v1712345678/` si está.
+  path = path.replace(/^v\d+\//, "");
+  if (!path) return null;
+
+  // Quita la extensión solo del último segmento (las carpetas pueden llevar puntos).
+  const lastSlash = path.lastIndexOf("/");
+  const dir = lastSlash === -1 ? "" : path.slice(0, lastSlash + 1);
+  const file = path.slice(lastSlash + 1);
+  const dot = file.lastIndexOf(".");
+  const base = dot > 0 ? file.slice(0, dot) : file;
+  if (!base) return null;
+
+  return dir + base;
+}
+
+/**
+ * Borra de Cloudinary la imagen de un plato que acaba de eliminarse.
+ *
+ * Hasta ahora el documento se iba y la imagen se quedaba para siempre: cada plato
+ * borrado dejaba un fichero pagando almacenamiento y, peor, una foto subida por un
+ * usuario seguía siendo accesible por URL después de que él la borrara.
+ *
+ * ANTES de borrar se comprueba que ningún otro plato apunte a la misma URL. Es una
+ * protección real, no defensiva: `imageUrl` lo escribe el cliente, así que alguien
+ * podría publicar un plato apuntando a la foto de otro y borrarlo para destruirle la
+ * imagen. Si queda alguna referencia, no se toca nada.
+ */
+async function deletePlateImage(plateId: string, imageUrl: string | undefined): Promise<void> {
+  if (!imageUrl) return;
+
+  const publicId = cloudinaryPublicIdFromUrl(imageUrl);
+  if (!publicId) {
+    logger.info(`Plato ${plateId}: imageUrl no es una URL de Cloudinary reconocible, no se borra nada`);
+    return;
+  }
+
+  const stillReferenced = await db
+    .collection("plates")
+    .where("imageUrl", "==", imageUrl)
+    .limit(1)
+    .get();
+  if (!stillReferenced.empty) {
+    logger.info(`Plato ${plateId}: la imagen ${publicId} la sigue usando otro plato, no se borra`);
+    return;
+  }
+
+  const cloudName = CLOUDINARY_CLOUD_NAME.value().trim();
+  const apiKey = CLOUDINARY_API_KEY.value().trim();
+  const apiSecret = CLOUDINARY_API_SECRET.value().trim();
+  if (!cloudName || !apiKey || !apiSecret) {
+    logger.error("Cloudinary sin configurar (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET): imagen huérfana");
+    return;
+  }
+  // La URL manda de qué cloud es la imagen; si no es la nuestra, el destroy no puede
+  // funcionar y firmarlo solo filtraría una firma válida a otro sitio.
+  if (!imageUrl.startsWith(`https://res.cloudinary.com/${cloudName}/`)) {
+    logger.warn(`Plato ${plateId}: la imagen no es del cloud ${cloudName}, no se borra`);
+    return;
+  }
+
+  // Firma de Cloudinary: sha1 de los parámetros ordenados alfabéticamente
+  // (api_key y file quedan fuera) concatenados con el api_secret.
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = createHash("sha1")
+    .update(`public_id=${publicId}&timestamp=${timestamp}${apiSecret}`)
+    .digest("hex");
+
+  const body = new URLSearchParams({
+    public_id: publicId,
+    api_key: apiKey,
+    timestamp: String(timestamp),
+    signature,
+  });
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const payload = (await res.json().catch(() => null)) as { result?: string } | null;
+  if (!res.ok) {
+    logger.error(`Cloudinary destroy falló para ${publicId} (HTTP ${res.status})`);
+    return;
+  }
+  // "not found" es un final aceptable: la imagen ya no estaba (reintento de la función,
+  // o borrada a mano). "ok" es el caso normal; cualquier otra cosa sí es un fallo.
+  if (payload?.result === "ok" || payload?.result === "not found") {
+    logger.info(`Imagen ${publicId} borrada de Cloudinary (${payload.result}) al eliminar ${plateId}`);
+  } else {
+    logger.error(`Cloudinary destroy devolvió un resultado inesperado para ${publicId}: ${payload?.result}`);
+  }
+}
+
+/**
  * Fires when a plate document is deleted by the owner (client-side, via rules).
  * Cascades deletion of all ratings and comments for that plate so they don't
  * remain as orphaned documents. The Admin SDK bypasses the
  * "allow delete: if false" rule on ratings.
  */
 export const onPlateDeleted = onDocumentDeleted(
-  "plates/{plateId}",
+  {
+    document: "plates/{plateId}",
+    secrets: [CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET],
+  },
   async (event) => {
     const plateId = event.params.plateId;
+    const authorId = event.data?.get("addedByUserId") as string | undefined;
+    const wasApproved = (event.data?.get("status") as string | undefined) === "approved";
+
+    // El XP se revierte ANTES de la cascada porque necesita leer los ratings que la
+    // cascada va a borrar. Va en su propio try/catch: si falla, la cascada debe correr
+    // igualmente y no dejar documentos huérfanos.
+    //
+    // Solo si el plato estaba aprobado: `deleteRejectedPlate` borra platos que la
+    // moderación tumbó estando en `pending`, y a esos el autor nunca llegó a cobrarlos
+    // (el XP lo da `approveplate`). Revertirlos le quitaría 55 XP que jamás recibió.
+    if (authorId && wasApproved) {
+      try {
+        await revertAuthorXP(plateId, authorId);
+      } catch (err) {
+        logger.error(`No se pudo revertir el XP del plato ${plateId}:`, err);
+      }
+    }
 
     try {
       await Promise.all([
@@ -1044,6 +1265,14 @@ export const onPlateDeleted = onDocumentDeleted(
       logger.info(`Cascade delete complete for plate ${plateId}`);
     } catch (err) {
       logger.error(`onPlateDeleted error for ${plateId}:`, err);
+    }
+
+    // Al final y aparte: si esto falla, lo que se pierde es un fichero en Cloudinary,
+    // no la coherencia de Firestore.
+    try {
+      await deletePlateImage(plateId, event.data?.get("imageUrl") as string | undefined);
+    } catch (err) {
+      logger.error(`No se pudo borrar la imagen del plato ${plateId}:`, err);
     }
   }
 );
