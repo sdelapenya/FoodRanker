@@ -15,37 +15,49 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-### 🔴 BLOQUEANTE: faltan dos secrets de Cloudinary para desplegar las Functions
+**No queda código pendiente para subir a Play.** Lo que falta es **todo de Play Console**
+—URL pública de privacidad y términos, Data safety, ficha con capturas, clasificación de
+contenido, declaración de UGC— y está detallado en "Bloqueantes de Play Store". El único
+pendiente técnico que sigue abierto es **App Check** (punto 2 de la identidad canónica).
 
-`onPlateDeleted` ahora borra la imagen de Cloudinary, y para firmar el `destroy` necesita
-credenciales que **no existen en ningún sitio**: `CLOUDINARY_API_KEY` y
-`CLOUDINARY_API_SECRET` están **vacías en `local.properties`** (la app sube con un upload
-preset *unsigned*, así que nunca hicieron falta). Hay que sacarlas de
-console.cloudinary.com → *Settings → API Keys* y ponerlas a mano:
+Lo que sí conviene hacer en algún momento: **pushear**. `main` va por delante de `origin` y
+de `gitea`, y el clon del servidor está muy atrás.
 
-```
-npx firebase functions:secrets:set CLOUDINARY_API_KEY
-npx firebase functions:secrets:set CLOUDINARY_API_SECRET
-```
-
-`CLOUDINARY_CLOUD_NAME` ya está puesto (versión 1, valor `dqjusjvus` — no es secreto, va en
-cada URL de imagen). **Hasta que estén los otros dos, `firebase deploy --only functions`
-falla**: la función los declara en `secrets: [...]`.
-
-Sin ellos la CF no rompe nada en caliente (`deletePlateImage` loguea un error y sigue), pero
-las imágenes se quedan huérfanas igual que antes.
-
-### ⚠️ Lo que se hizo el 2026-08-17 (segunda sesión)
+### ✅ Lo que se cerró el 2026-08-17 (segunda sesión)
 
 Los 5 ficheros que estaban sin commitear se revisaron, se les encontró **un bug**, se
-arreglaron y se commitearon. Estado por pieza:
+arreglaron, se commitearon y **se desplegó todo**. No queda nada a medias de aquello:
 
 | Pieza | Estado |
 |---|---|
-| `firestore.rules` — lista blanca `hasOnly` en `users/create` | **DESPLEGADA** el 2026-08-17 |
-| `revertAuthorXP()` + borrado de imagen en Cloudinary | Commiteado, **sin desplegar** (bloqueado por los secrets) |
-| `createdAt` en `AuthRepository` | Commiteado, **en el AAB nuevo** |
-| Textos legales reescritos | Commiteado, **en el AAB nuevo** |
+| `firestore.rules` — lista blanca `hasOnly` en `users/create` | **DESPLEGADA** |
+| `revertAuthorXP()` + borrado de imagen en Cloudinary | **DESPLEGADA** y verificada en producción |
+| `createdAt` en `AuthRepository` | **En el AAB nuevo** |
+| Textos legales reescritos | **En el AAB nuevo** (comprobado en `classes.dex`) |
+
+Las 13 Cloud Functions se redesplegaron en `europe-west1`.
+
+**Secrets de Cloudinary** (por si hay que rehacerlos): `CLOUDINARY_CLOUD_NAME`,
+`CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` están en Secret Manager, versión 1. Las dos
+últimas **estaban vacías en `local.properties`** y hubo que sacarlas de
+console.cloudinary.com → *Settings → API Keys*: la app sube con un upload preset *unsigned*,
+así que nunca hicieron falta hasta ahora. Se ponen con
+`npx firebase functions:secrets:set <NOMBRE>` **desde `e:\FoodRanker`** — desde otra carpeta
+falla con "No currently active project", porque el proyecto sale del `.firebaserc` del repo.
+
+**Verificación en producción** (2026-08-17, no deducida): se subió a Cloudinary una imagen
+que no es comida con el preset unsigned, se creó el plato en `pending` vía Admin SDK con un
+usuario temporal de 500 XP, y se dejó actuar a la moderación. Resultado en los logs:
+
+```
+16:19:29 moderateplateimage  Plate verify_tmp__... rejected (not food)
+16:19:31 onplatedeleted      Cascade delete complete for plate verify_tmp__...
+16:19:32 onplatedeleted      Imagen foodranker/plates/nbn8xovombttuzocx0sy borrada de Cloudinary (ok)
+```
+
+El XP del autor se quedó en **500**, que es justo lo que prueba la guarda nueva: ese plato
+nunca estuvo `approved`, así que no había nada que revertir. Usuario temporal borrado
+después; producción sin residuos.
 
 **El bug que tenía `revertAuthorXP` (encontrado leyendo el flujo, no ejecutándolo)**:
 `onPlateDeleted` llamaba a `revertAuthorXP` para **todo** plato borrado, pero
@@ -152,14 +164,13 @@ todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `
 2. **App Check no está activo**: el log de la callable dice `{auth: VALID, app: MISSING}`.
    Cualquiera con un token de sesión válido puede llamar a `resolveVenue`. Con los topes de
    cuota el daño está acotado, pero conviene activarlo antes de tener usuarios.
-3. **Borrar un plato: XP e imagen** — *código completo y commiteado, **sin desplegar***
-   (bloqueado por los secrets de Cloudinary, ver arriba). `revertAuthorXP()` descuenta
-   50 + 5 + 10 por valoración recibida **solo si el plato estaba `approved`**, más el XP de
-   liga vía el sello del rating del autor. `deletePlateImage()` firma un `destroy` contra la
-   API de Cloudinary, y **antes comprueba que ningún otro plato apunte a la misma
-   `imageUrl`**: `imageUrl` la escribe el cliente, así que sin esa comprobación cualquiera
-   podría publicar un plato con la foto de otro y borrarlo para destruírsela. La CF en
-   producción sigue siendo la del 2026-06-30 y no tiene **nada** de esto.
+3. ~~Borrar un plato no revierte el XP ni borra la imagen~~ — **desplegado y verificado el
+   2026-08-17** (ver arriba). `revertAuthorXP()` descuenta 50 + 5 + 10 por valoración
+   recibida **solo si el plato estaba `approved`**, más el XP de liga vía el sello del rating
+   del autor. `deletePlateImage()` firma un `destroy` contra la API de Cloudinary, y **antes
+   comprueba que ningún otro plato apunte a la misma `imageUrl`**: `imageUrl` la escribe el
+   cliente, así que sin esa comprobación cualquiera podría publicar un plato con la foto de
+   otro y borrarlo para destruírsela.
 4. ~~`createdAt` del usuario se queda a 0~~ — **arreglado y en el AAB del 2026-08-17**.
    `AuthRepository` pasa `System.currentTimeMillis()` al crear el perfil.
 5. ~~La regla `create` de `users` no tiene lista blanca de campos~~ — **desplegada el
@@ -376,6 +387,24 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
   del móvil, bajar una con la `PEXELS_API_KEY` de `local.properties`, `adb push` a
   `/sdcard/Pictures/`, `MEDIA_SCANNER_SCAN_FILE`, y borrarla al terminar. Wikimedia devuelve
   **429** a este tipo de descargas, no perder tiempo con ella
+- **Una imagen borrada de Cloudinary sigue devolviendo 200 un buen rato**: la sirve la caché
+  del CDN. Se perdió tiempo dando por fallido un `destroy` que había respondido `ok`. Para
+  comprobarlo de verdad, pedir la URL con un parámetro cualquiera
+  (`...png?cb=<algo-aleatorio>`), que cambia la clave de caché y va al origen → 404
+- **`firebase functions:log` pagina de forma engañosa**: `--only <fn> -n 30` devolvió
+  entradas de **8 días antes** y ninguna de hacía 2 minutos. Para mirar logs recientes de
+  verdad, ir a la API de Cloud Logging (`POST logging.googleapis.com/v2/entries:list`, filtro
+  `resource.labels.service_name="<nombre en minúsculas>"` + `timestamp>=...`, `orderBy:
+  "timestamp desc"`). El token se saca igual que para las reglas. Ojo con el filtro de
+  tiempo: hay que trabajar en **UTC**, y aquí se puso una hora que aún no había llegado, con
+  lo que salió "sin entradas" pareciendo que la función no se había ejecutado
+- **`curl -u` no existe en PowerShell**: `curl` es alias de `Invoke-WebRequest`. Hay que
+  llamar a `curl.exe` con la extensión
+- **`firebase functions:secrets:set` desde fuera del repo** falla con "No currently active
+  project": el proyecto sale del `.firebaserc`, así que hay que estar en `e:\FoodRanker` (o
+  pasar `--project foodranker-51270`)
+- **`jarsigner` no está en el PATH**: vive en
+  `C:\Program Files\Android\Android Studio\jbr\bin\jarsigner.exe`
 - **Leer las reglas realmente desplegadas** (no fiarse del fichero local) con la API de
   Firebase Rules: `GET firebaserules.googleapis.com/v1/projects/<proj>/releases/cloud.firestore`
   → `rulesetName`, y luego `GET /v1/<rulesetName>` trae el contenido. El access token se saca
