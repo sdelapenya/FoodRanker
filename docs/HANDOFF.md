@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-08-12
+**Actualizado:** 2026-08-17
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -15,9 +15,57 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-**La build de RELEASE está verificada de punta a punta en el Redmi (2026-08-12).** Ya no
-queda nada de código pendiente para subir a Play: lo que falta es **todo de Play Console**
-(ver "Bloqueantes de Play Store" más abajo).
+### 🔴 BLOQUEANTE: faltan dos secrets de Cloudinary para desplegar las Functions
+
+`onPlateDeleted` ahora borra la imagen de Cloudinary, y para firmar el `destroy` necesita
+credenciales que **no existen en ningún sitio**: `CLOUDINARY_API_KEY` y
+`CLOUDINARY_API_SECRET` están **vacías en `local.properties`** (la app sube con un upload
+preset *unsigned*, así que nunca hicieron falta). Hay que sacarlas de
+console.cloudinary.com → *Settings → API Keys* y ponerlas a mano:
+
+```
+npx firebase functions:secrets:set CLOUDINARY_API_KEY
+npx firebase functions:secrets:set CLOUDINARY_API_SECRET
+```
+
+`CLOUDINARY_CLOUD_NAME` ya está puesto (versión 1, valor `dqjusjvus` — no es secreto, va en
+cada URL de imagen). **Hasta que estén los otros dos, `firebase deploy --only functions`
+falla**: la función los declara en `secrets: [...]`.
+
+Sin ellos la CF no rompe nada en caliente (`deletePlateImage` loguea un error y sigue), pero
+las imágenes se quedan huérfanas igual que antes.
+
+### ⚠️ Lo que se hizo el 2026-08-17 (segunda sesión)
+
+Los 5 ficheros que estaban sin commitear se revisaron, se les encontró **un bug**, se
+arreglaron y se commitearon. Estado por pieza:
+
+| Pieza | Estado |
+|---|---|
+| `firestore.rules` — lista blanca `hasOnly` en `users/create` | **DESPLEGADA** el 2026-08-17 |
+| `revertAuthorXP()` + borrado de imagen en Cloudinary | Commiteado, **sin desplegar** (bloqueado por los secrets) |
+| `createdAt` en `AuthRepository` | Commiteado, **en el AAB nuevo** |
+| Textos legales reescritos | Commiteado, **en el AAB nuevo** |
+
+**El bug que tenía `revertAuthorXP` (encontrado leyendo el flujo, no ejecutándolo)**:
+`onPlateDeleted` llamaba a `revertAuthorXP` para **todo** plato borrado, pero
+`deleteRejectedPlate` también borra platos — los que la moderación tumba estando en
+`pending`. A esos el autor nunca cobró los 50 + 5 (el XP lo concede `approveplate`, y solo
+al aprobar), así que la reversión le habría **quitado 55 XP que jamás recibió** cada vez que
+Vision le rechazara una foto. Arreglado con una guarda `status === "approved"` en
+`onPlateDeleted`. Segundo ajuste del mismo estilo: los −10 por valoración recibida ahora
+cuentan solo las que tienen `processed === true`, que son exactamente las que dieron XP
+(`onRatingCreated` se sale antes de conceder nada si el plato no estaba aprobado).
+
+**El clon del servidor se comprobó antes de commitear**: `servidor/main` = `c86909e`, un
+único commit del 19 de julio que solo toca `docs/HANDOFF.md` (`Documenta merge pendiente…`),
+superado por completo. Local iba 27 commits por delante. No había nada que rescatar.
+
+### El resto del estado
+
+**La build de RELEASE está verificada de punta a punta en el Redmi (2026-08-12).** Salvo lo
+de arriba, no queda código pendiente para subir a Play: lo que falta es **todo de Play
+Console** (ver "Bloqueantes de Play Store" más abajo).
 
 Lo verificado en la release firmada con la clave de producción:
 
@@ -33,8 +81,10 @@ Lo verificado en la release firmada con la clave de producción:
   `ADMOB_TEST_DEVICE_IDS`).
 - **FCM: OK.** El `fcmToken` quedó guardado en el documento del usuario nuevo.
 
-⚠️ **El AAB del 2026-08-11 sigue siendo válido.** El único arreglo de esta sesión fue en
-`firestore.rules`, no en el binario. No hay que regenerarlo.
+⚠️ **El AAB se regeneró el 2026-08-17** para meter `createdAt` y los textos legales nuevos.
+Lo verificado en el Redmi el 2026-08-12 sigue valiendo: entre una build y otra solo cambian
+esas dos cosas, ningún flujo de los de arriba. Aun así, el AAB nuevo **no se ha probado en
+móvil** — si hay ocasión, un login con cuenta nueva confirma `createdAt` de una pasada.
 
 ### El bloqueante que se encontró y se arregló: ningún usuario nuevo podía registrarse
 
@@ -102,19 +152,20 @@ todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `
 2. **App Check no está activo**: el log de la callable dice `{auth: VALID, app: MISSING}`.
    Cualquiera con un token de sesión válido puede llamar a `resolveVenue`. Con los topes de
    cuota el daño está acotado, pero conviene activarlo antes de tener usuarios.
-3. **Borrar un plato no revierte el XP del autor.** `onPlateDeleted` cascadea ratings,
-   comments y saves, pero los 55 XP (50 por publicar + 5 por valorar) se quedan. Tampoco
-   borra la imagen de Cloudinary.
-4. **`createdAt` del usuario se queda a 0.** `AuthRepository` crea el perfil con el data
-   class `User`, que tiene `createdAt: Long = 0L`, y nunca lo rellena: todo usuario nuevo
-   queda con fecha de alta 1970. Visto en el documento creado el 2026-08-12. No es
-   bloqueante, pero arreglarlo obliga a **regenerar el AAB**, así que conviene juntarlo con
-   el próximo cambio de binario en vez de hacer una build solo para esto.
-5. **La regla `create` de `users` no tiene lista blanca de campos**, al contrario que
-   `plates`. `xp`, `level`, `premium` y `referralCount` están fijados, pero el documento
-   antiguo tiene además `followers`, `following`, `totalRatings` y `totalPlatesAdded`, que
-   nadie valida: un cliente manipulado podría crearse su perfil con `totalPlatesAdded`
-   inflado. Preexistente, no se tocó en esta sesión.
+3. **Borrar un plato: XP e imagen** — *código completo y commiteado, **sin desplegar***
+   (bloqueado por los secrets de Cloudinary, ver arriba). `revertAuthorXP()` descuenta
+   50 + 5 + 10 por valoración recibida **solo si el plato estaba `approved`**, más el XP de
+   liga vía el sello del rating del autor. `deletePlateImage()` firma un `destroy` contra la
+   API de Cloudinary, y **antes comprueba que ningún otro plato apunte a la misma
+   `imageUrl`**: `imageUrl` la escribe el cliente, así que sin esa comprobación cualquiera
+   podría publicar un plato con la foto de otro y borrarlo para destruírsela. La CF en
+   producción sigue siendo la del 2026-06-30 y no tiene **nada** de esto.
+4. ~~`createdAt` del usuario se queda a 0~~ — **arreglado y en el AAB del 2026-08-17**.
+   `AuthRepository` pasa `System.currentTimeMillis()` al crear el perfil.
+5. ~~La regla `create` de `users` no tiene lista blanca de campos~~ — **desplegada el
+   2026-08-17**. `users/create` lleva `keys().hasOnly([...])` con los 13 campos de `User` y
+   `badges.size() == 0`. Ojo con la trampa: en la lista va **`premium`**, no `isPremium`, y
+   añadir un campo al modelo sin añadirlo aquí rompe **todo** registro nuevo.
 
 ⚠️ Las reglas exigen `venueId`, `dishSlug` y que el id del plato sea `{venueId}__{dishSlug}`.
 Cualquier APK anterior a `7bdf715` **no puede publicar platos** contra producción. Si el móvil
@@ -209,10 +260,22 @@ Copiarlo a mano, o volver a bajarlo con `apps:sdkconfig`.
    romperse.
 
 ### AAB
-Regenerado el 2026-08-11 desde el commit `9e06590`, ya con la identidad canónica y el
-`google-services.json` nuevo: `app/build/outputs/bundle/release/app-release.aab`, 14,73 MB.
-Verificado con `jarsigner -verify`: `jar verified`, firmado por `CN=Sergio de la Peña`.
-Keystore y credenciales en `local.properties` (fuera de git).
+Regenerado el **2026-08-17** desde el commit `4183f43`:
+`app/build/outputs/bundle/release/app-release.aab`, 14,73 MB, `BUILD SUCCESSFUL in 4m 32s`.
+`versionCode` sigue en **1** a propósito: el AAB anterior nunca llegó a subirse a Play, así
+que no hay nada que superar. Keystore y credenciales en `local.properties` (fuera de git).
+
+Verificado, no supuesto:
+
+- `jarsigner -verify` → `jar verified`. Los avisos de "certificate chain is invalid" y
+  "self-signed" son los normales de una clave de subida propia, no un problema.
+  `jarsigner` no está en el PATH: vive en
+  `C:\Program Files\Android\Android Studio\jbr\bin\jarsigner.exe`.
+- **Los textos legales nuevos llegan al binario**: se extrajo el AAB y se buscaron cadenas
+  en `classes.dex`, que es la única forma fiable (ver "Trampas": leer `BuildConfig.java` no
+  dice qué entra). Salen `Ley aplicable` y `Google Cloud Vision`, apartados que solo existen
+  en la reescritura. Ojo al buscar: hay que respetar los acentos del fuente
+  (`Suscripción`, no `Suscripcion`), o no encuentra nada aunque esté.
 
 Ojo con `local.properties`: los valores llevan **escapes de Java** (`E\:\\FoodRanker\\...`).
 Al leerlo desde PowerShell hay que desescapar `\:` y `\\` o la ruta del keystore no resuelve.
@@ -281,6 +344,14 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
   inválido y suspende cuentas
 - **fail2ban en el servidor**: reintentar SSH en bucle banea la IP del PC y **tira las
   sesiones remotas de Cursor**. Solo jail `sshd`, puerto 22
+- **VS Code no conecta al servidor con `terminalRemoteResolver`** (2026-08-17): pasa cuando
+  Remote-SSH está en canal **pre-release**. VS Code estable cruza los `enabledApiProposals`
+  de la extensión con una lista blanca fija de su `product.json`, y el error muestra **la
+  lista blanca**, no lo que declara la extensión — parece que falta la declaración cuando sí
+  está. `--enable-proposed-api` en `argv.json` **no** lo arregla. Solución: volver a la
+  estable y dejarla fijada (`code --install-extension ms-vscode-remote.remote-ssh@0.124.0
+  --force`, que deja `pinned=True`). Ojo: el `code` del PATH es **Cursor**; hay que usar la
+  ruta larga de VS Code
 - **Capturas de pantalla por ADB**: `adb exec-out screencap -p > f.png` **corrompe el PNG** en
   PowerShell (le mete BOM y recodifica). Hacer `adb shell screencap -p /sdcard/s.png` y
   `adb pull`
