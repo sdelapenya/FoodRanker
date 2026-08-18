@@ -17,15 +17,21 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 **No queda código pendiente para subir a Play.** Lo que falta es **todo de Play Console**
 —Data safety, ficha con capturas, clasificación de contenido, declaración de UGC— y está
-detallado en "Bloqueantes de Play Store". El único pendiente técnico que sigue abierto es
-**App Check** (punto 2 de la identidad canónica).
+detallado en "Bloqueantes de Play Store".
 
-La **URL pública de privacidad y términos ya no es un bloqueante**: se publicó el 2026-08-18
-en GitHub Pages (rama `gh-pages`) y está verificada respondiendo 200. Las dos URL, y la
-trampa de Data safety que las acompaña, están en "Bloqueantes de Play Store".
+### ✅ Lo que se cerró el 2026-08-18 (tercera sesión)
 
-Lo que sí conviene hacer en algún momento: **pushear**. `main` va por delante de `origin` y
-de `gitea`, y el clon del servidor está muy atrás.
+- **URL pública de privacidad y términos**: publicada en GitHub Pages (rama `gh-pages`,
+  commit `37912ba`), verificada respondiendo 200. Ver "Bloqueantes de Play Store" para las
+  dos URL y la trampa de Data safety que las acompaña. Ya no es un bloqueante.
+- **App Check**: cliente integrado con Play Integrity, verificado en el AAB. **El
+  enforcement sigue sin activar a propósito** — el orden para activarlo está en
+  "Bloqueantes de Play Store" → punto 2. Antes era el único pendiente técnico; ahora es
+  trabajo de consola, no de código.
+- **`main` pusheado a `origin` y a `gitea`**: los tres están alineados en `b8ce568`. El
+  clon de trabajo del servidor (`/home/sergio/lab/apps/FoodRanker`) sigue sin actualizar —
+  un `git pull` ahí lo pone al día, no hay nada que rescatar de ese lado (se comprobó el
+  2026-08-17, ver más abajo).
 
 ### ✅ Lo que se cerró el 2026-08-17 (segunda sesión)
 
