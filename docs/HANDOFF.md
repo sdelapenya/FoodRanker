@@ -16,9 +16,13 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ## LO SIGUIENTE (retomar aquí)
 
 **No queda código pendiente para subir a Play.** Lo que falta es **todo de Play Console**
-—URL pública de privacidad y términos, Data safety, ficha con capturas, clasificación de
-contenido, declaración de UGC— y está detallado en "Bloqueantes de Play Store". El único
-pendiente técnico que sigue abierto es **App Check** (punto 2 de la identidad canónica).
+—Data safety, ficha con capturas, clasificación de contenido, declaración de UGC— y está
+detallado en "Bloqueantes de Play Store". El único pendiente técnico que sigue abierto es
+**App Check** (punto 2 de la identidad canónica).
+
+La **URL pública de privacidad y términos ya no es un bloqueante**: se publicó el 2026-08-18
+en GitHub Pages (rama `gh-pages`) y está verificada respondiendo 200. Las dos URL, y la
+trampa de Data safety que las acompaña, están en "Bloqueantes de Play Store".
 
 Lo que sí conviene hacer en algún momento: **pushear**. `main` va por delante de `origin` y
 de `gitea`, y el clon del servidor está muy atrás.
@@ -229,7 +233,22 @@ comprobado.
   `if (!BuildConfig.DEBUG) return`
 
 ### Falta — todo de Play Console, no de código
-- URL HTTPS pública de privacidad y términos
+- ~~URL HTTPS pública de privacidad y términos~~ — **PUBLICADAS el 2026-08-18**, verificadas
+  con HTTP 200 y UTF-8 correcto:
+  - Privacidad: https://sdelapenya.github.io/FoodRanker/privacy.html
+  - Términos: https://sdelapenya.github.io/FoodRanker/terms.html
+
+  Viven en la rama **huérfana `gh-pages`** de `origin` (commit `37912ba`), servida por GitHub
+  Pages desde `/(root)`. **No se usó `/docs` de main a propósito**: Pages habría publicado
+  `docs/HANDOFF.md` como página web. Los textos son los de `PrivacyPolicyScreen.kt` y
+  `TermsOfServiceScreen.kt` pasados a HTML **sin cambiar una palabra** — si se tocan los
+  textos de la app, hay que tocar también el sitio, porque Play compara la política
+  declarada con lo que hace la app. Para editarlo:
+  `git worktree add <carpeta> gh-pages`, commit y `git push origin gh-pages`.
+
+  ⚠️ Al rellenar **Data safety**, la política declara **ubicación, fotos, correo y datos de
+  diagnóstico**: las cuatro categorías tienen que aparecer marcadas o Play rechaza por
+  incoherencia con la política.
 - Formulario de Data safety (email, fotos, ubicación, datos de uso)
 - Ficha: capturas, descripciones, icono, gráfico destacado
 - Cuestionario de clasificación de contenido
