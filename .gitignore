@@ -22,4 +22,8 @@ firebase.json
 .claude 
 .cursor 
 .kotlin 
-release/ 
+# Artefactos firmados del bundle/APK. Con la ruta completa a proposito: un
+# `release/` suelto tambien ignoraba app/src/release/, el source set de la
+# variante, y el repo se quedaba sin compilar la release en otro clon.
+app/build/outputs/
+/release/
