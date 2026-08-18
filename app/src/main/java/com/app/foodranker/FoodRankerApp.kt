@@ -21,6 +21,9 @@ class FoodRankerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Antes que cualquier otro uso de Firebase: las llamadas que salgan antes de
+        // instalar el proveedor viajan sin token de App Check.
+        AppCheckInstaller.install()
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
         AdManager.initialize(this)
         AdManager.loadInterstitial(this)

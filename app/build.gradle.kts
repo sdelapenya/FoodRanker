@@ -121,6 +121,12 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
 
+    // App Check — atestigua que quien llama a las callables es la app de verdad.
+    // Play Integrity solo valida apps distribuidas por Google Play, así que en debug
+    // (emulador, installDebug) hay que usar el proveedor de depuración o no hay token.
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")
 
