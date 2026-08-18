@@ -165,9 +165,37 @@ todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `
    local otra vez: ahora guarda `country: "España"`. Si algún día la app deja de ser solo en
    castellano, hay que **decidir** en qué idioma vive la identidad canónica, no localizarla
    por usuario: eso obligaría a duplicar venues, que es lo que esta colección evita.
-2. **App Check no está activo**: el log de la callable dice `{auth: VALID, app: MISSING}`.
-   Cualquiera con un token de sesión válido puede llamar a `resolveVenue`. Con los topes de
-   cuota el daño está acotado, pero conviene activarlo antes de tener usuarios.
+2. **App Check: cliente LISTO desde el 2026-08-18 (`10aaf6b`), enforcement AÚN NO.**
+   `FoodRankerApp.onCreate()` instala el proveedor lo primero, antes de cualquier otro uso
+   de Firebase. Play Integrity en release, proveedor de depuración en debug, desdoblado en
+   `app/src/release` y `app/src/debug` — **no** un `if (BuildConfig.DEBUG)`, porque la clase
+   de debug entra por `debugImplementation` y no existe en release.
+
+   El enforcement se dejó **desactivado a propósito**, y este es el orden correcto para
+   activarlo, no antes:
+
+   1. Firebase Console → App Check → registrar la app Android con **Play Integrity**.
+   2. Subir el AAB a Play, aunque sea a un track **interno**. Play Integrity solo valida
+      builds distribuidas por Google Play: hasta ese momento un APK instalado a mano **no
+      obtiene token**, así que activar el enforcement ahora dejaría las callables sin
+      responder en el Redmi.
+   3. Dar de alta el **token de depuración** que el proveedor de debug escribe en logcat
+      (`Enter this debug secret into the allow list…`), o el emulador se queda fuera. Es por
+      instalación: cada emulador o reinstalación genera uno nuevo.
+   4. Mirar en la consola las métricas de App Check hasta ver tráfico **verificado**, y solo
+      entonces activar el enforcement. En las callables v2 no se activa desde la consola:
+      se añade `enforceAppCheck: true` a las opciones de cada `onCall` en
+      `functions/src/index.ts` y se redespliega. Son **cinco**: `validateFoodImage` (l. 365),
+      `awardAdXp` (979), `getLeagueId` (1013), `resolveVenue` (1295) y `deleteUserAccount`
+      (1391). Empezar por `resolveVenue` y `validateFoodImage`, que son las que gastan cuota
+      de Places y de Vision.
+
+   Mientras tanto el log seguirá diciendo `{auth: VALID, app: MISSING}` en las llamadas sin
+   token, que es lo esperado: en monitorización pasan igual.
+
+   ⚠️ Ojo con `.gitignore`: la regla `release/` sin ruta ignoraba `app/src/release/` y dejaba
+   el source set fuera del repo (arreglado en `e62223e`). Si en otro clon falla la release
+   con "unresolved reference AppCheckInstaller", es esto.
 3. ~~Borrar un plato no revierte el XP ni borra la imagen~~ — **desplegado y verificado el
    2026-08-17** (ver arriba). `revertAuthorXP()` descuenta 50 + 5 + 10 por valoración
    recibida **solo si el plato estaba `approved`**, más el XP de liga vía el sello del rating
@@ -290,10 +318,11 @@ Copiarlo a mano, o volver a bajarlo con `apps:sdkconfig`.
    romperse.
 
 ### AAB
-Regenerado el **2026-08-17** desde el commit `4183f43`:
-`app/build/outputs/bundle/release/app-release.aab`, 14,73 MB, `BUILD SUCCESSFUL in 4m 32s`.
+Regenerado el **2026-08-18** desde el commit `e62223e` (incluye App Check):
+`app/build/outputs/bundle/release/app-release.aab`, 14,74 MB, `BUILD SUCCESSFUL in 10m 39s`.
 `versionCode` sigue en **1** a propósito: el AAB anterior nunca llegó a subirse a Play, así
 que no hay nada que superar. Keystore y credenciales en `local.properties` (fuera de git).
+El AAB del 2026-08-17 (`4183f43`, textos legales + `createdAt`) queda superado por este.
 
 Verificado, no supuesto:
 
@@ -301,11 +330,15 @@ Verificado, no supuesto:
   "self-signed" son los normales de una clave de subida propia, no un problema.
   `jarsigner` no está en el PATH: vive en
   `C:\Program Files\Android\Android Studio\jbr\bin\jarsigner.exe`.
-- **Los textos legales nuevos llegan al binario**: se extrajo el AAB y se buscaron cadenas
-  en `classes.dex`, que es la única forma fiable (ver "Trampas": leer `BuildConfig.java` no
+- **Los textos legales llegan al binario**: se extrajo el AAB y se buscaron cadenas en
+  `classes.dex`, que es la única forma fiable (ver "Trampas": leer `BuildConfig.java` no
   dice qué entra). Salen `Ley aplicable` y `Google Cloud Vision`, apartados que solo existen
   en la reescritura. Ojo al buscar: hay que respetar los acentos del fuente
   (`Suscripción`, no `Suscripcion`), o no encuentra nada aunque esté.
+- **App Check llega al binario**: no sirve buscar `AppCheckInstaller` (R8 ofusca los nombres
+  de clase propios en release), pero las cadenas del SDK de Firebase, que R8 no toca, salen
+  en `classes2.dex` y en `AndroidManifest.xml`: `firebaseappcheck.googleapis.com`,
+  `PlayIntegrity`, `play.core.integrity`.
 
 Ojo con `local.properties`: los valores llevan **escapes de Java** (`E\:\\FoodRanker\\...`).
 Al leerlo desde PowerShell hay que desescapar `\:` y `\\` o la ruta del keystore no resuelve.
