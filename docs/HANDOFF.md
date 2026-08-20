@@ -19,6 +19,27 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 —Data safety, ficha con capturas, clasificación de contenido, declaración de UGC— y está
 detallado en "Bloqueantes de Play Store".
 
+### ✅ Lo que se cerró el 2026-08-20 (cuarta sesión)
+
+- **Cuenta de desarrollador creada**: verificación de identidad aprobada, se está rellenando
+  el formulario "Crear aplicación" en Play Console (`applicationId` `com.app.foodranker`,
+  idioma predeterminado cambiado a español). El botón "Crear aplicación" estaba bloqueado
+  hasta que se aprobó la identidad — normal, tarda de horas a días.
+- **Icono rehecho** (`e53d91c`): el launcher (plato + estrella genérico) no se parecía en
+  nada a `FoodRankerMark`, el logo real de la splash screen. Se recalculó la geometría exacta
+  del mark y se sustituyó `ic_launcher_foreground.xml` + `ic_launcher_background.xml`
+  (naranja sólido → blanco, el domo ya es naranja). De paso se encontró que
+  `app/src/main/ic_launcher-playstore.png` (el icono 512×512 para la ficha de Play) era el
+  placeholder genérico "Aa" de Android Studio, nunca sustituido — también rehecho, RGBA de 32
+  bits, desde el mismo `pathData`. Detalles en memoria `project_icon_mismatch.md`.
+- **Índice de Firestore arreglado** (`c091282`): `plates` por `city`+`averageScore` estaba
+  definido en `firestore.indexes.json` pero nunca se había desplegado con éxito (un índice de
+  un solo campo mal declarado abortaba el deploy completo). La pestaña "Cerca" del Discover
+  llevaba rota desde siempre por esto. Verificado en el emulador publicando y luego borrando
+  4 platos de prueba reales — sí, el índice funciona, y sí, se limpiaron después (XP
+  revertido, imágenes borradas de Cloudinary, cero rastro en producción). Ver
+  `project_no_seed_data.md`.
+
 ### ✅ Lo que se cerró el 2026-08-18 (tercera sesión)
 
 - **URL pública de privacidad y términos**: publicada en GitHub Pages (rama `gh-pages`,
@@ -324,11 +345,12 @@ Copiarlo a mano, o volver a bajarlo con `apps:sdkconfig`.
    romperse.
 
 ### AAB
-Regenerado el **2026-08-18** desde el commit `e62223e` (incluye App Check):
-`app/build/outputs/bundle/release/app-release.aab`, 14,74 MB, `BUILD SUCCESSFUL in 10m 39s`.
-`versionCode` sigue en **1** a propósito: el AAB anterior nunca llegó a subirse a Play, así
+Regenerado el **2026-08-20** desde el commit `e53d91c` (incluye el icono nuevo):
+`app/build/outputs/bundle/release/app-release.aab`, 15,46 MB, `BUILD SUCCESSFUL in 4m 18s`.
+`versionCode` sigue en **1** a propósito: ningún AAB anterior llegó a subirse a Play, así
 que no hay nada que superar. Keystore y credenciales en `local.properties` (fuera de git).
-El AAB del 2026-08-17 (`4183f43`, textos legales + `createdAt`) queda superado por este.
+El AAB del 2026-08-18 (`e62223e`, App Check) queda superado por este — llevaba el icono
+viejo (plato + estrella genérico).
 
 Verificado, no supuesto:
 
