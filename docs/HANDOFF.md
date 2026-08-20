@@ -314,10 +314,31 @@ comprobado.
 | | SHA-1 |
 |---|---|
 | Debug | `00:56:2C:9F:18:0E:7F:6C:EB:03:BB:3F:7A:03:B5:CE:F9:82:34:C7` |
-| Release | `27:78:23:4B:D8:97:89:FE:86:23:28:F4:F7:65:10:23:15:E1:1A:59` |
+| Release (clave de carga, la del keystore local) | `27:78:23:4B:D8:97:89:FE:86:23:28:F4:F7:65:10:23:15:E1:1A:59` |
+| **Firma de Play** (App Signing key, la que Google usa de verdad para lo que llega a los usuarios) | `B6:D0:BF:6D:59:E8:DC:52:2E:0D:AC:E8:1C:B7:16:05:BA:90:00:DF` |
 
-**Las dos están registradas en Firebase desde el 2026-08-11.** La de release se leyó del
-keystore con `keytool` y se dio de alta con el CLI, sin pasar por la consola:
+⚠️ **Trampa real, no teórica** (encontrada el 2026-08-20 al probar el primer build subido a
+prueba interna): al aceptar "Firma de aplicaciones de Play" en la creación de la app, Google
+**vuelve a firmar** el AAB con una clave propia antes de repartirlo — el APK que le llega al
+usuario final **no** lleva la huella del keystore local, sino esta tercera huella nueva. El
+login de Google (Firebase Auth) falló en el Redmi con el build instalado desde Play real
+hasta que se registró esta huella — con solo las dos primeras (debug + carga) no basta en
+cuanto la app se distribuye por Play, aunque esas dos sigan haciendo falta para las builds
+locales (`installDebug`, `bundleRelease` firmado a mano).
+
+Se encuentra en **Play Console → Protegida con Play → Protección de Play Store → "Protege la
+clave de firma de aplicación" → Gestiona la firma de aplicaciones de Play**, bloque "Clave de
+firma de aplicación" → "Clave clásica" (no la "Clave criptográfica poscuántica", es para
+otra cosa).
+
+**Revisar si la clave de Places tiene el mismo problema**: la restricción por huella de la
+clave de Android en Google Cloud Console (ver más abajo, "Falta de las huellas") solo tiene
+las dos primeras huellas registradas a fecha de este hallazgo. Si la búsqueda de locales
+falla en un build instalado desde Play real (aunque funcionara en local), es este mismo
+patrón — añadir esta tercera huella a la restricción de la clave ahí también.
+
+**Las tres están registradas en Firebase.** La de release y la de firma de Play se leyeron y
+se dieron de alta con el CLI, sin pasar por la consola:
 
 ```
 npx firebase apps:android:sha:list   1:350322634794:android:42b4b2e91a8df170c4d353
