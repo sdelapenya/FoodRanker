@@ -337,6 +337,18 @@ las dos primeras huellas registradas a fecha de este hallazgo. Si la búsqueda d
 falla en un build instalado desde Play real (aunque funcionara en local), es este mismo
 patrón — añadir esta tercera huella a la restricción de la clave ahí también.
 
+⚠️ **Sigue sin funcionar 24h+ después de registrar la huella** (2026-08-21): con la huella
+verificada byte a byte en Firebase y en Google Cloud Console, la pantalla de consentimiento
+OAuth en "En producción", y los datos de Google Play Services borrados del todo en el Redmi,
+el login sigue fallando en el build de Play — instantáneo y silencioso, sin ningún error en
+logcat. Aislado con una prueba concluyente: un APK de release firmado con el keystore local
+(huella de carga, la de siempre) **funciona perfectamente** en el mismo momento y
+dispositivo. Descarta cualquier problema de código; es propagación de Google más lenta de lo
+normal, o algo sin pulir en el rollout de la firma dual "preparada para computación
+cuántica (beta)" que aparece junto a la clave clásica en Play Console. Detalle completo en
+memoria `project_play_signing_sha1.md`. Reintentar el login en el build de Play el
+2026-08-23 (domingo) o después.
+
 **Las tres están registradas en Firebase.** La de release y la de firma de Play se leyeron y
 se dieron de alta con el CLI, sin pasar por la consola:
 
