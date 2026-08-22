@@ -19,6 +19,79 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 —Data safety, ficha con capturas, clasificación de contenido, declaración de UGC— y está
 detallado en "Bloqueantes de Play Store".
 
+### 🔶 RETOMAR AQUÍ — a media tarea en "Contenido de la aplicación" (quinta sesión, 2026-08-21)
+
+Estás dentro de **Play Console → Política y programas → Contenido de la aplicación**,
+rellenando las 11 declaraciones obligatorias. Progreso:
+
+✅ Política de Privacidad · ✅ Anuncios · ✅ Datos de inicio de sesión · ✅ Aplicaciones
+gubernamentales (No) · ✅ Funciones financieras (No) · ✅ Aplicaciones de salud (No) · ✅ ID
+de publicidad (Sí, AdMob) · ✅ Permisos de fotos y vídeos · ✅ Clasificaciones del contenido
+(12-14+ según región, sin violencia/sexo/lenguaje) · ✅ Contenido y audiencia objetivo
+(**18+ únicamente**, sin marcar la restricción dura de menores)
+
+🔶 **Seguridad de los datos — a medias.** Estás en el paso 3 "Tipos de datos", acabas de
+marcar **Ubicación aproximada** y **Ubicación precisa**. Falta rellenar los desplegables de
+seguimiento de cada tipo y luego el resto de categorías. Respuestas ya decididas (no hace
+falta volver a pensarlas, solo transcribirlas al formulario):
+
+| Tipo | Recogido | Compartido | Finalidad | Opcional | Notas |
+|---|---|---|---|---|---|
+| Ubicación aproximada/precisa | Sí | **No** | Funcionalidad de la app | Sí | Procesada de forma efímera (no se guarda, solo se usa en el momento de buscar locales); Google Places es proveedor de servicio, no "compartición" |
+| Nombre | Sí | No | Funcionalidad de la app, gestión de cuenta | No | Viene del login de Google |
+| Correo electrónico | Sí | No | Gestión de cuenta | No | No se muestra a otros usuarios (no se guarda en `users/{uid}`, que es legible por cualquiera) |
+| ID de usuario | Sí | No | Funcionalidad de la app | No | |
+| Fotos | Sí | No | Funcionalidad de la app | Sí | Solo si publicas un plato; Cloudinary es proveedor de servicio |
+| Interacciones en la app | Sí | No | Analítica, funcionalidad de la app | Sí | Eventos de `AnalyticsManager` sin PII, solo IDs y categorías |
+| Historial de búsqueda en la app | Sí | No | Funcionalidad de la app | Sí | |
+| Registros de fallos | Sí | No | Analítica | No | Crashlytics |
+| Diagnósticos | Sí | No | Analítica | No | Firebase Analytics |
+| ID de publicidad | Sí | **Sí, con Google AdMob** | Publicidad o marketing | No | Único bloque con "compartido: sí" real — AdMob usa el ID con fines propios |
+| Otros ID (token FCM) | Sí | No | Funcionalidad de la app (notificaciones) | No | |
+| Todo lo demás (financiero, salud, mensajes, archivos, calendario, contactos, navegación web, audio) | **No recopilado** | — | — | — | |
+
+Preguntas generales del paso 2 (ya contestadas, por si hay que repetirlas): cifrado en
+tránsito → Sí; método de cuenta → solo OAuth; eliminación parcial sin borrar cuenta → No;
+URL de eliminación de cuenta → `https://sdelapenya.github.io/FoodRanker/delete-account.html`.
+
+Cuando termines "Seguridad de los datos", quedan los pasos 4 (Uso y gestión de datos) y 5
+(Vista previa) de ese mismo asistente, y ya estarían las 11 declaraciones completas.
+
+### ✅ Lo que se cerró el 2026-08-21 (quinta sesión)
+
+- **Cuenta de la app creada en Play Console** y subida a **prueba interna**: primera versión
+  (`1.0`) publicada y disponible para testers, sin esperar revisión. `Producción` sigue
+  inactivo a propósito — hace falta pasar antes por la prueba cerrada de 12 testers/14 días
+  que exige Google a las cuentas de desarrollador nuevas.
+- **Gráfico destacado 1024×500** (`03fa790`) para la ficha de Play, mismo estilo del icono.
+- **Tercera huella SHA-1 encontrada y registrada** (`7b7197d`): al activar "Firma de
+  aplicaciones de Play", Google re-firma el AAB con una clave propia — el login de Google
+  roto en cualquier build instalada desde Play real hasta que se registra esa huella. Ya
+  registrada en Firebase y en Google Cloud Console, verificada byte a byte.
+- ⚠️ **Sigue sin propagarse 24h+ después** (`eb9f8df`): con todo verificado del lado de
+  Google (huella, cliente OAuth, consentimiento en producción, caché de Play Services del
+  Redmi borrada del todo), el login sigue fallando en el build de Play — instantáneo y
+  silencioso, sin ningún error en logcat. Aislado con una prueba concluyente: un APK de
+  release firmado con el keystore local (huella de siempre) **funciona perfectamente** en el
+  mismo momento y dispositivo. No es un bug nuestro. **Reintentar el login en el build de
+  Play el 2026-08-23 (domingo) o después** — detalle completo en memoria
+  `project_play_signing_sha1.md`. Mientras tanto, el Redmi tiene instalada la build firmada
+  con el keystore local (funciona bien), no la de Play.
+- **Cuenta de revisión de Google Play creada**: `foodrankerreview@gmail.com`, dada de alta en
+  la declaración "Datos de inicio de sesión" de Play Console (la contraseña **no se guarda
+  aquí** — el repo es público — solo vive en Play Console y en quien la creó). Sirve para que
+  el equipo de revisión de Google entre en la app; no tiene Premium contratado.
+- **Bug real encontrado y arreglado en el sitio de gh-pages**: `foodranker.app@gmail.com`
+  estaba publicado como contacto en privacidad/términos/portada desde antes de esta sesión,
+  pero esa cuenta **nunca se creó** — cualquier correo enviado ahí se habría perdido.
+  Sustituido por `sdelapenya1991@gmail.com` en las 4 páginas (commit `02088ac` en `gh-pages`).
+  De paso se creó y publicó **`delete-account.html`** (commit `3c13291`), la página que exige
+  Play Console para la declaración de eliminación de cuentas — describe los pasos en la app y
+  un método alternativo por email para quien no la tenga instalada.
+- **Hueco de producto anotado**: no existe forma de bloquear o banear usuarios, solo reportar
+  contenido (que se oculta con 3+ reportes). Pendiente si la app crece y aparece contenido
+  ofensivo de verdad — ver `project_no_user_blocking.md`.
+
 ### ✅ Lo que se cerró el 2026-08-20 (cuarta sesión)
 
 - **Cuenta de desarrollador creada**: verificación de identidad aprobada, se está rellenando
