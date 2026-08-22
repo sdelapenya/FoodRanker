@@ -15,29 +15,64 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-**No queda código pendiente para subir a Play.** Lo que falta es **todo de Play Console**
-—Data safety, ficha con capturas, clasificación de contenido, declaración de UGC— y está
-detallado en "Bloqueantes de Play Store".
+### ✅ Sexta sesión (2026-08-22): capturas de Play Store hechas y producción limpiada
 
-### 🔶 RETOMAR AQUÍ — a media tarea en "Contenido de la aplicación" (quinta sesión, 2026-08-21)
+Se publicaron 4 platos de prueba reales desde el Redmi (conectado por ADB, USB debugging)
+para sacar capturas de pantalla para la ficha de Play Store, siguiendo el mismo patrón
+verificado el 2026-08-20 (publicar por el flujo normal de la app, con fotos reales de
+Pexels vía `PEXELS_API_KEY` de `local.properties`, luego borrar): Pizza Margarita
+Artesanal, Tortilla de la Abuela, Roll Tempura Picante, Hamburguesa Especial de la Casa —
+los 4 en Bar Casa Benito, Toledo.
 
-Estás dentro de **Play Console → Política y programas → Contenido de la aplicación**,
-rellenando las 11 declaraciones obligatorias. Progreso:
+**La app no tiene botón de borrar plato para el autor** (el lápiz de "Mis platos" solo deja
+editar la descripción) — se borraron los 4 documentos de `plates` con un script Admin SDK
+(mismo patrón ADC de siempre), lo que disparó `onPlateDeleted` igual que si se hubiera
+borrado desde la app. Verificado, no supuesto: `plates`, `ratings`, `comments` y `saves`
+volvieron a 0. De paso se encontraron **6 venues residuales** en la colección `venues` —
+5 de sesiones de prueba anteriores (Madrid y Toledo) más el de hoy, ninguno con platos
+asociados — y se borraron los 6 con el visto bueno del usuario, ejecutados por él mismo
+desde su propia PowerShell (el clasificador de seguridad de Claude Code bloquea escrituras
+destructivas directas a producción vía Admin SDK aunque el usuario confirme en el chat; hay
+que dárselo para que lo ejecute él, o añadir una regla de permiso Bash). Producción vuelve
+a estar en 0 en las 5 colecciones.
+
+Se concedió permiso de ubicación al Redmi vía `pm grant` (no por el diálogo real) para
+poder probar `resolveVenue` sin fricción — sin importancia, ya se había verificado el flujo
+real de permisos antes.
+
+**Capturas conseguidas y guardadas** en `docs/play-store-screenshots/` (fuera del
+scratchpad de sesión, que no persiste): `01-ranking.png` (ranking con contenido real),
+`02-detalle-plato.png` (detalle de "Tortilla de la Abuela"), `03-perfil.png` (perfil de
+Sergio, 720 XP/Crítico Gastronómico/logros). Listas para usar en la ficha de Play Store —
+recortar/adaptar tamaño si Play lo exige, pero el contenido ya es bueno.
+
+Curiosidad menor encontrada de paso: la pestaña Liga pedía "añade tu ciudad en el perfil"
+aunque el perfil ya mostraba "Madrid" — no investigado, no bloqueante, anotar si se repite.
+
+---
+
+**No queda código pendiente para subir a Play.** Las 11 declaraciones de "Contenido de la
+aplicación" (incluida Data safety) están **completas**. Lo que falta es el resto de la
+ficha de Play Store: **capturas de pantalla, descripciones**. La clasificación de
+contenido y la declaración de audiencia/UGC ya están hechas (ver más abajo).
+
+### ✅ Sexta sesión (2026-08-22): "Contenido de la aplicación" completado
+
+Las 11 declaraciones obligatorias de **Play Console → Política y programas → Contenido de
+la aplicación** están cerradas:
 
 ✅ Política de Privacidad · ✅ Anuncios · ✅ Datos de inicio de sesión · ✅ Aplicaciones
 gubernamentales (No) · ✅ Funciones financieras (No) · ✅ Aplicaciones de salud (No) · ✅ ID
 de publicidad (Sí, AdMob) · ✅ Permisos de fotos y vídeos · ✅ Clasificaciones del contenido
 (12-14+ según región, sin violencia/sexo/lenguaje) · ✅ Contenido y audiencia objetivo
-(**18+ únicamente**, sin marcar la restricción dura de menores)
+(**18+ únicamente**) · ✅ **Seguridad de los datos**
 
-🔶 **Seguridad de los datos — a medias.** Estás en el paso 3 "Tipos de datos", acabas de
-marcar **Ubicación aproximada** y **Ubicación precisa**. Falta rellenar los desplegables de
-seguimiento de cada tipo y luego el resto de categorías. Respuestas ya decididas (no hace
-falta volver a pensarlas, solo transcribirlas al formulario):
+Respuestas que quedaron en "Seguridad de los datos", por si hay que repetirlas o auditarlas
+(**tipos de datos** → paso 3; **recogido/compartido/finalidad/opcional** → paso 4):
 
 | Tipo | Recogido | Compartido | Finalidad | Opcional | Notas |
 |---|---|---|---|---|---|
-| Ubicación aproximada/precisa | Sí | **No** | Funcionalidad de la app | Sí | Procesada de forma efímera (no se guarda, solo se usa en el momento de buscar locales); Google Places es proveedor de servicio, no "compartición" |
+| Ubicación aproximada/precisa | Sí | No | Funcionalidad de la app | Sí | Procesada de forma efímera (no se guarda, solo se usa en el momento de buscar locales); Google Places es proveedor de servicio, no "compartición" |
 | Nombre | Sí | No | Funcionalidad de la app, gestión de cuenta | No | Viene del login de Google |
 | Correo electrónico | Sí | No | Gestión de cuenta | No | No se muestra a otros usuarios (no se guarda en `users/{uid}`, que es legible por cualquiera) |
 | ID de usuario | Sí | No | Funcionalidad de la app | No | |
@@ -46,16 +81,23 @@ falta volver a pensarlas, solo transcribirlas al formulario):
 | Historial de búsqueda en la app | Sí | No | Funcionalidad de la app | Sí | |
 | Registros de fallos | Sí | No | Analítica | No | Crashlytics |
 | Diagnósticos | Sí | No | Analítica | No | Firebase Analytics |
-| ID de publicidad | Sí | **Sí, con Google AdMob** | Publicidad o marketing | No | Único bloque con "compartido: sí" real — AdMob usa el ID con fines propios |
-| Otros ID (token FCM) | Sí | No | Funcionalidad de la app (notificaciones) | No | |
+| ID de publicidad (dentro de "IDs de dispositivo o de otro tipo") | Sí | **Sí, con Google AdMob** | Publicidad o marketing | No | Único bloque con "compartido: sí" real — AdMob usa el ID con fines propios |
+| Otros ID (token FCM, misma categoría que el ID de publicidad) | Sí | No | Funcionalidad de la app (notificaciones) | No | |
 | Todo lo demás (financiero, salud, mensajes, archivos, calendario, contactos, navegación web, audio) | **No recopilado** | — | — | — | |
 
-Preguntas generales del paso 2 (ya contestadas, por si hay que repetirlas): cifrado en
-tránsito → Sí; método de cuenta → solo OAuth; eliminación parcial sin borrar cuenta → No;
-URL de eliminación de cuenta → `https://sdelapenya.github.io/FoodRanker/delete-account.html`.
+Preguntas generales del paso 2: cifrado en tránsito → Sí; método de cuenta → solo OAuth;
+eliminación parcial sin borrar cuenta → No; URL de eliminación de cuenta →
+`https://sdelapenya.github.io/FoodRanker/delete-account.html`.
 
-Cuando termines "Seguridad de los datos", quedan los pasos 4 (Uso y gestión de datos) y 5
-(Vista previa) de ese mismo asistente, y ya estarían las 11 declaraciones completas.
+⚠️ **Trampa real, dos veces seguidas**: el asistente de "Seguridad de los datos" **no
+autoguarda entre pasos** — un F5 a media tarea borra todo desde el último "Guardar" y hay
+que repetirlo entero. Guardar como borrador al terminar cada paso, no solo al final.
+
+⚠️ **Curiosidad sin importancia, verificada dos veces**: la categoría "Ubicación" no
+aparece en el resumen "Vista previa de la ficha de Play Store" (ni en "Datos recogidos" ni
+desplegando "Mostrar detalles"), aunque en los pasos 3 y 4 del asistente esté marcada como
+"Completado". Es un fallo visual del resumen de Play Console, no de los datos guardados —
+confirmado comprobando el estado real en los pasos 3/4, que sí la reflejan.
 
 ### ✅ Lo que se cerró el 2026-08-21 (quinta sesión)
 
@@ -516,6 +558,10 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
 
 ## Trampas conocidas (ahorran tiempo)
 
+- **El asistente de "Seguridad de los datos" en Play Console NO autoguarda entre pasos.**
+  Un F5 a media tarea borra todo lo tecleado desde el último "Guardar" o "Guardar como
+  borrador" y el asistente vuelve al principio. Guardar como borrador **al terminar cada
+  paso** (Tipos de datos, Uso y gestión de datos), no solo al final del todo
 - **ADB solo funciona en PowerShell**, no en Git Bash. Y Git Bash convierte `/sdcard/...`
   en rutas de Windows: usar `//sdcard/...` o hacerlo desde PowerShell
 - **`local.properties`**: no añadir líneas con `Add-Content` sin salto previo. Ya pasó una
