@@ -15,6 +15,69 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔄 Séptima sesión (2026-08-23): ficha de Play Store completada y prueba cerrada enviada a revisión
+
+Se completó lo que faltaba de la ficha ("Presencia en Google Play Store"): nombre,
+descripción breve y completa, icono, gráfico destacado, 3 capturas, categoría ("Comer y
+beber"), etiquetas ("Comida y bebida" + "Restaurante") y datos de contacto públicos
+(`sdelapenya1991@gmail.com`). Las 11 declaraciones de "Contenido de la aplicación" seguían
+completas de la sesión anterior. Con eso, las 11 de 11 tareas de "Termina de configurar tu
+aplicación" quedaron cerradas.
+
+**Bloqueante real encontrado (esperado, ya documentado antes)**: Play no deja pedir acceso
+a producción sin pasar antes por una **prueba cerrada con mínimo 12 testers durante 14
+días** — política de Google para cuentas de desarrollador nuevas. Se montó:
+
+- **Google Group `foodranker-testers@googlegroups.com`** (creado con la cuenta correcta,
+  `sdelapenya1991@gmail.com` — no confundir con `sergiodelapenya1991@`), configurado como
+  "cualquier usuario de la Web puede unirse", para poder sumar testers de grupos de
+  Facebook/Telegram sin pedirles el Gmail de antemano.
+- **Track "Prueba cerrada - Alpha"** en Play Console, con ese Google Group como lista de
+  testers, todos los países marcados, y `sdelapenya1991@gmail.com` como canal de feedback.
+- **AAB regenerado con `versionCode 2`** (el `1` ya estaba usado por la prueba interna del
+  2026-08-21): `versionCode` en `app/build.gradle.kts` subido de 1 a 2, `bundleRelease`
+  reejecutado, BUILD SUCCESSFUL, 15,46 MB. El de `versionCode 1` queda obsoleto.
+- **Enviado a revisión** (2026-08-23): la ficha completa + las 11 declaraciones + esta
+  versión de prueba cerrada, todo junto, quedó en estado "Cambios en revisión".
+
+⚠️ **Aviso real encontrado al subir el AAB, con plazo pero ya resuelto en código**: Play
+detectó una dependencia transitiva de **reCAPTCHA Enterprise
+(`com.google.android.recaptcha:recaptcha` 18.1.2) con una vulnerabilidad crítica**
+(viene de `firebase-auth`, que la arrastra internamente aunque FoodRanker solo use Google
+Sign-In), parcheada en la 18.4.0, y **SoLoader desactualizado** (0.10.1, viene de
+`cloudinary-android` → `fresco:2.6.0`, riesgo de crash en dispositivos solo 64 bits,
+corregido en 0.10.4). Google daba 90 días desde el envío (límite aprox. **2026-11-21**).
+
+**Arreglado el mismo día** forzando las dos dependencias transitivas directamente en
+`app/build.gradle.kts`, sin tocar el Firebase BOM ni Kotlin:
+```
+implementation("com.google.android.recaptcha:recaptcha:18.4.0")
+implementation("com.facebook.soloader:soloader:0.10.4")
+```
+Confirmado con `./gradlew :app:dependencies --configuration releaseRuntimeClasspath` que
+ambas resuelven a la versión parcheada. `compileReleaseKotlin` en verde. **Se probó primero
+subir el Firebase BOM (32.7.0 → 34.18.0)**, que es como Google "querría" que se arreglara,
+pero esa vía obliga a quitar el sufijo `-ktx` de todas las dependencias Firebase → obliga a
+subir Kotlin (2.0.21 → 2.3.20) para que el compilador lea los metadatos nuevos → rompe Kapt
+(el que usa Hilt), cuyo arreglo real es migrar a KSP. Se revirtió todo (nunca se commiteó) y
+se quedó con el forzado quirúrgico. Detalle completo en memoria
+`project_recaptcha_soloader_warning.md`.
+
+**Pendiente**: el fix ya está en el código pero **no se ha regenerado ni resubido el AAB**
+(la v2 ya estaba en revisión en la prueba cerrada, no merecía la pena interrumpirla). Subir
+`versionCode` a 3 y regenerar (`bundleRelease`) la próxima vez que se toque una versión,
+antes de pedir acceso a producción como muy tarde. De paso se confirmó que
+`firebase-dynamic-links` es dependencia muerta (Google apagó el servicio en 2025, cero
+referencias en el código) — limpieza pendiente sin prisa, no se tocó para no mezclar con
+este arreglo.
+
+**Retomar aquí**: cuando Google apruebe la prueba cerrada (horas, no días), ir a Play
+Console → Probar y publicar → Pruebas → Prueba cerrada → Testers, copiar el enlace de
+unión, y compartirlo junto con el enlace del Google Group con los 4-5 contactos del usuario
+más gente de grupos de Telegram/Facebook de testers Android en español, hasta reunir 12.
+Desde que el 12º acepte y abra la app, contar 14 días antes de poder pedir acceso a
+producción.
+
 ### ✅ Sexta sesión (2026-08-22): capturas de Play Store hechas y producción limpiada
 
 Se publicaron 4 platos de prueba reales desde el Redmi (conectado por ADB, USB debugging)

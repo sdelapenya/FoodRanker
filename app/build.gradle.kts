@@ -52,7 +52,7 @@ android {
         applicationId = "com.app.foodranker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -156,6 +156,13 @@ dependencies {
 
     // Cloudinary
     implementation("com.cloudinary:cloudinary-android:2.3.1")
+
+    // Fuerza versiones mínimas de dependencias transitivas señaladas por Play Console:
+    // recaptcha 18.1.2 (de firebase-auth) tenía una vulnerabilidad crítica parcheada en
+    // la 18.4.0; soloader 0.10.1 (de Cloudinary -> Fresco) podía fallar en dispositivos
+    // solo de 64 bits, corregido en la 0.10.4.
+    implementation("com.google.android.recaptcha:recaptcha:18.4.0")
+    implementation("com.facebook.soloader:soloader:0.10.4")
 
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.animation:animation-core")
