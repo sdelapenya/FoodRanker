@@ -43,7 +43,9 @@ class BillingManager @Inject constructor(
                     purchases?.forEach { handlePurchase(it) }
                 }
             }
-            .enablePendingPurchases()
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
+            )
             .build()
 
         connect()
@@ -92,7 +94,8 @@ class BillingManager @Inject constructor(
             ))
             .build()
 
-        billingClient?.queryProductDetailsAsync(params) { result, details ->
+        billingClient?.queryProductDetailsAsync(params) { result, queryResult ->
+            val details = queryResult.productDetailsList
             if (result.responseCode == BillingClient.BillingResponseCode.OK && details.isNotEmpty()) {
                 productDetails = details[0]
                 details[0].subscriptionOfferDetails?.firstOrNull()?.pricingPhases
@@ -105,7 +108,8 @@ class BillingManager @Inject constructor(
 
     fun launchPurchase(activity: Activity): Boolean {
         val details = productDetails ?: return false
-        val offerToken = details.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return false
+        val offerToken = details.subscriptionOfferDetails?.firstOrNull()?.offerToken
+            ?.takeIf { it.isNotBlank() } ?: return false
 
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(
