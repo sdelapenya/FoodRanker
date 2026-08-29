@@ -167,16 +167,25 @@ service cloud.firestore {
     match /comments/{commentId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Reportes: solo incremento de 1, mismo patrón que plates.reportCount
+      // Reportes: solo incremento de 1, mismo patrón que plates.reportCount.
+      // get('reportCount', 0): un comentario creado por una app anterior a esta
+      // feature no tiene el campo — sin el default, resource.data.reportCount sería
+      // null y "null + 1" rompe la regla, bloqueando el reporte justo en el contenido
+      // más antiguo (y más probable que necesite reportarse primero).
       allow update: if isSignedIn()
                     && changedKeys().hasOnly(['reportCount'])
-                    && request.resource.data.reportCount == resource.data.reportCount + 1;
+                    && request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // ── SAVES ──────────────────────────────────────────────────
     match /saves/{saveId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // El propio usuario ve sus guardados; el autor del plato puede ver quién lo ha
+      // guardado (función Premium "quién ha interactuado" — ver PlateDetailViewModel).
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        get(/databases/$(database)/documents/plates/$(resource.data.plateId)).data.addedByUserId == request.auth.uid
+      );
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow update: if false;

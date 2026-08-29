@@ -9,6 +9,7 @@ import com.app.foodranker.data.model.Comment
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.data.model.Rating
+import com.app.foodranker.data.model.User
 import com.app.foodranker.data.repository.PlateRepository
 import com.app.foodranker.utils.InputLimits
 import com.google.firebase.functions.FirebaseFunctions
@@ -37,11 +38,19 @@ data class PlateDetailUiState(
     val isSubmittingComment: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null,
-    val cityRank: Int = 0
+    val cityRank: Int = 0,
+    val engagement: PlateEngagement = PlateEngagement()
 ) {
     // Derivado de ratings para evitar desincronización con el campo separado
     val userRating: Rating? get() = ratings.find { it.userId == currentUserId }
 }
+
+/** Quién ha dado like o guardado el plato — visible solo para el autor, y solo Premium. */
+data class PlateEngagement(
+    val isLoading: Boolean = false,
+    val likedByUsers: List<User> = emptyList(),
+    val savedByUsers: List<User> = emptyList()
+)
 
 @HiltViewModel
 class PlateDetailViewModel @Inject constructor(
@@ -387,6 +396,45 @@ class PlateDetailViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
+            }
+        }
+    }
+
+    /**
+     * Quién ha dado like o guardado el plato. La llama la UI solo cuando el que mira es el
+     * autor y es Premium (la regla de `saves` ya lo exige del lado del servidor: solo el
+     * autor del plato puede leer los guardados de otra persona).
+     */
+    fun loadEngagement(plateId: String) {
+        val plate = _uiState.value.plate ?: return
+        _uiState.value = _uiState.value.copy(engagement = PlateEngagement(isLoading = true))
+        viewModelScope.launch {
+            try {
+                val likeIds = plate.likedByUsers.take(30)
+                val savesSnap = firestore.collection("saves")
+                    .whereEqualTo("plateId", plateId).limit(30).get().await()
+                val saveIds = savesSnap.documents.mapNotNull { it.getString("userId") }.take(30)
+
+                // whereIn admite como mucho 30 valores — el límite tiene que aplicarse
+                // DESPUÉS de unir y deduplicar like+save, no antes (30+30 sigue siendo 60).
+                val allIds = (likeIds + saveIds).distinct().take(30)
+                val usersById = if (allIds.isEmpty()) emptyMap() else
+                    firestore.collection("users")
+                        .whereIn(com.google.firebase.firestore.FieldPath.documentId(), allIds)
+                        .get().await().documents
+                        .associate { it.id to (it.toObject(User::class.java) ?: User()) }
+
+                _uiState.value = _uiState.value.copy(
+                    engagement = PlateEngagement(
+                        likedByUsers = likeIds.mapNotNull { usersById[it] },
+                        savedByUsers = saveIds.mapNotNull { usersById[it] }
+                    )
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    engagement = PlateEngagement(),
+                    error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
+                )
             }
         }
     }

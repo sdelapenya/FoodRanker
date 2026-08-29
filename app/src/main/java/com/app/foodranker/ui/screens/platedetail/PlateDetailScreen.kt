@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.data.model.Comment
 import com.app.foodranker.data.model.Rating
+import com.app.foodranker.data.model.User
 import com.app.foodranker.ui.components.PlateDetailSkeleton
 import com.app.foodranker.ui.screens.addplate.FoodTextField
 import com.app.foodranker.ui.screens.addplate.ScoreSlider
@@ -59,6 +60,7 @@ import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
 import com.app.foodranker.utils.AdManager
+import com.app.foodranker.viewmodel.BillingViewModel
 import com.app.foodranker.viewmodel.PlateDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,9 +68,11 @@ import com.app.foodranker.viewmodel.PlateDetailViewModel
 fun PlateDetailScreen(
     plateId: String,
     onNavigateBack: () -> Unit,
-    viewModel: PlateDetailViewModel = hiltViewModel()
+    viewModel: PlateDetailViewModel = hiltViewModel(),
+    billingViewModel: BillingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isPremium by billingViewModel.isPremium.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -79,6 +83,7 @@ fun PlateDetailScreen(
     var showCollectionSheet by remember { mutableStateOf(false) }
     var showReportPlateDialog by remember { mutableStateOf(false) }
     var reportingCommentId by remember { mutableStateOf<String?>(null) }
+    var showEngagementSheet by remember { mutableStateOf(false) }
     var contentVisible by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     var showImageZoom by remember { mutableStateOf(false) }
@@ -89,11 +94,13 @@ fun PlateDetailScreen(
     // al usuario antes de que haya visto el contenido.
     var shouldShowAdOnExit by remember { mutableStateOf(false) }
     LaunchedEffect(plateId) {
-        shouldShowAdOnExit = AdManager.recordPlateDetailView()
+        // isPremium se comprueba también al salir (no solo aquí): quitar el anuncio
+        // en el momento en que se compra/regala Premium, sin esperar a la próxima entrada.
+        shouldShowAdOnExit = !isPremium && AdManager.recordPlateDetailView()
     }
     DisposableEffect(Unit) {
         onDispose {
-            if (shouldShowAdOnExit) {
+            if (shouldShowAdOnExit && !isPremium) {
                 val activity = (context as? android.app.Activity)
                 if (activity != null) AdManager.showInterstitial(activity) {}
             }
@@ -205,6 +212,16 @@ fun PlateDetailScreen(
                                     showReportPlateDialog = true
                                 }
                             )
+                            if (isPremium && uiState.plate?.addedByUserId == viewModel.currentUserId) {
+                                DropdownMenuItem(
+                                    text = { Text("👀 Quién ha interactuado") },
+                                    onClick = {
+                                        showShareMenu = false
+                                        viewModel.loadEngagement(plateId)
+                                        showEngagementSheet = true
+                                    }
+                                )
+                            }
                         }
                     }
                 },
@@ -618,6 +635,35 @@ fun PlateDetailScreen(
         }
     }
 
+    // Sheet Premium: quién ha dado like o guardado el plato
+    if (showEngagementSheet) {
+        @OptIn(ExperimentalMaterial3Api::class)
+        ModalBottomSheet(onDismissRequest = { showEngagementSheet = false }) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Quién ha interactuado", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                if (uiState.engagement.isLoading) {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = OrangePrimary)
+                    }
+                } else if (uiState.engagement.likedByUsers.isEmpty() && uiState.engagement.savedByUsers.isEmpty()) {
+                    Text("Nadie ha interactuado todavía.", fontSize = 14.sp, color = TextSecondary)
+                } else {
+                    if (uiState.engagement.likedByUsers.isNotEmpty()) {
+                        Text("❤️ Le ha gustado (${uiState.engagement.likedByUsers.size})", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
+                        uiState.engagement.likedByUsers.forEach { EngagementUserRow(it) }
+                    }
+                    if (uiState.engagement.savedByUsers.isNotEmpty()) {
+                        Text("🔖 Guardado por (${uiState.engagement.savedByUsers.size})", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
+                        uiState.engagement.savedByUsers.forEach { EngagementUserRow(it) }
+                    }
+                }
+            }
+        }
+    }
+
     // Preview de la tarjeta antes de compartir
     // Sheet para seleccionar colección
     if (showCollectionSheet) {
@@ -814,6 +860,32 @@ private fun ImageZoomViewer(imageUrl: String, onDismiss: () -> Unit) {
     }
 }
 
+
+@Composable
+fun EngagementUserRow(user: User) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(32.dp).clip(CircleShape).background(DividerColor),
+            contentAlignment = Alignment.Center
+        ) {
+            if (user.photoUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = user.photoUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(Icons.Default.Person, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+            }
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(user.name.ifBlank { "Usuario" }, fontSize = 14.sp, color = TextPrimary)
+    }
+}
 
 @Composable
 fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit, onReport: () -> Unit = {}) {
