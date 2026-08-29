@@ -14,12 +14,10 @@
 .cxx
 local.properties
  
-# Sensibles 
-app/google-services.json 
-foodranker-keystore.jks 
-firebase.json 
-.firebaserc 
-.claude 
+# Sensibles
+app/google-services.json
+foodranker-keystore.jks
+.claude
 .cursor 
 .kotlin 
 # Artefactos firmados del bundle/APK. Con la ruta completa a proposito: un
