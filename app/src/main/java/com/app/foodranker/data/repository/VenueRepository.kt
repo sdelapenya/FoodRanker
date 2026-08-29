@@ -55,11 +55,11 @@ class VenueRepository @Inject constructor(
      * habilita hoy. Por eso hay que obtener las coordenadas aparte.
      */
     @SuppressLint("MissingPermission")
-    suspend fun nearbyVenues(): Result<List<VenueSuggestion>> = runCatching {
+    suspend fun nearbyVenues(radiusMeters: Double = SEARCH_RADIUS_METERS): Result<List<VenueSuggestion>> = runCatching {
         val location = currentLocation() ?: error("sin ubicación disponible")
         val circle = CircularBounds.newInstance(
             LatLng(location.latitude, location.longitude),
-            SEARCH_RADIUS_METERS
+            radiusMeters
         )
         val response = placesClient.searchNearby(
             SearchNearbyRequest.builder(circle, fields)
@@ -70,8 +70,10 @@ class VenueRepository @Inject constructor(
         response.places.mapNotNull { it.toSuggestion() }
     }.onFailure { Log.w(TAG, "nearbyVenues falló: ${it.message}") }
 
+    /** Ubicación GPS actual, o null si no hay permiso/señal. Pública: la reutiliza
+     * cualquier pantalla que necesite la posición real del usuario (ver NearbyDishesViewModel). */
     @SuppressLint("MissingPermission")
-    private suspend fun currentLocation(): Location? {
+    suspend fun currentLocation(): Location? {
         val client = LocationServices.getFusedLocationProviderClient(context)
         // lastLocation es instantáneo cuando hay una posición reciente en caché; si no
         // hay ninguna (GPS recién encendido) se pide una lectura fresca.

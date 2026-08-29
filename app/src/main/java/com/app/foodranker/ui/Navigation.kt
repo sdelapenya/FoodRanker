@@ -23,6 +23,7 @@ sealed class Screen(val route: String) {
         fun createRoute(plateId: String) = "plate/$plateId"
     }
     object Trending : Screen("trending")
+    object Nearby : Screen("nearby")
     object Privacy : Screen("privacy")
     object Terms         : Screen("terms")
     object Notifications : Screen("notifications")

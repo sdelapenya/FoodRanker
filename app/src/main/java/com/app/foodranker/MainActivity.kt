@@ -33,6 +33,7 @@ import com.app.foodranker.utils.OnboardingManager
 import com.app.foodranker.ui.screens.privacy.PrivacyPolicyScreen
 import com.app.foodranker.ui.screens.privacy.TermsOfServiceScreen
 import com.app.foodranker.ui.screens.splash.SplashScreen
+import com.app.foodranker.ui.screens.nearby.NearbyDishesScreen
 import com.app.foodranker.ui.screens.trending.TrendingScreen
 import com.app.foodranker.ui.screens.league.LeagueScreen
 import com.app.foodranker.ui.screens.referral.ReferralScreen
@@ -219,6 +220,18 @@ fun FoodRankerNavigation() {
                 },
                 onNavigateToLeague = {
                     navController.navigate(Screen.League.route)
+                },
+                onNavigateToNearby = {
+                    navController.navigate(Screen.Nearby.route)
+                }
+            )
+        }
+
+        composable(Screen.Nearby.route) {
+            NearbyDishesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onPlateClick = { plateId ->
+                    navController.navigate(Screen.PlateDetail.createRoute(plateId))
                 }
             )
         }

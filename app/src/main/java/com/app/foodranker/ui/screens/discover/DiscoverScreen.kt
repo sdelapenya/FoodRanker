@@ -61,6 +61,7 @@ fun DiscoverScreen(
     onNavigateToPlateDetail: (String) -> Unit,
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToLeague: () -> Unit = {},
+    onNavigateToNearby: () -> Unit = {},
     viewModel: DiscoverViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
@@ -170,6 +171,7 @@ fun DiscoverScreen(
                 isOnline      = isOnline,
                 onSearch      = onNavigateToExplore,
                 onNotifications = onNavigateToNotifications,
+                onNearby      = onNavigateToNearby,
                 onTabSelected = { viewModel.setTab(it) }
             )
         },
@@ -306,6 +308,7 @@ private fun RankingTopBar(
     isOnline: Boolean,
     onSearch: () -> Unit,
     onNotifications: () -> Unit,
+    onNearby: () -> Unit,
     onTabSelected: (Int) -> Unit
 ) {
     Surface(shadowElevation = 2.dp, color = SurfaceWhite) {
@@ -343,6 +346,9 @@ private fun RankingTopBar(
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = onNearby) {
+                    Icon(Icons.Default.LocationOn, contentDescription = "Qué pido aquí", tint = TextSecondary)
+                }
                 IconButton(onClick = onSearch) {
                     Icon(Icons.Default.Search, contentDescription = "Buscar", tint = TextSecondary)
                 }
