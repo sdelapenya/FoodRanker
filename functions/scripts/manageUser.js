@@ -1,10 +1,12 @@
 // Acciones administrativas a mano sobre un usuario. Único mecanismo de moderación/gestión
 // que existe hoy: no hay rol de admin ni pantalla en la app (ver docs/HANDOFF.md).
 //
-// ban/unban: bloquea/restaura el acceso (cuenta de Firebase Auth desactivada). El baneo de
-// momento SOLO bloquea el acceso futuro; el contenido ya publicado por el usuario se queda
-// visible tal cual. Si en el futuro se decide borrar también su contenido, el punto de
-// partida es reutilizar la lógica de cascade-delete que ya existe en `deleteUserAccount`
+// ban/unban: bloquea/restaura el acceso (cuenta de Firebase Auth desactivada +
+// revocación de refresh tokens en el baneo, para que no siga con acceso hasta que
+// caduque el ID token que ya tuviera en el móvil, hasta 1h). El baneo de momento SOLO
+// bloquea el acceso futuro; el contenido ya publicado por el usuario se queda visible
+// tal cual. Si en el futuro se decide borrar también su contenido, el punto de partida
+// es reutilizar la lógica de cascade-delete que ya existe en `deleteUserAccount`
 // (functions/src/index.ts) en vez de reescribirla aquí.
 //
 // grant-premium/revoke-premium: regala/quita Premium a mano (amigos, familia, etc.), sin
@@ -46,6 +48,7 @@ async function main() {
   await admin.firestore().collection("users").doc(uid).update({ [field]: value });
   if (field === "banned") {
     await admin.auth().updateUser(uid, { disabled: value });
+    if (value) await admin.auth().revokeRefreshTokens(uid);
   }
 
   console.log(`✅ ${action} aplicado a ${uid} correctamente.`);
