@@ -3,6 +3,7 @@ package com.app.foodranker.utils
 object ErrorMapper {
 
     fun toUserMessage(e: Exception): String = when {
+        isDisabledAccountError(e) -> "Esta cuenta ha sido suspendida"
         isNetworkError(e)     -> "Sin conexión a internet. Comprueba tu red e inténtalo de nuevo"
         isPermissionError(e)  -> "No tienes permisos para realizar esta acción"
         isUnavailableError(e) -> "Servicio no disponible. Inténtalo en unos minutos"
@@ -12,6 +13,11 @@ object ErrorMapper {
         isCancelledError(e)   -> "Operación cancelada"
         else                  -> "Algo salió mal. Inténtalo de nuevo"
     }
+
+    // Comprueba el código, no el mensaje (a diferencia del resto de este mapper): el
+    // mensaje de FirebaseAuthException varía por locale, el errorCode no.
+    private fun isDisabledAccountError(e: Exception) =
+        (e as? com.google.firebase.auth.FirebaseAuthException)?.errorCode == "ERROR_USER_DISABLED"
 
     private fun isNetworkError(e: Exception) = e.message?.let {
         it.contains("Unable to resolve host", ignoreCase = true) ||

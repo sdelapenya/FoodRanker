@@ -7,5 +7,6 @@ data class Comment(
     val userName: String = "",
     val userPhotoUrl: String = "",
     val text: String = "",
-    val createdAt: Long = 0L
+    val createdAt: Long = 0L,
+    val reportCount: Int = 0
 )

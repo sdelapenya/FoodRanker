@@ -146,6 +146,7 @@ class PlateDetailViewModel @Inject constructor(
 
                     val comments = commentsDeferred.await().documents
                         .mapNotNull { it.toObject(Comment::class.java) }
+                        .filter { it.reportCount < 3 }
                         .sortedByDescending { it.createdAt }
 
                     val isSaved = isSavedDeferred.await()
@@ -303,6 +304,86 @@ class PlateDetailViewModel @Inject constructor(
                 firestore.collection("comments").document(commentId).delete().await()
                 _uiState.value = _uiState.value.copy(
                     comments = _uiState.value.comments.filter { it.id != commentId }
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
+            }
+        }
+    }
+
+    fun reportPlate(plateId: String, reason: String) {
+        val userId = auth.currentUser?.uid ?: return
+        if (plateId.isBlank()) return
+        val cleanReason = reason.sanitized(InputLimits.REPORT_REASON)
+        viewModelScope.launch {
+            try {
+                // Mismo patrón que DiscoverViewModel.reportPlate: id determinista por
+                // usuario+plato, transacción atómica reporte+contador.
+                val reportId = "${userId}_${plateId}"
+                val reportRef = firestore.collection("reports").document(reportId)
+                val plateRef = firestore.collection("plates").document(plateId)
+                val alreadyReported = firestore.runTransaction { tx ->
+                    if (tx.get(reportRef).exists()) return@runTransaction true
+                    tx.set(reportRef, mapOf(
+                        "id" to reportId,
+                        "plateId" to plateId,
+                        "reportedByUserId" to userId,
+                        "reason" to cleanReason,
+                        "createdAt" to System.currentTimeMillis()
+                    ))
+                    tx.update(plateRef, "reportCount", FieldValue.increment(1))
+                    false
+                }.await()
+                _uiState.value = _uiState.value.copy(
+                    successMessage = if (alreadyReported)
+                        "Ya has reportado este plato anteriormente"
+                    else
+                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
+            }
+        }
+    }
+
+    fun reportComment(plateId: String, commentId: String, reason: String) {
+        val userId = auth.currentUser?.uid ?: return
+        if (commentId.isBlank()) return
+        val cleanReason = reason.sanitized(InputLimits.REPORT_REASON)
+        viewModelScope.launch {
+            try {
+                // Mismo patrón que reportPlate: id determinista por usuario+comentario,
+                // transacción atómica reporte+contador sobre comments/{commentId}.
+                val reportId = "${userId}_${commentId}"
+                val reportRef = firestore.collection("reports").document(reportId)
+                val commentRef = firestore.collection("comments").document(commentId)
+                val alreadyReported = firestore.runTransaction { tx ->
+                    if (tx.get(reportRef).exists()) return@runTransaction true
+                    tx.set(reportRef, mapOf(
+                        "id" to reportId,
+                        "plateId" to plateId,
+                        "commentId" to commentId,
+                        "reportedByUserId" to userId,
+                        "reason" to cleanReason,
+                        "createdAt" to System.currentTimeMillis()
+                    ))
+                    tx.update(commentRef, "reportCount", FieldValue.increment(1))
+                    false
+                }.await()
+                if (!alreadyReported) {
+                    // Refleja el nuevo contador localmente para que un comentario que
+                    // acaba de cruzar el umbral desaparezca sin esperar a la próxima carga.
+                    _uiState.value = _uiState.value.copy(
+                        comments = _uiState.value.comments
+                            .map { if (it.id == commentId) it.copy(reportCount = it.reportCount + 1) else it }
+                            .filter { it.reportCount < 3 }
+                    )
+                }
+                _uiState.value = _uiState.value.copy(
+                    successMessage = if (alreadyReported)
+                        "Ya has reportado este comentario anteriormente"
+                    else
+                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))

@@ -26,17 +26,18 @@ service cloud.firestore {
                     && request.resource.data.level == 1
                     && request.resource.data.get('premium', false) == false
                     && request.resource.data.get('isPremium', false) == false
+                    && request.resource.data.get('banned', false) == false
                     && request.resource.data.referralCount == 0
                     && request.resource.data.badges.size() == 0
                     && request.resource.data.keys().hasOnly([
                          'id', 'name', 'photoUrl', 'bio', 'city', 'website',
-                         'premium', 'xp', 'level', 'badges',
+                         'premium', 'xp', 'level', 'badges', 'banned',
                          'referralCount', 'referredByUserId', 'createdAt'
                        ]);
 
       allow update: if (
         // El dueño puede editar perfil.
-        // isPremium, xp, level, badges: solo Cloud Functions via Admin SDK.
+        // isPremium, xp, level, badges, banned: solo Cloud Functions/scripts via Admin SDK.
         isOwner(userId)
         && changedKeys().hasOnly([
           'name', 'bio', 'city', 'website', 'photoUrl', 'fcmToken',
@@ -166,7 +167,10 @@ service cloud.firestore {
     match /comments/{commentId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if false;
+      // Reportes: solo incremento de 1, mismo patrón que plates.reportCount
+      allow update: if isSignedIn()
+                    && changedKeys().hasOnly(['reportCount'])
+                    && request.resource.data.reportCount == resource.data.reportCount + 1;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
@@ -203,7 +207,13 @@ service cloud.firestore {
 
     // ── REPORTS ────────────────────────────────────────────────
     match /reports/{reportId} {
-      allow read: if false;
+      // El id es determinista: "{userId}_{plateId}" o "{userId}_{commentId}". Permitir
+      // el get de tu propio prefijo es lo que necesita la transacción de reportPlate/
+      // reportComment para comprobar si ya reportaste algo (funciona también cuando el
+      // documento aún no existe, a diferencia de comprobar resource.data). Nadie puede
+      // listar ni leer reportes de otro usuario.
+      allow get: if isSignedIn() && reportId.split('_')[0] == request.auth.uid;
+      allow list: if false;
       allow create: if isSignedIn() && request.resource.data.reportedByUserId == request.auth.uid;
       allow update, delete: if false;
     }

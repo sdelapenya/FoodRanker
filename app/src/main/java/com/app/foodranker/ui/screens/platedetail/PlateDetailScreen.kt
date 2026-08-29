@@ -77,6 +77,8 @@ fun PlateDetailScreen(
     var showShareMenu by remember { mutableStateOf(false) }
     var showShareCard by remember { mutableStateOf(false) }
     var showCollectionSheet by remember { mutableStateOf(false) }
+    var showReportPlateDialog by remember { mutableStateOf(false) }
+    var reportingCommentId by remember { mutableStateOf<String?>(null) }
     var contentVisible by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     var showImageZoom by remember { mutableStateOf(false) }
@@ -194,6 +196,13 @@ fun PlateDetailScreen(
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                     context.startActivity(intent)
                                     showShareMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("🚩 Reportar plato") },
+                                onClick = {
+                                    showShareMenu = false
+                                    showReportPlateDialog = true
                                 }
                             )
                         }
@@ -519,7 +528,10 @@ fun PlateDetailScreen(
                                         CommentItem(comment = comment, isOwn = true, onDelete = { viewModel.deleteComment(comment.id) })
                                     }
                                 } else {
-                                    CommentItem(comment = comment, isOwn = false, onDelete = {})
+                                    CommentItem(
+                                        comment = comment, isOwn = false, onDelete = {},
+                                        onReport = { reportingCommentId = comment.id }
+                                    )
                                 }
                             }
                         }
@@ -680,6 +692,30 @@ fun PlateDetailScreen(
         }
     }
 
+    if (showReportPlateDialog) {
+        ReportReasonDialog(
+            title = "Reportar plato",
+            reasons = listOf("No es comida real", "Contenido ofensivo", "Spam"),
+            onDismiss = { showReportPlateDialog = false },
+            onSelect = { reason ->
+                showReportPlateDialog = false
+                viewModel.reportPlate(plateId, reason)
+            }
+        )
+    }
+
+    reportingCommentId?.let { commentId ->
+        ReportReasonDialog(
+            title = "Reportar comentario",
+            reasons = listOf("Contenido ofensivo", "Spam"),
+            onDismiss = { reportingCommentId = null },
+            onSelect = { reason ->
+                reportingCommentId = null
+                viewModel.reportComment(plateId, commentId, reason)
+            }
+        )
+    }
+
     val zoomImageUrl = uiState.plate?.imageUrl?.takeIf { it.isNotEmpty() }
     AnimatedVisibility(
         visible = showImageZoom && zoomImageUrl != null,
@@ -780,7 +816,7 @@ private fun ImageZoomViewer(imageUrl: String, onDismiss: () -> Unit) {
 
 
 @Composable
-fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit) {
+fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit, onReport: () -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
         shape = RoundedCornerShape(12.dp),
@@ -813,9 +849,37 @@ fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit) {
                 IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
                     Icon(Icons.Default.Delete, contentDescription = "Borrar", tint = TextSecondary, modifier = Modifier.size(16.dp))
                 }
+            } else {
+                IconButton(onClick = onReport, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Flag, contentDescription = "Reportar", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                }
             }
         }
     }
+}
+
+@Composable
+fun ReportReasonDialog(
+    title: String,
+    reasons: List<String>,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold, color = TextPrimary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                reasons.forEach { reason ->
+                    TextButton(onClick = { onSelect(reason) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(reason, color = TextPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
 
 @Composable
