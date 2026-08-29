@@ -21,6 +21,7 @@ object RemoteConfigManager {
             "premium_price_monthly"  to "2,99 €/mes",
             "premium_price_yearly"   to "19,99 €/año",
             "max_daily_plates"       to 10L,
+            "max_daily_plates_premium" to 20L,
             "feed_page_size"         to 20L,
             "show_thefork_button"    to true,
             "enable_following_feed"  to true,
@@ -41,6 +42,7 @@ object RemoteConfigManager {
     val premiumPriceMonthly: String get() = config.getString("premium_price_monthly")
     val premiumPriceYearly: String  get() = config.getString("premium_price_yearly")
     val maxDailyPlates: Int         get() = config.getLong("max_daily_plates").toInt()
+    val maxDailyPlatesPremium: Int  get() = config.getLong("max_daily_plates_premium").toInt()
     val feedPageSize: Int           get() = config.getLong("feed_page_size").toInt()
     val showTheForkButton: Boolean  get() = config.getBoolean("show_thefork_button")
     val enableFollowingFeed: Boolean get() = config.getBoolean("enable_following_feed")

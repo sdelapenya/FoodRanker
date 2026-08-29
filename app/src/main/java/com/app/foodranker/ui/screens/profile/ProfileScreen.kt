@@ -66,6 +66,7 @@ import com.app.foodranker.utils.RewardManager
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.viewmodel.AuthViewModel
+import com.app.foodranker.viewmodel.BillingViewModel
 import com.app.foodranker.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,11 +83,18 @@ fun ProfileScreen(
     onNavigateToPremium: () -> Unit = {},
     onAccountDeleted: () -> Unit = onSignOut,
     viewModel: ProfileViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel(),
+    billingViewModel: BillingViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val currentUser = authViewModel.currentUser
+    // El badge del perfil propio usa el estado combinado en vivo (compra real + temporal +
+    // regalado) de BillingManager; el de otros perfiles solo puede reflejar lo que haya en
+    // Firestore (hoy, solo el premium regalado a mano — una compra real o el temporal por
+    // anuncio de OTRO usuario nunca salen de su dispositivo, no hay verificación server-side
+    // de compras). Limitación conocida, no algo que se vaya a resolver aquí.
+    val ownIsPremium by billingViewModel.isPremium.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditSheet by remember { mutableStateOf(false) }
     var showEditPlateId by remember { mutableStateOf<String?>(null) }
@@ -165,7 +173,7 @@ fun ProfileScreen(
                     ProfileHero(
                         name = uiState.user?.name ?: currentUser?.displayName ?: "Usuario",
                         photoUrl = uiState.user?.photoUrl ?: currentUser?.photoUrl?.toString() ?: "",
-                        isPremium = uiState.user?.isPremium ?: false,
+                        isPremium = if (uiState.isOwnProfile) ownIsPremium else (uiState.user?.isPremium ?: false),
                         paddingTop = paddingValues.calculateTopPadding(),
                         bio = uiState.user?.bio ?: "",
                         city = uiState.user?.city ?: ""
@@ -419,7 +427,7 @@ fun ProfileScreen(
                             onTerms = onNavigateToTerms,
                             onReferral = onNavigateToReferral,
                             onPremium = onNavigateToPremium,
-                            isPremium = uiState.user?.isPremium ?: false,
+                            isPremium = ownIsPremium,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }

@@ -20,6 +20,7 @@ import com.google.firebase.functions.FirebaseFunctions
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.data.model.Rating
+import com.app.foodranker.utils.BillingManager
 import com.app.foodranker.utils.CloudinaryManager
 import com.app.foodranker.utils.FoodImageValidator
 import com.app.foodranker.utils.InputLimits
@@ -56,6 +57,7 @@ class AddPlateViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val functions: FirebaseFunctions,
     private val venueRepository: VenueRepository,
+    private val billingManager: BillingManager,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -227,7 +229,10 @@ class AddPlateViewModel @Inject constructor(
             _state.value = AddPlateState.Loading(uploadProgress = -1)
             var uploadedImageUrl: String? = null
             try {
-                val maxDaily = RemoteConfigManager.maxDailyPlates
+                val maxDaily = if (billingManager.isPremium.value)
+                    RemoteConfigManager.maxDailyPlatesPremium
+                else
+                    RemoteConfigManager.maxDailyPlates
                 if (maxDaily > 0) {
                     // Medianoche local de hoy, no "hace 24h" (que permitiría más de
                     // maxDaily platos si se publican a horas distintas cada día).

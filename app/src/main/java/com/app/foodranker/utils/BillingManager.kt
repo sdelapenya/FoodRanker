@@ -3,6 +3,9 @@ package com.app.foodranker.utils
 import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.*
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,7 +14,9 @@ import javax.inject.Singleton
 
 @Singleton
 class BillingManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) {
     companion object {
         const val PRODUCT_PREMIUM_MONTHLY = "foodranker_premium_monthly"
@@ -35,6 +40,22 @@ class BillingManager @Inject constructor(
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private var reconnectAttempt = 0
 
+    // Tres señales independientes de premium, combinadas en recomputeIsPremium(): compra
+    // real (Play Billing), premium temporal (ver anuncio) y regalado a mano (campo
+    // `premium` en Firestore, solo lo escribe el script Admin SDK). Ninguna debe pisar a
+    // las otras: antes, restorePurchases() sobrescribía _isPremium directamente y podía
+    // borrar un premium temporal todavía vigente al reconectar Billing.
+    private var billingActive = false
+    private var tempPremiumUntil = 0L
+    private var firestoreGranted = false
+    private var firestoreListener: ListenerRegistration? = null
+
+    private fun recomputeIsPremium() {
+        _isPremium.value = billingActive ||
+            System.currentTimeMillis() < tempPremiumUntil ||
+            firestoreGranted
+    }
+
     init {
         restoreTemporaryPremium()
         billingClient = BillingClient.newBuilder(context)
@@ -49,6 +70,21 @@ class BillingManager @Inject constructor(
             .build()
 
         connect()
+
+        auth.addAuthStateListener { firebaseAuth ->
+            firestoreListener?.remove()
+            val uid = firebaseAuth.currentUser?.uid
+            if (uid == null) {
+                firestoreGranted = false
+                recomputeIsPremium()
+                return@addAuthStateListener
+            }
+            firestoreListener = firestore.collection("users").document(uid)
+                .addSnapshotListener { snap, _ ->
+                    firestoreGranted = snap?.getBoolean("premium") ?: false
+                    recomputeIsPremium()
+                }
+        }
     }
 
     private fun connect() {
@@ -75,13 +111,14 @@ class BillingManager @Inject constructor(
         val until = System.currentTimeMillis() + 24L * 60 * 60 * 1000
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().putLong(KEY_TEMP_PREMIUM_UNTIL, until).apply()
-        _isPremium.value = true
+        tempPremiumUntil = until
+        recomputeIsPremium()
     }
 
     private fun restoreTemporaryPremium() {
-        val until = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        tempPremiumUntil = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getLong(KEY_TEMP_PREMIUM_UNTIL, 0L)
-        if (until > System.currentTimeMillis()) _isPremium.value = true
+        recomputeIsPremium()
     }
 
     private fun queryProductDetails() {
@@ -126,7 +163,8 @@ class BillingManager @Inject constructor(
 
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-            _isPremium.value = true
+            billingActive = true
+            recomputeIsPremium()
             // isPremium en Firestore solo debe escribirse desde Cloud Functions via Admin SDK
             if (!purchase.isAcknowledged) {
                 val ackParams = AcknowledgePurchaseParams.newBuilder()
@@ -145,8 +183,8 @@ class BillingManager @Inject constructor(
             .setProductType(BillingClient.ProductType.SUBS).build()
         billingClient?.queryPurchasesAsync(params) { result, purchases ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryPurchasesAsync
-            val hasActive = purchases.any { it.purchaseState == Purchase.PurchaseState.PURCHASED }
-            _isPremium.value = hasActive
+            billingActive = purchases.any { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+            recomputeIsPremium()
         }
     }
 }

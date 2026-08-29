@@ -104,7 +104,8 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
             // (BannerAd) y el badge aparece en el perfil. No prometer funciones no implementadas.
             val benefits = listOf(
                 "Sin anuncios" to "Disfruta sin interrupciones",
-                "Badge Premium" to "Destaca en la comunidad"
+                "Badge Premium" to "Destaca en la comunidad",
+                "Más platos al día" to "Publica hasta el doble de platos"
             )
 
             benefits.forEach { (title, subtitle) ->
