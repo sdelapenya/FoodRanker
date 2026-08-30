@@ -15,7 +15,53 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-### 🔄 Séptima sesión (2026-08-23): ficha de Play Store completada y prueba cerrada enviada a revisión
+### ✅ Octava sesión (2026-08-28/29): moderación, Premium arreglado, "Qué pido aquí", code review
+
+**Retomar exactamente aquí**: el AAB de `versionCode 6` está generado en local
+(`app/build/outputs/bundle/release/app-release.aab`, 15,57 MB) con **todo** lo de esta
+sesión, pero **no se ha subido a Play Console todavía**. Y los testers de la prueba cerrada
+**siguen sin reclutarse** — se preparó el Google Group (`foodranker-testers@googlegroups.com`)
+y el track en sesiones anteriores, pero nunca se llegó a mandar el mensaje de invitación a
+nadie. Los dos pasos pendientes, en este orden:
+1. Subir el AAB de `versionCode 6` a Play Console → Probar y publicar → Prueba cerrada
+   (mismo proceso ya hecho varias veces: crear versión, subir el `.aab`, notas, enviar a
+   revisión — suele aprobarse en horas).
+2. Reclutar a los 12 testers mínimos (contactos + grupos de Telegram/Facebook de testers
+   Android) y contar 14 días desde que el 12º entra, antes de poder pedir producción.
+
+**Lo que se cerró esta sesión** (commits `1424d61`…`1c28424`, todo en `main`, nada pusheado
+a `origin`/`gitea` — pendiente comprobar cuándo se retome):
+
+- **Cumplimiento de Play**: Billing Library 7.0.0→8.0.0 (exigido por Google antes del
+  31-ago), reCAPTCHA y SoLoader forzados a versión parcheada — los tres iban con plazo real.
+- **Sistema de moderación**: reportar plato (conectado, el código llevaba muerto desde
+  siempre) y reportar comentarios (nuevo, mismo umbral de 3+ para ocultar), baneo manual de
+  usuarios vía `functions/scripts/manageUser.js ban/unban <uid>` (desactiva la cuenta +
+  revoca tokens). Se encontró y arregló un bug real: la regla de `reports` bloqueaba su
+  propia transacción de dedup.
+- **Premium arreglado de raíz**: `isPremium` en Firestore nunca lo escribía nada (ni compra
+  real ni el temporal por anuncio) — el badge de Premium **nunca funcionó**, para nadie.
+  `BillingManager` ahora combina las tres señales (compra real / temporal / regalado) sin
+  que se pisen. Nuevo: `manageUser.js grant-premium/revoke-premium <uid>` para regalar
+  Premium a mano (amigos, familia). El intersticial de `PlateDetail` también se saltaba
+  Premium — ya no.
+- **"Qué pido aquí"**: pantalla nueva (icono de ubicación en Discover), platos ya puntuados
+  cerca por GPS real, diseñada para no gastar cuota de Places salvo que el usuario lo pida
+  explícitamente. Radio ampliado para Premium.
+- **Nuevo beneficio Premium**: ver quién ha dado like/guardado tu plato, y tope diario de
+  platos más alto.
+- **`/code-review --effort high`** sobre todo el repo: 4 bugs reales arreglados (límite de
+  `whereIn` a 30, `reportCount` de comentarios legacy rompía la regla, tokens no revocados al
+  banear), 1 falso positivo descartado tras comprobarlo en el emulador (no fiarse del
+  análisis automático a ciegas).
+- **`firestore.rules` desplegadas a producción** dos veces esta sesión (moderación primero,
+  luego saves+comments), ambas verificadas en el emulador local antes de desplegar.
+- **`.gitignore`**: `firebase.json`/`.firebaserc` habían quedado sin commitear sin necesidad
+  (no tienen secretos) — ya están en el repo.
+
+Detalle completo de cada pieza en memoria: `project_recaptcha_soloader_warning.md` (RESUELTO).
+
+### ✅ Séptima sesión (2026-08-23): ficha de Play Store completada y prueba cerrada enviada a revisión
 
 Se completó lo que faltaba de la ficha ("Presencia en Google Play Store"): nombre,
 descripción breve y completa, icono, gráfico destacado, 3 capturas, categoría ("Comer y
