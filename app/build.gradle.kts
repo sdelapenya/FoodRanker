@@ -52,7 +52,7 @@ android {
         applicationId = "com.app.foodranker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
+        versionCode = 7
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -127,8 +127,13 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
 
-    // Google Sign-In
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    // Sign in with Google (Credential Manager) — la API legacy de GoogleSignInClient
+    // (com.google.android.gms.auth.api.signin) está deprecada por Google y empezó a
+    // fallar en silencio (login.log: "AutoManageHelper: Unresolved error while
+    // connecting client") en septiembre 2026, ver docs/HANDOFF.md.
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // Places — identidad canónica del local (ver docs/VENUES.md)
     implementation(libs.places)

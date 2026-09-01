@@ -15,6 +15,112 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ Novena sesión (2026-09-01): login de Google migrado a Credential Manager — v7 en revisión
+
+**Retomar exactamente aquí**: el AAB de `versionCode 7` está subido y enviado a revisión en
+Play Console (Prueba cerrada - Alpha) — pendiente de que Google lo apruebe (la v6 tardó
+horas). **Antes de reclutar testers**, en cuanto se apruebe la v7:
+1. Desinstalar FoodRanker del Redmi e instalar la nueva versión **desde el enlace real de
+   Play** (`https://play.google.com/apps/testing/com.app.foodranker`, no un APK local) y
+   probar el login de Google de punta a punta ahí — el bug que se arregló esta sesión solo
+   se había visto en builds distribuidas por Play real, así que la prueba de verdad es esa,
+   no la del debug local que ya se hizo.
+2. Si funciona, retomar el reclutamiento de testers (mensaje ya redactado, ver más abajo).
+
+**El bug de login (que llevaba reapareciendo desde la sesión del 2026-08-21) se diagnosticó
+y arregló de raíz esta sesión**: no era la huella SHA-1 de firma de Play (esa parte estaba
+bien, verificado varias veces). Con logcat en vivo desde el Redmi (conectado por ADB) se vio
+que el selector de cuentas de Google completaba bien, pero justo al volver a la app aparecía
+`AutoManageHelper: Unresolved error while connecting client. Stopping auto-manage.` — la app
+se quedaba sin ningún resultado (ni éxito ni error), exactamente el síntoma de "no pasa de
+la selección de cuenta". El mismo log llevaba el aviso de Google:
+`You are using the deprecated legacy Google Sign-In APIs from play-services-auth SDK.
+Please migrate to the Credential Manager APIs`. Búsqueda web confirmó que todo el paquete
+`com.google.android.gms.auth.api.signin` (el que usaba FoodRanker) está deprecado y Google
+lo está retirando progresivamente — encaja con que funcionara una vez y volviera a fallar
+sin que nada del lado de FoodRanker cambiara.
+
+**Arreglo**: migrado el flujo de login en
+[AuthScreen.kt](../app/src/main/java/com/app/foodranker/ui/screens/auth/AuthScreen.kt) de
+`GoogleSignInClient` (legacy) a **Credential Manager**
+(`CredentialManager.getCredential()` + `GetGoogleIdOption`), que es lo que Google recomienda
+ahora. `AuthRepository.signInWithGoogle(idToken: String)` no se tocó — solo cambia cómo se
+consigue el `idToken`, no qué se hace con él. Compatible con el mismo `google-services.json`
+y `default_web_client_id` de siempre (mismo proyecto Firebase, no hace falta tocar nada de
+consola).
+
+⚠️ **Trampa real con las versiones de las librerías**: las últimas estables de
+`androidx.credentials` (1.6.0) y `googleid` (1.2.0) están compiladas con metadatos de
+Kotlin 2.1+/2.2+ que **Kapt no puede leer** (`error: Unable to read Kotlin metadata due to
+unsupported metadata kind: null` — mismo problema documentado ya para el intento de subir el
+Firebase BOM en la séptima sesión). Se usaron versiones anteriores compatibles con Kapt:
+`androidx.credentials:credentials:1.3.0`, `androidx.credentials:credentials-play-services-auth:1.3.0`,
+`com.google.android.libraries.identity.googleid:googleid:1.1.1`. Compila y funciona bien —
+si en el futuro se migra Hilt de Kapt a KSP, se podría subir a las versiones más nuevas.
+
+**Verificado en el Redmi (build de debug, instalada a mano por MIUI)**: login completo, sin
+fallos, con el flujo nuevo. Pendiente verificar en un build real de Play (ver arriba, punto
+1) antes de dar el bug por cerrado del todo — el síntoma original solo se vio en builds de
+Play, nunca en debug local, así que la prueba definitiva es esa.
+
+**Trampas de esta sesión, por si se repiten**:
+- Instalar un build de **firma distinta** a la que ya tiene el dispositivo falla con
+  `INSTALL_FAILED_UPDATE_INCOMPATIBLE` — hay que desinstalar la app primero.
+- MIUI bloquea instalaciones **nuevas** por ADB tras desinstalar
+  (`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user` — literal, es un diálogo de
+  confirmación en el móvil que expira si nadie lo toca). Reintentar `adb install -r` directo
+  (no vía `gradlew installDebug`) a veces basta la segunda vez.
+- Los exploradores de archivos de MIUI a veces no listan los `.apk` en Descargas aunque
+  estén ahí (verificado con `adb shell ls`) — no vale la pena perseguirlo, ir directo a
+  `adb install -r`.
+
+**Bug real, reproducido hoy por el usuario y por su hermano**: instalando la app desde el
+enlace de prueba real de Play, el login con Google se queda colgado en el selector de
+cuenta — mismo síntoma exacto que el bug de la huella SHA-1 de firma de Play documentado en
+`project_play_signing_sha1.md` (sesión 2026-08-21). La diferencia esta vez: **el usuario
+confirma que a él sí le había funcionado en algún momento después del 21 de agosto** en un
+build real de Play, así que no es que la propagación nunca se completara — parece haber
+**reaparecido**.
+
+Auditoría de código hecha hoy sin el móvil delante (el usuario estaba en el trabajo, sin
+acceso al Redmi): **no se encontró ninguna causa en el código**.
+- `app/google-services.json` (local, fuera de git) tiene las 3 huellas OAuth — verificado
+  con `npx firebase apps:android:sha:list` **y** leyendo el JSON: debic, release y la de
+  firma de Play (`b6d0bf6d...`) las 3 presentes.
+- `default_web_client_id` de `strings.xml` coincide con el cliente web del
+  `google-services.json`.
+- Ningún commit reciente (Billing 8.0.0, reCAPTCHA/SoLoader, moderación, Premium, "Qué pido
+  aquí") toca `AuthScreen.kt`, el `AndroidManifest.xml` ni nada del flujo de login.
+- Detalle del código que explica el síntoma "sin ningún error visible": en
+  `AuthScreen.kt`, el `launcher` del selector de cuentas solo pone `errorMessage` si
+  `resultCode == RESULT_OK` pero falla la `ApiException`. Si Google cierra el selector con
+  `RESULT_CANCELED` (que es lo que pasaría si bloquea por la huella o cualquier motivo a
+  nivel de Play Services), **la app no muestra nada** — coherente con que la causa esté un
+  nivel por debajo del código de la app.
+
+**Pendiente para la próxima vez que haya acceso al Redmi**: conectar por ADB
+(`& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices`, el `adb` normal no
+está en el PATH) y sacar `logcat` en vivo mientras se intenta el login, filtrando por
+`Auth`/`GoogleSignIn`/`ApiException`, para ver si es exactamente el mismo cierre silencioso
+de antes o algo distinto. Sin ese log no hay más que investigar por código — ya se agotó esa
+vía hoy.
+
+**Pendiente sin prisa para otra sesión**: Play Console avisa (calidad técnica, "Requiere tu
+atención") de que alguna librería nativa del AAB está compilada con una versión antigua del
+NDK sin alinear a páginas de memoria de 16 kB ("Tu aplicación podría fallar en dispositivos
+de 16 kB") — visto en la versión 6, no bloqueante, no es una vulnerabilidad. Hay que
+identificar qué dependencia nativa lo causa (candidatos: SoLoader, Places, alguna de
+Firebase) y actualizarla. Sin relación con el bug del login.
+
+**No mandar el mensaje de reclutamiento de testers hasta confirmar que el login funciona**:
+si a los 12 testers les pasa lo mismo que al hermano del usuario, se quema la primera
+impresión con gente que cuesta mucho convencer de que lo vuelva a intentar. El mensaje ya
+está redactado (dos versiones, una directa y otra con más gancho) con los enlaces reales:
+- Grupo: `https://groups.google.com/g/foodranker-testers`
+- Opt-in de prueba cerrada: `https://play.google.com/apps/testing/com.app.foodranker`
+(Ojo: NO usar `https://play.google.com/apps/internaltest/...` — es de la pista de prueba
+interna, no cuenta para el requisito de 12 testers/14 días de la prueba cerrada.)
+
 ### ✅ Octava sesión (2026-08-28/29): moderación, Premium arreglado, "Qué pido aquí", code review
 
 **Retomar exactamente aquí**: el AAB de `versionCode 6` está generado en local

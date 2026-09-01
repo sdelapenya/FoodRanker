@@ -27,15 +27,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.R
 import com.app.foodranker.ui.components.FoodRankerLogo
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.viewmodel.AuthState
 import com.app.foodranker.viewmodel.AuthViewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
@@ -46,6 +52,7 @@ fun AuthScreen(
 ) {
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { visible = true }
@@ -59,31 +66,59 @@ fun AuthScreen(
         }
     }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+    fun handleGoogleCredential(credential: androidx.credentials.Credential) {
+        if (credential is CustomCredential &&
+            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
             try {
-                val account = task.getResult(ApiException::class.java)
-                val token = account.idToken
-                if (token != null) {
-                    viewModel.signInWithGoogle(token)
-                } else {
-                    errorMessage = "No se pudo obtener el token de Google. Inténtalo de nuevo."
-                }
-            } catch (e: ApiException) {
-                errorMessage = "Error al iniciar sesión con Google (${e.statusCode})"
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                viewModel.signInWithGoogle(googleIdTokenCredential.idToken)
+            } catch (e: GoogleIdTokenParsingException) {
+                errorMessage = "Error al procesar la respuesta de Google. Inténtalo de nuevo."
             }
+        } else {
+            errorMessage = "No se pudo obtener el token de Google. Inténtalo de nuevo."
         }
     }
 
     fun launchGoogleSignIn() {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
-            .requestEmail()
-            .build()
-        launcher.launch(GoogleSignIn.getClient(context, gso).signInIntent)
+        val activity = context as? Activity ?: return
+        val credentialManager = CredentialManager.create(context)
+        val webClientId = context.getString(R.string.default_web_client_id)
+
+        coroutineScope.launch {
+            // Primero solo cuentas ya usadas antes con FoodRanker (sign-in silencioso);
+            // si no hay ninguna (primer login), reintentamos mostrando todas las cuentas.
+            val authorizedRequest = GetCredentialRequest.Builder()
+                .addCredentialOption(
+                    GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(true)
+                        .setServerClientId(webClientId)
+                        .build()
+                )
+                .build()
+            try {
+                val result = credentialManager.getCredential(activity, authorizedRequest)
+                handleGoogleCredential(result.credential)
+            } catch (e: NoCredentialException) {
+                val anyAccountRequest = GetCredentialRequest.Builder()
+                    .addCredentialOption(
+                        GetGoogleIdOption.Builder()
+                            .setFilterByAuthorizedAccounts(false)
+                            .setServerClientId(webClientId)
+                            .build()
+                    )
+                    .build()
+                try {
+                    val result = credentialManager.getCredential(activity, anyAccountRequest)
+                    handleGoogleCredential(result.credential)
+                } catch (e: GetCredentialException) {
+                    errorMessage = "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+                }
+            } catch (e: GetCredentialException) {
+                errorMessage = "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+            }
+        }
     }
 
     Box(
