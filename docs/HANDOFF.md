@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-08-17
+**Actualizado:** 2026-09-01
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -73,6 +73,8 @@ Play, nunca en debug local, así que la prueba definitiva es esa.
 - Los exploradores de archivos de MIUI a veces no listan los `.apk` en Descargas aunque
   estén ahí (verificado con `adb shell ls`) — no vale la pena perseguirlo, ir directo a
   `adb install -r`.
+
+**Git**: todo pusheado, `main` sincronizado en local/`origin`/`gitea` en `1818766`.
 
 **Bug real, reproducido hoy por el usuario y por su hermano**: instalando la app desde el
 enlace de prueba real de Play, el login con Google se queda colgado en el selector de
