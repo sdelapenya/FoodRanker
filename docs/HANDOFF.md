@@ -15,6 +15,87 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔶 Décima sesión (2026-09-02): el bug de login REAPARECE en v7 — la migración a Credential Manager no lo arregló; nueva pista (firma poscuántica de Play) y huellas registradas, pendiente de propagación
+
+**Retomar exactamente aquí**: el usuario probó el login en un Redmi con la v7 instalada desde el
+enlace real de Play (`https://play.google.com/apps/testing/com.app.foodranker`) y **falla con el
+mismo síntoma de siempre** — se atasca en el selector de cuenta, sin pasar. Lo reprodujo también
+su hermano. Es decir: **la migración de la novena sesión (`GoogleSignInClient` → Credential
+Manager) NO arregló el bug real**, aunque sí era un cambio correcto y recomendado por Google.
+
+**Por qué no lo arregló — diagnóstico con logcat en vivo (Redmi por ADB, Android 13)**: se repitió
+exactamente la misma secuencia de la sesión del 21 de agosto:
+1. `ActivityTaskManager: START ... cmp=com.app.foodranker/com.google.android.gms.auth.api.signin.internal.SignInHubActivity` —
+   **la app sigue cayendo en las activities legacy de Google Sign-In**, pese a que `AuthScreen.kt`
+   ya usa `CredentialManager.getCredential()`. Motivo: `androidx.credentials:credentials-play-services-auth`
+   está fijado en la versión **1.3.0** (por el problema de Kapt/metadatos de Kotlin, ver sesión 9),
+   y en un dispositivo sin proveedor nativo de Credential Manager (Android 13, sin la API de
+   sistema de Android 14+) esa librería **hace de wrapper y cae por debajo al mismo backend legacy
+   de siempre**. Cambiamos la API que usa la app, pero no el camino real que toma en este móvil.
+2. `SignIn: [Activity,SignInChimeraActivity] Failed to record the consent.` — **pista nueva que no
+   se había visto antes tan claramente**: el fallo ocurre dentro del propio proceso de Google Play
+   Services (`com.google.android.gms`, no en el nuestro) justo al intentar grabar el consentimiento
+   de la cuenta.
+3. `AutoManageHelper: Unresolved error while connecting client. Stopping auto-manage.` — el mismo
+   log de siempre, la app vuelve a `MainActivity` sin éxito ni error visible.
+4. En el segundo intento (tras el cambio de abajo) apareció además:
+   `SignIn: Couldn't fetch app's branding information, but continuing without it.` — coherente con
+   que Google aún no tenga indexado algo del lado servidor para esta app/huella.
+
+**Nueva hipótesis, con buen encaje pero sin confirmar del todo — firma poscuántica de Play**: en
+Play Console → Protegida con Play → Firma de aplicaciones, FoodRanker está inscrita (sin que nadie
+lo pidiera, es el nuevo comportamiento por defecto de Google al subir un AAB) en **firma híbrida
+poscuántica** ("Preparada para la computación cuántica (beta)", esquema de firma APK v3.2: firma
+clásica + ML-DSA). Confirmado por búsqueda web: *"By default, when you upload your app bundle,
+your app is automatically enrolled in quantum-ready, hybrid signing with Google-generated keys"*.
+La huella SHA-1 **clásica** coincide exactamente con la ya registrada en Firebase
+(`b6d0bf6d59e8dc522e0dace81cb71605ba9000df`, verificado carácter a carácter) — así que la huella
+"de siempre" está bien. Pero había una **segunda huella, la de la clave poscuántica, que nunca se
+había registrado en ningún sitio**:
+- SHA-1: `99935593de3c2de12d1d455856e594d9a72ca55a`
+- SHA-256: `989f8551e61c6e95062f64ece41dd02e44cdfded8045a2bd7d3c4db727e71193`
+
+Hipótesis: si Play Services, al validar la firma del paquete recibido de Play (firmado con dos
+certificados), usa o consulta la huella poscuántica en algún punto de ese flujo legacy, y esa
+huella no está en la lista de clientes OAuth Android conocidos, el registro de consentimiento
+fallaría exactamente así — sin tocar código, sin reconstruir nada, es un fallo puramente de
+configuración en el backend de Google.
+
+**Acción tomada (2026-09-02, con la app ya instalada, sin recompilar nada)**: registradas ambas
+huellas poscuánticas en Firebase vía CLI:
+```
+npx firebase apps:android:sha:create 1:350322634794:android:42b4b2e91a8df170c4d353 99935593de3c2de12d1d455856e594d9a72ca55a --project foodranker-51270
+npx firebase apps:android:sha:create 1:350322634794:android:42b4b2e91a8df170c4d353 989f8551e61c6e95062f64ece41dd02e44cdfded8045a2bd7d3c4db727e71193 --project foodranker-51270
+```
+Ahora hay 5 huellas totales en Firebase (ver `firebase apps:android:sha:list`). **Probado a los
+pocos minutos de registrar y sigue fallando igual** — pero el precedente de la sesión del 21 de
+agosto es que incluso con la huella correcta ya registrada, tardó **horas** en propagarse (de
+viernes a domingo). No se puede descartar la hipótesis todavía solo por esto.
+
+**Pendiente exacto para retomar**:
+1. Esperar unas horas (o hasta el día siguiente) y volver a probar el login en el Redmi **sin
+   necesidad de logcat** — solo abrir la app e intentarlo. Si funciona, el bug queda resuelto de
+   verdad esta vez y hay que actualizar este documento y la memoria correspondiente.
+2. Si sigue fallando pasado ese tiempo razonable de propagación, la hipótesis de la huella
+   poscuántica queda descartada (o al menos insuficiente) y toca ir a la opción robusta: **mover
+   el login de Google a un flujo OAuth por navegador** (Firebase Auth `OAuthProvider` +
+   Chrome Custom Tabs / `startActivityForSignInWithProvider`), que valida por `client_id` +
+   `redirect_uri` y **no depende en absoluto** de que Play Services valide la firma del paquete —
+   esquiva del todo este problema (y cualquier futuro relacionado con cómo evolucione la firma de
+   apps de Google), a cambio de más trabajo de implementación y un cambio de experiencia (abre
+   navegador en vez del selector nativo de cuentas).
+3. Alternativa de menor prioridad, mencionada pero no elegida: migrar Hilt de Kapt a KSP para
+   poder subir `androidx.credentials`/`googleid` a versiones más nuevas, por si manejan mejor la
+   firma híbrida — mucho trabajo, sin garantía (el dispositivo de prueba no tiene proveedor nativo
+   de Credential Manager de todos modos, así que probablemente seguiría cayendo al mismo backend
+   legacy).
+
+**No mandar el mensaje de reclutamiento de testers todavía** — sigue aplicando el mismo motivo de
+la novena sesión, ahora con más razón: ya se "confirmó arreglado" una vez y ha reaparecido.
+
+**Git**: nada de código tocado esta sesión (el cambio fue solo registrar huellas en Firebase, no
+requiere commit). `main` sigue en `e674d19`.
+
 ### ✅ Novena sesión (2026-09-01): login de Google migrado a Credential Manager — v7 en revisión
 
 **Retomar exactamente aquí**: el AAB de `versionCode 7` está subido y enviado a revisión en
@@ -107,12 +188,20 @@ está en el PATH) y sacar `logcat` en vivo mientras se intenta el login, filtran
 de antes o algo distinto. Sin ese log no hay más que investigar por código — ya se agotó esa
 vía hoy.
 
-**Pendiente sin prisa para otra sesión**: Play Console avisa (calidad técnica, "Requiere tu
-atención") de que alguna librería nativa del AAB está compilada con una versión antigua del
-NDK sin alinear a páginas de memoria de 16 kB ("Tu aplicación podría fallar en dispositivos
-de 16 kB") — visto en la versión 6, no bloqueante, no es una vulnerabilidad. Hay que
-identificar qué dependencia nativa lo causa (candidatos: SoLoader, Places, alguna de
-Firebase) y actualizarla. Sin relación con el bug del login.
+**Pendiente sin prisa para otra sesión — avisos de calidad de Play Console** (vistos ya en la
+versión 6 y siguen en la 7, que se aprobó igual para prueba cerrada — **no bloqueantes**, no
+son vulnerabilidades, sin relación con el bug del login):
+1. **Alineación de 16 kB**: alguna librería nativa del AAB está compilada con una versión
+   antigua del NDK sin alinear a páginas de memoria de 16 kB ("Tu aplicación podría fallar en
+   dispositivos de 16 kB" / "Vuelve a compilar tu aplicación con la alineación de bibliotecas
+   nativas de 16 KB"). Hay que identificar qué dependencia nativa lo causa (candidatos:
+   SoLoader, Places, alguna de Firebase) y actualizarla.
+2. **Vista de extremo a extremo (edge-to-edge)** — visto por primera vez en la sesión del
+   2026-09-02: como `targetSdk = 36`, Android 15+ fuerza edge-to-edge por defecto y Play avisa
+   de que la app usa APIs/parámetros obsoletos para gestionarlo, y de que puede no mostrarse
+   bien para todos los usuarios. Requiere revisar `enableEdgeToEdge()` y el manejo de
+   `WindowInsets` pantalla por pantalla, con pruebas visuales en un dispositivo/emulador
+   Android 15+ — trabajo de UI, no un cambio de una línea. Sin empezar todavía.
 
 **No mandar el mensaje de reclutamiento de testers hasta confirmar que el login funciona**:
 si a los 12 testers les pasa lo mismo que al hermano del usuario, se quema la primera

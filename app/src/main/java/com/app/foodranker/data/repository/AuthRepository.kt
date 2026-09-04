@@ -1,8 +1,9 @@
 package com.app.foodranker.data.repository
 
+import android.app.Activity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.OAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.User
 import com.app.foodranker.utils.InputLimits
@@ -34,48 +35,75 @@ class AuthRepository @Inject constructor(
         cont.invokeOnCancellation { auth.removeAuthStateListener(listener) }
     }
 
-    suspend fun signInWithGoogle(idToken: String): Result<FirebaseUser> {
+    // Login de Google vía navegador (Chrome Custom Tabs), no vía el selector nativo de
+    // Play Services: la app estuvo usando GoogleSignInClient y luego Credential Manager,
+    // y las dos veces el login se atascaba en silencio en builds reales de Play porque el
+    // fallo estaba dentro del propio proceso de Play Services al validar la firma del
+    // paquete ("SignIn: Failed to record the consent" en logcat) — ver docs/HANDOFF.md,
+    // sección "Décima sesión". Este flujo autentica por client_id + redirect_uri y no
+    // depende de que Play Services valide nada del paquete instalado.
+    suspend fun signInWithGoogle(activity: Activity): Result<FirebaseUser> {
         return try {
-            val credential = GoogleAuthProvider.getCredential(idToken, null)
-            val result = auth.signInWithCredential(credential).await()
+            val provider = OAuthProvider.newBuilder("google.com")
+                .addCustomParameter("prompt", "select_account")
+                .build()
+            val result = auth.startActivityForSignInWithProvider(activity, provider).await()
             val firebaseUser = result.user
                 ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
-
-            val displayName = (firebaseUser.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME)
-            val photoUrl = firebaseUser.photoUrl?.toString() ?: ""
-
-            val userRef = firestore.collection("users").document(firebaseUser.uid)
-            val snap = userRef.get().await()
-
-            // El email NO se guarda en Firestore (el doc users/{uid} es legible por
-            // cualquier usuario autenticado vía firestore.rules — guardar el email ahí
-            // lo expondría a todo el mundo). Ya está disponible vía FirebaseAuth
-            // (auth.currentUser?.email) para quien lo necesite localmente.
-            if (!snap.exists()) {
-                // Primer login: creamos el documento completo del usuario.
-                // createdAt hay que pasarlo a mano: el default del modelo es 0L y, si no
-                // se rellena aquí, todo usuario nuevo queda con fecha de alta en 1970.
-                val newUser = User(
-                    id = firebaseUser.uid,
-                    name = displayName,
-                    photoUrl = photoUrl,
-                    createdAt = System.currentTimeMillis()
-                )
-                userRef.set(newUser).await()
-            } else {
-                // Logins posteriores: SOLO refrescamos los datos que vienen de Google,
-                // sin tocar xp, level, badges, bio, isPremium, etc.
-                userRef.update(
-                    mapOf(
-                        "name" to displayName,
-                        "photoUrl" to photoUrl
-                    )
-                ).await()
-            }
-
+            syncUserDocument(firebaseUser)
             Result.success(firebaseUser)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    // Si la Activity se recrea mientras el navegador está abierto (giro de pantalla, poca
+    // memoria), el resultado del login no se pierde: Firebase lo guarda y hay que
+    // recuperarlo con pendingAuthResult en vez de relanzar el flujo desde cero.
+    suspend fun awaitPendingGoogleSignIn(): Result<FirebaseUser>? {
+        val pending = auth.pendingAuthResult ?: return null
+        return try {
+            val result = pending.await()
+            val firebaseUser = result.user
+                ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
+            syncUserDocument(firebaseUser)
+            Result.success(firebaseUser)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun syncUserDocument(firebaseUser: FirebaseUser) {
+        val displayName = (firebaseUser.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME)
+        val photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+
+        val userRef = firestore.collection("users").document(firebaseUser.uid)
+        val snap = userRef.get().await()
+
+        // El email NO se guarda en Firestore (el doc users/{uid} es legible por
+        // cualquier usuario autenticado vía firestore.rules — guardar el email ahí
+        // lo expondría a todo el mundo). Ya está disponible vía FirebaseAuth
+        // (auth.currentUser?.email) para quien lo necesite localmente.
+        if (!snap.exists()) {
+            // Primer login: creamos el documento completo del usuario.
+            // createdAt hay que pasarlo a mano: el default del modelo es 0L y, si no
+            // se rellena aquí, todo usuario nuevo queda con fecha de alta en 1970.
+            val newUser = User(
+                id = firebaseUser.uid,
+                name = displayName,
+                photoUrl = photoUrl,
+                createdAt = System.currentTimeMillis()
+            )
+            userRef.set(newUser).await()
+        } else {
+            // Logins posteriores: SOLO refrescamos los datos que vienen de Google,
+            // sin tocar xp, level, badges, bio, isPremium, etc.
+            userRef.update(
+                mapOf(
+                    "name" to displayName,
+                    "photoUrl" to photoUrl
+                )
+            ).await()
         }
     }
 

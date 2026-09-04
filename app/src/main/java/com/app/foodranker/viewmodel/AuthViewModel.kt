@@ -1,5 +1,6 @@
 package com.app.foodranker.viewmodel
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
@@ -30,19 +31,31 @@ class AuthViewModel @Inject constructor(
 
     suspend fun awaitAuthReady(): Boolean = authRepository.awaitAuthReady()
 
-    fun signInWithGoogle(idToken: String) {
+    fun signInWithGoogle(activity: Activity) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-            val result = authRepository.signInWithGoogle(idToken)
-            _authState.value = if (result.isSuccess) {
-                AuthState.Success(result.getOrThrow())
-            } else {
-                val error = result.exceptionOrNull()
-                AuthState.Error(
-                    (error as? Exception)?.let { com.app.foodranker.utils.ErrorMapper.toUserMessage(it) }
-                        ?: "Error desconocido"
-                )
-            }
+            applyResult(authRepository.signInWithGoogle(activity))
+        }
+    }
+
+    // Recupera un login que quedó a medias si la Activity se recreó mientras el
+    // navegador estaba abierto (ver AuthRepository.awaitPendingGoogleSignIn).
+    fun checkPendingGoogleSignIn() {
+        viewModelScope.launch {
+            val result = authRepository.awaitPendingGoogleSignIn() ?: return@launch
+            applyResult(result)
+        }
+    }
+
+    private fun applyResult(result: Result<FirebaseUser>) {
+        _authState.value = if (result.isSuccess) {
+            AuthState.Success(result.getOrThrow())
+        } else {
+            val error = result.exceptionOrNull()
+            AuthState.Error(
+                (error as? Exception)?.let { com.app.foodranker.utils.ErrorMapper.toUserMessage(it) }
+                    ?: "Error desconocido"
+            )
         }
     }
 
