@@ -430,7 +430,10 @@ private fun PodiumSlot(
 ) {
     Column(
         modifier = modifier
-            .height(height)
+            // Altura MÍNIMA, no fija: mantiene el escalonado del podio pero deja crecer
+            // el bloque si el contenido no cabe. Con altura fija, el "XP" de abajo salía
+            // cortado en cuanto el móvil tenía la fuente del sistema ampliada.
+            .heightIn(min = height)
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .background(
                 if (highlight)
