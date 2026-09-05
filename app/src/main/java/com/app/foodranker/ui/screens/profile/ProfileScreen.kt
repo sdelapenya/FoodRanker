@@ -170,7 +170,14 @@ fun ProfileScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 40.dp)
+                // El contenido ocupa la pantalla entera a propósito (la cabecera se
+                // dibuja bajo la barra de estado), así que el inset inferior hay que
+                // sumarlo a mano: con solo 40.dp fijos, las últimas filas quedaban
+                // tapadas por la barra de navegación en móviles de 3 botones.
+                contentPadding = PaddingValues(
+                    bottom = 40.dp + WindowInsets.navigationBars
+                        .asPaddingValues().calculateBottomPadding()
+                )
             ) {
                 // Hero banner con foto
                 item {
