@@ -171,6 +171,37 @@ fun LeagueScreen(
                 return@LazyColumn
             }
 
+            // ── Error de carga ───────────────────────────────────────────────
+            // Va antes del estado "sin ciudad" a propósito: cuando load() falla, city
+            // se queda vacío, y sin esto la pantalla diría "añade tu ciudad" a alguien
+            // que sí la tiene.
+            if (uiState.loadFailed) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("⚠️", fontSize = 52.sp)
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "No se pudo cargar la liga. Comprueba tu conexión e inténtalo de nuevo.",
+                            color = TextSecondary,
+                            fontSize = 15.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.load() },
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Reintentar", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+                return@LazyColumn
+            }
+
             // ── No city ──────────────────────────────────────────────────────
             if (uiState.city.isBlank()) {
                 item {

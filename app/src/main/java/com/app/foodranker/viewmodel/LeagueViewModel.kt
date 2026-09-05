@@ -25,7 +25,11 @@ data class LeagueUiState(
     val city: String = "",
     val weekKey: String = "",
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    // Distingue "no tienes ciudad" de "la carga falló": sin esto, cualquier error deja
+    // city vacío y la pantalla acusa al usuario de no tener ciudad aunque la tenga.
+    // `error` no sirve para eso porque se limpia en cuanto el snackbar lo muestra.
+    val loadFailed: Boolean = false
 )
 
 @HiltViewModel
@@ -43,7 +47,7 @@ class LeagueViewModel @Inject constructor(
     fun load() {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, loadFailed = false)
             try {
                 val userSnap = firestore.collection("users").document(userId).get().await()
                 val city = userSnap.getString("city") ?: ""
@@ -91,9 +95,14 @@ class LeagueViewModel @Inject constructor(
                     isLoading = false
                 )
             } catch (e: Exception) {
+                // Sin este log, cualquier fallo aquí sale como "Algo salió mal" y además
+                // deja city vacío, así que la pantalla dice "añade tu ciudad" aunque la
+                // tengas: dos síntomas que despistan sobre la causa real.
+                android.util.Log.w("LeagueVM", "load() falló", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = ErrorMapper.toUserMessage(e)
+                    error = ErrorMapper.toUserMessage(e),
+                    loadFailed = true
                 )
             }
         }
