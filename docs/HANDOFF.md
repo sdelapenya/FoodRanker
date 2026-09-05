@@ -15,6 +15,75 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅✅ Undécima sesión (2026-09-05): LOGIN ARREGLADO DE VERDAD + liga rota + 16 KB + edge-to-edge
+
+**El bug del login está resuelto y verificado en un build real de Play (v9).** La causa era
+una huella de firma que no aparece en ninguna consola: el APK que Play entrega por el canal
+de **tester interno** viene **re-firmado por Google con un certificado propio**:
+
+```
+SHA-1: 9e6dcb790778ad01be7b4e77a60e78beeaf50e71
+DN:    CN=Android, OU=Android, O=Google Inc., L=Mountain View, ST=California, C=US
+```
+
+No era ninguna de las registradas (debug, carga, firma de Play `b6d0bf6d...`, poscuántica).
+Firebase la rechazaba con `INVALID_CERT_HASH` y el login abortaba antes de abrir el
+navegador. **Arreglado registrándola en Firebase** (`firebase apps:android:sha:create`).
+Ojo: **esto no requiere ninguna versión nueva de la app** — es configuración de backend, la
+v9 ya instalada empezó a funcionar sola.
+
+**Cómo se encontró, y cómo hacerlo la próxima vez lo PRIMERO**: extrayendo el APK real del
+dispositivo en vez de fiarse de las consolas:
+```
+adb shell pm path com.app.foodranker
+adb pull <ruta>/base.apk
+apksigner verify --print-certs -v base.apk
+```
+
+**Aviso importante sobre la migración de esta sesión**: se migró Kapt→KSP, Kotlin 2.0.21→
+2.3.21, Hilt 2.48→2.58 y Firebase BOM 32.7.0→34.18.0 con la hipótesis de que el SDK viejo
+no sabía calcular la huella de la firma dual. **Esa hipótesis era falsa**: el
+`INVALID_CERT_HASH` seguía igual con el SDK nuevo. La migración se queda porque aporta otras
+cosas (ver abajo), pero no arregló el login.
+
+**Lo demás que se arregló, todo verificado en el Redmi (Android 13) y en el emulador
+FoodRanker_Test (Android 15)**:
+
+1. **La liga no cargaba para NINGÚN usuario** (`FAILED_PRECONDITION`): faltaba el índice de
+   `leagues/{id}/entries` por `xp` descendente. Causa: `firestore.indexes.json` declaraba un
+   `fieldOverride` de `entries.xp` **solo** con ámbito `COLLECTION_GROUP`, y declarar un
+   override **desactiva los índices automáticos** del campo en los ámbitos no listados.
+   Índice desplegado; la liga ya carga.
+2. **Mina enterrada**: `firestore.indexes.json` declaraba 4 índices cuando producción tiene
+   10. Cualquier `firebase deploy --only firestore:indexes` **habría borrado 6 índices vivos**.
+   Sincronizado con producción.
+3. **La liga engañaba**: al fallar la carga, `city` se quedaba vacío y la pantalla decía
+   "añade tu ciudad" a usuarios que sí la tenían. Nuevo flag `loadFailed` + estado de error
+   con reintento, y log en el `catch` (antes no registraba nada).
+4. **Aviso de 16 KB de Play resuelto**: las 3 `.so` mal alineadas eran de Fresco, que entraba
+   por `cloudinary-android-download` (la app no lo usa: solo `MediaManager` para subir, y
+   Coil para mostrar). Excluido `com.facebook.fresco` → solo quedan 2 `.so`, ambas a 16 KB, y
+   el APK baja de 10,0 a 8,06 MB. De paso caen `recaptcha` y `soloader` forzados a mano, ya
+   innecesarios.
+5. **Edge-to-edge**: quitado `window.statusBarColor` (API obsoleta que marcaba Play), nuevo
+   helper `LightStatusBarIcons()` para las pantallas de cabecera oscura (perfil, liga, login)
+   donde los iconos del sistema quedaban ilegibles, y arreglado el perfil, cuyo contenido
+   quedaba tapado por la barra de navegación de 3 botones.
+
+**Pendiente de subir**: todo lo del cliente (puntos 3, 4 y 5) está commiteado pero **solo la
+v9 está en Play**, y la v9 no lleva nada de eso. Hay que generar una **v10**. Los puntos 1 y
+2 son de servidor y ya están vivos.
+
+**Pendiente de borrar (datos de prueba en producción)**: se publicó un plato de prueba real
+para verificar la subida a Cloudinary: `PRUEBA TECNICA - BORRAR` (pizza, Telepizza El Álamo,
+7,0), su rating asociado (ojo: **nunca `delete` en `ratings`**), un venue de "Telepizza El
+Álamo" (dato canónico legítimo, se puede dejar) y la imagen en Cloudinary
+(`foodranker/plates`).
+
+**Pendiente sin empezar**: App Check. La API `firebaseappcheck.googleapis.com` no está
+habilitada en el proyecto de Cloud (403 en logcat), pero con el enforcement desactivado no
+afecta a nada visible — las callables funcionan con token placeholder.
+
 ### 🔶 Décima sesión (2026-09-02): el bug de login REAPARECE en v7 — la migración a Credential Manager no lo arregló; nueva pista (firma poscuántica de Play) y huellas registradas, pendiente de propagación
 
 **Retomar exactamente aquí**: el usuario probó el login en un Redmi con la v7 instalada desde el
