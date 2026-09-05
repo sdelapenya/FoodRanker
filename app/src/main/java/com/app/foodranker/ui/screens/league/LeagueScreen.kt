@@ -43,6 +43,9 @@ fun LeagueScreen(
     onNavigateToProfile: () -> Unit = {},
     viewModel: LeagueViewModel = hiltViewModel()
 ) {
+    // Cabecera oscura bajo la barra de estado — ver LightStatusBarIcons.
+    LightStatusBarIcons()
+
     val uiState by viewModel.uiState.collectAsState()
     val currentUserId = viewModel.currentUserId
 

@@ -38,6 +38,9 @@ fun AuthScreen(
     onNavigateToTerms: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
+    // El degradado de la pantalla de login es oscuro arriba — ver LightStatusBarIcons.
+    LightStatusBarIcons()
+
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
     var visible by remember { mutableStateOf(false) }

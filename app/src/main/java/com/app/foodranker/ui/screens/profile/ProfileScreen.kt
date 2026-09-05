@@ -86,6 +86,10 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = hiltViewModel(),
     billingViewModel: BillingViewModel = hiltViewModel()
 ) {
+    // La cabecera del perfil es un degradado oscuro y ocupa la zona de la barra de
+    // estado: sin esto los iconos del sistema salen oscuros sobre oscuro.
+    LightStatusBarIcons()
+
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val currentUser = authViewModel.currentUser
