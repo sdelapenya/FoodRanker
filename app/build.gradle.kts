@@ -151,15 +151,14 @@ dependencies {
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.0.0")
 
-    // Cloudinary
-    implementation("com.cloudinary:cloudinary-android:2.3.1")
-
-    // Fuerza versiones mínimas de dependencias transitivas señaladas por Play Console:
-    // recaptcha 18.1.2 (de firebase-auth) tenía una vulnerabilidad crítica parcheada en
-    // la 18.4.0; soloader 0.10.1 (de Cloudinary -> Fresco) podía fallar en dispositivos
-    // solo de 64 bits, corregido en la 0.10.4.
-    implementation("com.google.android.recaptcha:recaptcha:18.4.0")
-    implementation("com.facebook.soloader:soloader:0.10.4")
+    // Cloudinary. Se excluye Fresco: entra por cloudinary-android-download, que la app
+    // no usa (solo MediaManager para subir; las imágenes se muestran con Coil), y sus
+    // .so están alineadas a 4 KB — Play avisa de que la app puede fallar en dispositivos
+    // con páginas de memoria de 16 KB. Al quitarlo desaparecen libimagepipeline.so,
+    // libnative-filters.so y libnative-imagetranscoder.so, las tres mal alineadas.
+    implementation("com.cloudinary:cloudinary-android:2.3.1") {
+        exclude(group = "com.facebook.fresco")
+    }
 
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.animation:animation-core")
