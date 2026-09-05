@@ -1,8 +1,8 @@
 package com.app.foodranker.utils
 
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
-import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
+import com.google.firebase.Firebase
+import com.google.firebase.remoteconfig.remoteConfig
+import com.google.firebase.remoteconfig.remoteConfigSettings
 
 /**
  * Valores configurables remotamente desde Firebase Console sin publicar una nueva versión.

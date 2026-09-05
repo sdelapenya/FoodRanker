@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,7 +8,7 @@ plugins {
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
     id("com.google.dagger.hilt.android")
-    kotlin("kapt")
+    alias(libs.plugins.ksp)
 }
 
 
@@ -85,13 +86,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_11
     }
 }
 
@@ -113,13 +116,13 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
     // Firebase BOM (controla versiones automáticamente)
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-crashlytics-ktx")
-    implementation("com.google.firebase:firebase-config-ktx")
+    implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-config")
 
     // App Check — atestigua que quien llama a las callables es la app de verdad.
     // Play Integrity solo valida apps distribuidas por Google Play, así que en debug
@@ -134,19 +137,16 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
     // Hilt (inyección de dependencias)
-    implementation("com.google.dagger:hilt-android:2.48")
-    kapt("com.google.dagger:hilt-android-compiler:2.48")
+    implementation("com.google.dagger:hilt-android:2.58")
+    ksp("com.google.dagger:hilt-android-compiler:2.58")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
     // Coil (carga de imágenes)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Deep Links y Dynamic Links Firebase
-    implementation("com.google.firebase:firebase-dynamic-links-ktx")
-
     // Notificaciones push
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-functions")
 
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.0.0")
@@ -176,9 +176,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-}
-
-// Necesario para Hilt
-kapt {
-    correctErrorTypes = true
 }
