@@ -43,7 +43,10 @@ class AuthRepository @Inject constructor(
     // paquete ("SignIn: Failed to record the consent" en logcat) — ver docs/HANDOFF.md,
     // sección "Décima sesión". Este flujo autentica por client_id + redirect_uri y no
     // depende de que Play Services valide nada del paquete instalado.
+    @Volatile private var signedOutSinceLastAttempt = false
+
     suspend fun signInWithGoogle(activity: Activity): Result<FirebaseUser> {
+        signedOutSinceLastAttempt = false
         val provider = OAuthProvider.newBuilder("google.com")
             .addCustomParameter("prompt", "select_account")
             .build()
@@ -56,7 +59,13 @@ class AuthRepository @Inject constructor(
     // Chequeo síncrono para que el ViewModel pueda decidir si vale la pena mostrar el
     // spinner antes de lanzar la corrutina: se llama en cada apertura de la pantalla de
     // login, así que sin esto se vería un parpadeo de carga incluso sin nada pendiente.
-    fun hasPendingGoogleSignIn(): Boolean = auth.pendingAuthResult != null
+    //
+    // El guard de signedOutSinceLastAttempt es defensivo: no hay confirmación de que
+    // FirebaseAuth limpie pendingAuthResult tras consumirlo una vez, así que sin esto un
+    // cierre de sesión justo después de un login recuperado (tras recrear la Activity)
+    // podría volver a autenticar solo con reabrir la pantalla de login, sin pulsar nada.
+    fun hasPendingGoogleSignIn(): Boolean =
+        !signedOutSinceLastAttempt && auth.pendingAuthResult != null
 
     suspend fun awaitPendingGoogleSignIn(): Result<FirebaseUser>? {
         val pending = auth.pendingAuthResult ?: return null
@@ -117,5 +126,6 @@ class AuthRepository @Inject constructor(
             } catch (e: Exception) { /* sin red u otro fallo: no bloquear el logout */ }
         }
         auth.signOut()
+        signedOutSinceLastAttempt = true
     }
 }

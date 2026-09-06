@@ -61,11 +61,18 @@ object AdManager {
         // hilo principal a mano porque la API de anuncios exige que se llamen ahí.
         val appContext = context.applicationContext
         Thread {
-            MobileAds.initialize(appContext) {
-                Handler(Looper.getMainLooper()).post {
-                    loadInterstitial(appContext)
-                    loadRewarded(appContext)
+            // Sin este try/catch, una excepción aquí (SDK mal configurado, OOM al
+            // inicializar) muere en el manejador por defecto del hilo suelto, sin pasar
+            // por Crashlytics ni dejar rastro de que la precarga de anuncios se paró.
+            try {
+                MobileAds.initialize(appContext) {
+                    Handler(Looper.getMainLooper()).post {
+                        loadInterstitial(appContext)
+                        loadRewarded(appContext)
+                    }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("AdManager", "Error inicializando MobileAds", e)
             }
         }.start()
     }

@@ -325,7 +325,13 @@ class ProfileViewModel @Inject constructor(
                 val plateRef = firestore.collection("plates").document(plateId)
                 val snap = plateRef.get().await()
                 val ownerId = snap.getString("addedByUserId") ?: ""
-                if (ownerId != uid) return@launch
+                if (ownerId != uid) {
+                    // No debería pasar nunca desde la UI (el botón solo aparece en tus
+                    // propios platos), pero si "plates" está desincronizado de Firestore
+                    // por lo que sea, salir en silencio dejaría creer que sí se borró.
+                    _uiState.value = _uiState.value.copy(error = "No tienes permiso para eliminar este plato")
+                    return@launch
+                }
 
                 plateRef.delete().await()
                 _uiState.value = _uiState.value.copy(

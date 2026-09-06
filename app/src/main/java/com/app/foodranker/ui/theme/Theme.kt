@@ -132,7 +132,10 @@ private val darkStatusBarRequests = java.util.concurrent.atomic.AtomicInteger(0)
 fun LightStatusBarIcons() {
     val view = LocalView.current
     if (view.isInEditMode) return
-    val darkTheme = isSystemInDarkTheme()
+    // rememberUpdatedState, no un val suelto: DisposableEffect(Unit) no se reinicia si
+    // el tema del sistema cambia mientras la pantalla está abierta, así que sin esto el
+    // onDispose restauraría el valor de cuando se montó, no el actual.
+    val darkTheme by rememberUpdatedState(isSystemInDarkTheme())
     DisposableEffect(Unit) {
         val controller = WindowCompat.getInsetsController(
             (view.context as Activity).window, view
