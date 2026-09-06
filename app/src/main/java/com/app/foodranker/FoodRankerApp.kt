@@ -25,9 +25,9 @@ class FoodRankerApp : Application() {
         // instalar el proveedor viajan sin token de App Check.
         AppCheckInstaller.install()
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+        // initialize() ya encadena las precargas cuando el SDK termina de arrancar,
+        // en segundo plano. Llamarlas aquí las lanzaba antes de que estuviera listo.
         AdManager.initialize(this)
-        AdManager.loadInterstitial(this)
-        AdManager.loadRewarded(this)
         CloudinaryManager.initialize(this)
         AnalyticsManager.initialize(this)
         RemoteConfigManager.initialize()

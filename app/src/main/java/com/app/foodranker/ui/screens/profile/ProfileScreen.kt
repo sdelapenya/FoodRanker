@@ -457,6 +457,10 @@ fun ProfileScreen(
                 onSave = { desc ->
                     viewModel.updatePlateDescription(plateId, desc)
                     showEditPlateId = null
+                },
+                onDelete = {
+                    viewModel.deletePlate(plateId)
+                    showEditPlateId = null
                 }
             )
         }
@@ -1371,10 +1375,35 @@ private fun CollectionsSection(
 private fun EditPlateSheet(
     plate: Plate,
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit
+    onSave: (String) -> Unit,
+    onDelete: () -> Unit
 ) {
     val maxLen = com.app.foodranker.utils.InputLimits.PLATE_DESCRIPTION
     var description by remember { mutableStateOf(plate.description) }
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("¿Eliminar este plato?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Se borrará \"${plate.name}\" junto con su foto y las valoraciones " +
+                    "que haya recibido. Esta acción no se puede deshacer."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDelete() }) {
+                    Text("Eliminar", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) {
+                    Text("Cancelar", color = TextSecondary)
+                }
+            }
+        )
+    }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
@@ -1414,6 +1443,22 @@ private fun EditPlateSheet(
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
             ) { Text("Guardar", fontWeight = FontWeight.Bold, color = Color.White) }
+
+            OutlinedButton(
+                onClick = { confirmDelete = true },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = MaterialTheme.shapes.medium,
+                border = BorderStroke(1.dp, Color(0xFFD32F2F).copy(alpha = 0.5f))
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = Color(0xFFD32F2F),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Eliminar plato", fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+            }
         }
     }
 }

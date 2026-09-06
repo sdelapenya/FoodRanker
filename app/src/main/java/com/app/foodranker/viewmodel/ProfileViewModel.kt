@@ -309,6 +309,35 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Borra un plato del usuario. La limpieza de todo lo que cuelga de él (imagen en
+     * Cloudinary, valoraciones, XP concedido, entradas de liga) la hace la Cloud
+     * Function `onPlateDeleted`; aquí solo se borra el documento.
+     *
+     * Se comprueba la propiedad antes de borrar aunque las reglas de Firestore ya la
+     * exigen: así el fallo es un no-op silencioso en vez de una excepción de permisos.
+     */
+    fun deletePlate(plateId: String, onDeleted: () -> Unit = {}) {
+        val uid = auth.currentUser?.uid ?: return
+        if (plateId.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val plateRef = firestore.collection("plates").document(plateId)
+                val snap = plateRef.get().await()
+                val ownerId = snap.getString("addedByUserId") ?: ""
+                if (ownerId != uid) return@launch
+
+                plateRef.delete().await()
+                _uiState.value = _uiState.value.copy(
+                    plates = _uiState.value.plates.filterNot { it.id == plateId }
+                )
+                onDeleted()
+            } catch (e: Exception) {
+                android.util.Log.e("Profile", "Error borrando plato: ${e.message}")
+            }
+        }
+    }
+
     fun updateProfile(
         bio: String,
         city: String,

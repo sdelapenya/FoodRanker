@@ -2,6 +2,8 @@ package com.app.foodranker.utils
 
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import java.util.concurrent.atomic.AtomicInteger
 import com.app.foodranker.BuildConfig
 import com.google.android.gms.ads.AdRequest
@@ -49,7 +51,23 @@ object AdManager {
                 )
             }
         }
-        MobileAds.initialize(context)
+        // MobileAds.initialize() hace E/S de disco y red. Llamarlo en el hilo principal
+        // desde Application.onCreate() retrasa el arranque y puede acabar en ANR
+        // ("failed to complete startup", reproducido en el emulador de Android 15); la
+        // propia documentación de Google pide lanzarlo en segundo plano.
+        //
+        // Las precargas van dentro del callback y no antes: lanzarlas mientras el SDK
+        // aún se inicializa era pedir anuncios sin nada configurado. Se publican al
+        // hilo principal a mano porque la API de anuncios exige que se llamen ahí.
+        val appContext = context.applicationContext
+        Thread {
+            MobileAds.initialize(appContext) {
+                Handler(Looper.getMainLooper()).post {
+                    loadInterstitial(appContext)
+                    loadRewarded(appContext)
+                }
+            }
+        }.start()
     }
 
     // Precargar intersticial
