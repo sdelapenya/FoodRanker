@@ -90,6 +90,8 @@ fun ProfileScreen(
     // estado: sin esto los iconos del sistema salen oscuros sobre oscuro.
     LightStatusBarIcons()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val currentUser = authViewModel.currentUser
@@ -114,7 +116,14 @@ fun ProfileScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    LaunchedEffect(uiState.error) {
+        val msg = uiState.error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(msg)
+        viewModel.clearError()
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = BackgroundLight,
         topBar = {
             TopAppBar(

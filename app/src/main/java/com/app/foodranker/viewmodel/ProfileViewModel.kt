@@ -333,9 +333,18 @@ class ProfileViewModel @Inject constructor(
                 )
                 onDeleted()
             } catch (e: Exception) {
+                // El diálogo de confirmación avisa de que borrar es irreversible, así que
+                // un fallo silencioso aquí dejaría al usuario creyendo que sí se borró.
                 android.util.Log.e("Profile", "Error borrando plato: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
+                )
             }
         }
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
     }
 
     fun updateProfile(

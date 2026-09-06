@@ -1,6 +1,7 @@
 package com.app.foodranker.data.repository
 
 import android.app.Activity
+import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.OAuthProvider
@@ -43,28 +44,28 @@ class AuthRepository @Inject constructor(
     // sección "Décima sesión". Este flujo autentica por client_id + redirect_uri y no
     // depende de que Play Services valide nada del paquete instalado.
     suspend fun signInWithGoogle(activity: Activity): Result<FirebaseUser> {
-        return try {
-            val provider = OAuthProvider.newBuilder("google.com")
-                .addCustomParameter("prompt", "select_account")
-                .build()
-            val result = auth.startActivityForSignInWithProvider(activity, provider).await()
-            val firebaseUser = result.user
-                ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
-            syncUserDocument(firebaseUser)
-            Result.success(firebaseUser)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        val provider = OAuthProvider.newBuilder("google.com")
+            .addCustomParameter("prompt", "select_account")
+            .build()
+        return completeSignIn(auth.startActivityForSignInWithProvider(activity, provider))
     }
 
     // Si la Activity se recrea mientras el navegador está abierto (giro de pantalla, poca
     // memoria), el resultado del login no se pierde: Firebase lo guarda y hay que
     // recuperarlo con pendingAuthResult en vez de relanzar el flujo desde cero.
+    // Chequeo síncrono para que el ViewModel pueda decidir si vale la pena mostrar el
+    // spinner antes de lanzar la corrutina: se llama en cada apertura de la pantalla de
+    // login, así que sin esto se vería un parpadeo de carga incluso sin nada pendiente.
+    fun hasPendingGoogleSignIn(): Boolean = auth.pendingAuthResult != null
+
     suspend fun awaitPendingGoogleSignIn(): Result<FirebaseUser>? {
         val pending = auth.pendingAuthResult ?: return null
+        return completeSignIn(pending)
+    }
+
+    private suspend fun completeSignIn(task: com.google.android.gms.tasks.Task<AuthResult>): Result<FirebaseUser> {
         return try {
-            val result = pending.await()
-            val firebaseUser = result.user
+            val firebaseUser = task.await().user
                 ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
             syncUserDocument(firebaseUser)
             Result.success(firebaseUser)

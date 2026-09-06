@@ -112,6 +112,14 @@ fun FoodRankerTheme(
     }
 }
 
+// Cuántas pantallas de cabecera oscura están montadas a la vez. El NavHost anima las
+// transiciones (slide), así que la pantalla que se va y la que entra conviven un
+// instante en la composición: si cada una restaurase "lo que había antes" al salir,
+// la que se va podría machacar el ajuste de la que acaba de entrar (p.ej. Perfil →
+// Liga, las dos con cabecera oscura). Solo se restaura el valor por defecto del tema
+// cuando la última pantalla que lo pidió se desmonta de verdad.
+private val darkStatusBarRequests = java.util.concurrent.atomic.AtomicInteger(0)
+
 /**
  * Fuerza iconos claros en la barra de estado mientras la pantalla está visible, y
  * restaura los del tema al salir.
@@ -124,12 +132,17 @@ fun FoodRankerTheme(
 fun LightStatusBarIcons() {
     val view = LocalView.current
     if (view.isInEditMode) return
+    val darkTheme = isSystemInDarkTheme()
     DisposableEffect(Unit) {
         val controller = WindowCompat.getInsetsController(
             (view.context as Activity).window, view
         )
-        val previous = controller.isAppearanceLightStatusBars
         controller.isAppearanceLightStatusBars = false
-        onDispose { controller.isAppearanceLightStatusBars = previous }
+        darkStatusBarRequests.incrementAndGet()
+        onDispose {
+            if (darkStatusBarRequests.decrementAndGet() == 0) {
+                controller.isAppearanceLightStatusBars = !darkTheme
+            }
+        }
     }
 }

@@ -440,9 +440,6 @@ private fun PodiumSlot(
                     Color(0xFFD79A1E).copy(alpha = 0.22f)
                 else
                     Color.White.copy(alpha = 0.12f)
-            )
-            .then(
-                if (highlight) Modifier else Modifier
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

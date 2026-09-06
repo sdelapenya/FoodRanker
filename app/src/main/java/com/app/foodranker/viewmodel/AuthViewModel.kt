@@ -41,7 +41,9 @@ class AuthViewModel @Inject constructor(
     // Recupera un login que quedó a medias si la Activity se recreó mientras el
     // navegador estaba abierto (ver AuthRepository.awaitPendingGoogleSignIn).
     fun checkPendingGoogleSignIn() {
+        if (!authRepository.hasPendingGoogleSignIn()) return
         viewModelScope.launch {
+            _authState.value = AuthState.Loading
             val result = authRepository.awaitPendingGoogleSignIn() ?: return@launch
             applyResult(result)
         }
