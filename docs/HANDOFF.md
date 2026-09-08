@@ -15,6 +15,98 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ Decimotercera sesión (2026-09-07): v10 aprobada — pero la clave de Places también estaba mal (bug nuevo, ya arreglado)
+
+**La v10 se aprobó y se probó en el Redmi real**, pero salió un bug nuevo, sin relación con el
+login: **no dejaba buscar/añadir restaurante ni completar la publicación de un plato**. Mismo
+patrón de fondo que el del login (huella de firma no registrada), pero en un sitio distinto:
+
+**Causa**: la clave `PLACES_API_KEY` del cliente ("FoodRanker Places Android" en Google Cloud
+Console → Credenciales) solo tenía autorizada la huella de **debug/carga** en su restricción de
+Android. Ni la huella clásica de firma de Play ni la real del canal de tester estaban en la
+lista — verificado reproduciendo la llamada real (`places.googleapis.com/v1/places:searchText`
+con cabeceras `X-Android-Package`/`X-Android-Cert`) con cada huella por separado.
+
+**Arreglo**: añadidas a mano en Google Cloud Console (el usuario lo hizo, la clasificación del
+harness bloqueó hacerlo por API con el token de ADC — con razón, es una acción sensible):
+- `B6:D0:BF:6D:59:E8:DC:52:2E:0D:AC:E8:1C:B7:16:05:BA:90:00:DF` (clásica de Play)
+- `9E:6D:CB:79:07:78:AD:01:BE:7B:4E:77:A6:0E:78:BE:EA:F5:0E:71` (canal de tester interno)
+
+Tardó los ~5 minutos que avisa Google Cloud en propagarse. **Verificado en producción real**:
+el usuario publicó un plato real completo (foto + local buscado por Places + categoría),
+`status: approved` tras pasar Vision API. Sigue sin borrar a propósito, queda como prueba.
+
+**Pendiente de revisar en otra sesión, sin prisa**: dado que tanto Firebase Auth como la clave
+de Places tenían huellas de firma incompletas, merece la pena auditar **todas** las claves/API
+restringidas por huella en Google Cloud Console (Cloudinary no aplica, usa upload preset
+unsigned) para ver si hay más con el mismo hueco, en vez de esperar a que cada una falle por
+separado.
+
+**De paso, en esta sesión**: regalado Premium permanente a un tester
+(`patring81@gmail.com`, uid `I6ZAVZjsQjZTo0irlc5PVWgiQgw1`) vía
+`manageUser.js grant-premium`. Solo 3 usuarios registrados en total en la app a día de hoy.
+
+**Auditoría completa de las 4 claves de API del proyecto** (vía Cloud API Keys API,
+`apikeys.googleapis.com`, con el mismo patrón de ADC ya documentado): "FoodRanker Places
+Server" y "FoodRanker Places Android" (ya arregladas), y las dos automáticas de Firebase
+("Android key"/"Browser key", gestionadas por la sincronización de huellas de
+`firebase apps:android:sha`, ya completa). Ninguna otra tiene el mismo hueco. AdMob no usa
+este mecanismo (se autoriza por App ID, no por huella) — confirmado además que muestra
+anuncios reales en el build de Play. **No queda ningún cabo suelto del tipo "huella de firma
+que falta" en todo el proyecto.**
+
+### 🔶 Duodécima sesión (2026-09-06/07): v10 enviada a revisión — falta aprobación + verificación final
+
+**Retomar exactamente aquí**: la v10 (AAB `e:\FoodRanker\app\build\outputs\bundle\release\app-release.aab`,
+`versionCode 10`) está **enviada a revisión** en Play Console (Prueba cerrada). En cuanto Google
+la apruebe:
+1. Desinstalar FoodRanker del Redmi e instalar desde el enlace real de prueba cerrada
+   (`https://play.google.com/apps/testing/com.app.foodranker`) — **no** un APK/AAB local. Si Play
+   sirve una build antigua (`versionCode` bajo) en vez de la v10, es la trampa ya documentada de
+   la pista de "tester interno" con prioridad sobre "prueba cerrada": forzar refresco de Play
+   Store (`am force-stop com.android.vending` + reabrir la ficha) o comprobar que el enlace usado
+   es el de la pestaña "Testers" de "Prueba cerrada", no el de "Prueba interna".
+2. Probar login de Google de punta a punta ahí (con logcat en vivo si hay cualquier duda,
+   filtrando `INVALID_CERT_HASH`/`FirebaseAuth`) — la v9 ya lo confirmó funcionando en un build
+   real de Play, pero la v10 lleva más cambios encima y no se ha probado todavía en ese canal
+   exacto.
+3. Si todo va bien, retomar el reclutamiento de testers (mensaje ya redactado en sesiones
+   anteriores de este documento).
+
+**Qué lleva la v10 respecto a la v9** (v9 solo llevaba la migración de Firebase, nada de esto):
+- Liga arreglada (índice de Firestore que faltaba) + fichero de índices sincronizado con
+  producción (ver "Undécima sesión" más abajo).
+- Aviso de 16 KB de Play resuelto (Fresco excluido, APK −2 MB).
+- Edge-to-edge pulido: API obsoleta fuera, iconos de barra de estado legibles con recuento de
+  referencias (`LightStatusBarIcons` en `Theme.kt`), perfil ya no se corta con la barra de
+  navegación, podio de la liga ya no recorta el XP.
+- Botón nuevo para eliminar un plato propio (`ProfileScreen` → editar plato → "Eliminar plato"),
+  con confirmación. Verificado de punta a punta en producción real: borró el plato de prueba
+  `PRUEBA TECNICA - BORRAR` y limpió Cloudinary/XP/valoraciones vía `onPlateDeleted`.
+- ANR real arreglado: `MobileAds.initialize()` bloqueaba `Application.onCreate()` en el hilo
+  principal, reproducido como "FoodRanker isn't responding" en el emulador de Android 15. Movido
+  a un hilo aparte.
+- **Dos pasadas de `/code-review`** sobre todo el diff de la sesión, con verificación en
+  dispositivo de cada arreglo (no solo lectura de código): borrado de plato que fallaba en
+  silencio pese a decir "irreversible" (dos rutas distintas del mismo método), condición de
+  carrera real en los iconos de la barra al navegar entre pantallas de cabecera oscura seguidas,
+  posible bypass de cierre de sesión por `pendingAuthResult` sin limpiar (guarda defensiva,
+  verificado login→logout→login en el Redmi), falta de manejo de excepciones en el hilo de
+  AdMob, y tema del sistema obsoleto si cambia con una pantalla abierta.
+
+**Nada pendiente de borrar en producción** — el plato de prueba ya se borró con el botón nuevo
+(ver arriba), incluyendo su imagen en Cloudinary y el XP revertido.
+
+**Pendiente sin empezar, sin prisa**: App Check — la API `firebaseappcheck.googleapis.com` no
+está habilitada en el proyecto de Cloud (403 en logcat), pero con el enforcement desactivado no
+afecta a nada visible.
+
+**Idea para una sesión futura, no urgente**: valorar volver al selector nativo de cuentas
+(Credential Manager) para el login en vez del flujo por navegador actual — mejor experiencia
+(un toque en vez de abrir Chrome), pero solo tiene sentido intentarlo con calma y verificando en
+Play real, ahora que se sabe diagnosticar este tipo de bug en minutos. Ver conversación de la
+duodécima sesión para el razonamiento completo de por qué no se hizo ya.
+
 ### ✅✅ Undécima sesión (2026-09-05): LOGIN ARREGLADO DE VERDAD + liga rota + 16 KB + edge-to-edge
 
 **El bug del login está resuelto y verificado en un build real de Play (v9).** La causa era

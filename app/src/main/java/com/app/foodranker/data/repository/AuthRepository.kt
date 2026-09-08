@@ -49,6 +49,13 @@ class AuthRepository @Inject constructor(
         signedOutSinceLastAttempt = false
         val provider = OAuthProvider.newBuilder("google.com")
             .addCustomParameter("prompt", "select_account")
+            // Sin esto, un primer consentimiento (usuario nuevo que nunca usó FoodRanker)
+            // le devuelve a Firebase la foto pero NO el nombre — visto en los 3 primeros
+            // testers reales, mientras que las cuentas que ya llevaban meses seguían
+            // mostrando bien el nombre porque Firebase conserva el que ya tenían guardado
+            // de antes, no porque el flujo lo trajera de nuevo. Pedir el scope explícito
+            // es la vía recomendada por Firebase para proveedores OAuth genéricos.
+            .setScopes(listOf("email", "profile"))
             .build()
         return completeSignIn(auth.startActivityForSignInWithProvider(activity, provider))
     }
@@ -74,18 +81,30 @@ class AuthRepository @Inject constructor(
 
     private suspend fun completeSignIn(task: com.google.android.gms.tasks.Task<AuthResult>): Result<FirebaseUser> {
         return try {
-            val firebaseUser = task.await().user
+            val result = task.await()
+            val firebaseUser = result.user
                 ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
-            syncUserDocument(firebaseUser)
+            syncUserDocument(firebaseUser, result.additionalUserInfo?.profile)
             Result.success(firebaseUser)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    private suspend fun syncUserDocument(firebaseUser: FirebaseUser) {
-        val displayName = (firebaseUser.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME)
-        val photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+    private suspend fun syncUserDocument(firebaseUser: FirebaseUser, rawProfile: Map<String, Any?>?) {
+        // Para el flujo OAuth genérico, firebaseUser.displayName no siempre viene relleno
+        // en el primer login de una cuenta nueva — el respaldo son los claims en bruto de
+        // Google en additionalUserInfo.profile, que es donde Firebase documenta que hay
+        // que mirar para proveedores OAuth genéricos (no pasa con el proveedor nativo de
+        // Google, que sí rellena displayName siempre).
+        val displayName = (
+            firebaseUser.displayName?.takeIf { it.isNotBlank() }
+                ?: (rawProfile?.get("name") as? String)?.takeIf { it.isNotBlank() }
+                ?: "Usuario"
+            ).sanitized(InputLimits.USER_NAME)
+        val photoUrl = firebaseUser.photoUrl?.toString()?.takeIf { it.isNotBlank() }
+            ?: (rawProfile?.get("picture") as? String)
+            ?: ""
 
         val userRef = firestore.collection("users").document(firebaseUser.uid)
         val snap = userRef.get().await()
