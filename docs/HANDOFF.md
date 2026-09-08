@@ -15,6 +15,33 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔶 Decimocuarta sesión (2026-09-08): v11 lista — arregla el nombre vacío de testers nuevos
+
+**Retomar exactamente aquí**: AAB `versionCode 11` generado en local
+(`app/build/outputs/bundle/release/app-release.aab`), **todavía no subido a Play Console**.
+Falta el paso de siempre: subir, esperar aprobación, verificar en un build real de Play.
+
+**Bug encontrado por el usuario, mismo día de reclutar testers**: los 3 primeros testers
+reales se registraron con el nombre "Usuario" en vez del suyo (la foto sí salía bien). Las 2
+cuentas del propio usuario, con meses de antigüedad desde el flujo nativo antiguo, no lo
+sufrían — pero no porque el flujo actual les trajera el nombre de nuevo hoy, sino porque
+Firebase conserva el que ya tenían guardado de entonces (`firebaseUser.displayName` no se
+vacía solo entre logins).
+
+**Causa, en `AuthRepository.signInWithGoogle()`**: el flujo OAuth por navegador
+(`OAuthProvider("google.com")`) no pedía el scope `profile` explícitamente — Firebase
+documenta que, a diferencia del proveedor nativo de Google, los proveedores OAuth genéricos no
+lo incluyen por defecto. Y aun pidiéndolo, para proveedores genéricos el nombre puede venir
+solo en `additionalUserInfo.profile` (los claims en bruto de Google), no en
+`firebaseUser.displayName` ya procesado — el código descartaba ese dato por completo.
+
+**Arreglo**: `.setScopes(listOf("email", "profile"))` en el `OAuthProvider`, y
+`additionalUserInfo.profile` como respaldo tanto para nombre como para foto. **Sin verificar
+con una cuenta que nunca haya usado la app** (no había ninguna a mano) — queda pendiente de
+confirmar con el próximo tester real. El usuario les va a pedir a los 3 afectados que
+actualicen a la v11 **y cierren sesión y vuelvan a entrar** (no basta con actualizar: una
+sesión ya iniciada no vuelve a pasar por el flujo de login solo por seguir abierta).
+
 ### ✅ Decimotercera sesión (2026-09-07): v10 aprobada — pero la clave de Places también estaba mal (bug nuevo, ya arreglado)
 
 **La v10 se aprobó y se probó en el Redmi real**, pero salió un bug nuevo, sin relación con el
