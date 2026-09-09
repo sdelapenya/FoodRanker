@@ -15,6 +15,15 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+**Aviso pendiente de AdMob, sin prisa pero no olvidar**: Google avisó por email (2026-09-09,
+"Upcoming changes to coarse location collection in Google Mobile Ads SDK") de que una futura
+versión del GMA SDK usará también la ubicación aproximada para anuncios si el usuario ya dio
+permiso de ubicación a la app (FoodRanker lo pide para "Cerca"/"Qué pido aquí" —
+`ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION`). Es opt-out, no opt-in: se activa solo al
+actualizar `play-services-ads` (ahora en `23.0.0`) a la versión nueva, sin que haga falta tocar
+código. Cuando llegue el momento de subir esa dependencia: (1) decidir si activar el flag para
+desactivarlo, (2) revisar si la política de privacidad ya cubre este uso o hay que ampliarla.
+
 ### 🔶 Decimocuarta sesión (2026-09-08): v11 lista — arregla el nombre vacío de testers nuevos
 
 **Retomar exactamente aquí**: AAB `versionCode 11` generado en local

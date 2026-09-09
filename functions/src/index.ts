@@ -44,6 +44,13 @@ const XP_REFERRAL_REFERRED = 50;
 const XP_GIVE_COMMENT = 5;
 
 const FAIL_LIKELIHOODS = new Set(["LIKELY", "VERY_LIKELY"]);
+// "racy" y "violence" dan falsos positivos frecuentes con fotos de comida reales:
+// postres brillantes/con formas redondeadas disparan "racy", y salsas oscuras que
+// gotean disparan "violence". Verificado con dos fotos de platos reales rechazadas
+// (2026-09-09): una cayó por racy=LIKELY, la otra por violence=LIKELY, las dos con
+// Food/Dessert por encima de 0.85 en las labels. "adult" no tiene este problema con
+// comida, así que se queda en el umbral normal.
+const FAIL_LIKELIHOODS_STRICT = new Set(["VERY_LIKELY"]);
 
 const FOOD_KEYWORDS = [
   "food", "dish", "cuisine", "recipe", "ingredient", "meal", "cooking",
@@ -76,8 +83,8 @@ function isImageProblematic(safeSearch: SafeSearchResult): {
 } {
   const reasons: string[] = [];
   if (FAIL_LIKELIHOODS.has(safeSearch.adult)) reasons.push("adult");
-  if (FAIL_LIKELIHOODS.has(safeSearch.violence)) reasons.push("violence");
-  if (FAIL_LIKELIHOODS.has(safeSearch.racy)) reasons.push("racy");
+  if (FAIL_LIKELIHOODS_STRICT.has(safeSearch.violence)) reasons.push("violence");
+  if (FAIL_LIKELIHOODS_STRICT.has(safeSearch.racy)) reasons.push("racy");
   return { rejected: reasons.length > 0, reasons };
 }
 
