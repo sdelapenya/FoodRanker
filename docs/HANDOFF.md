@@ -15,6 +15,49 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+**Verificado (2026-09-09): borrar plato + long-press para editar/eliminar.** El usuario pidió
+revisar que el botón de eliminar funcionara bien, y añadir un gesto de pulsación larga sobre
+la miniatura para abrir editar/eliminar sin depender del icono pequeño de la esquina.
+
+- **Botón de eliminar**: confirmado en dos rutas independientes. (1) El propio usuario borró y
+  resubió a mano el plato real "Cortante patatas revolconas" (el del autocorrector, ver nota de
+  abajo) — log de `onPlateDeleted`: XP revertida (-55), cascada de ratings/comments/saves
+  completa, imagen borrada de Cloudinary. (2) Prueba en emulador (`FoodRanker_Test`, cuenta
+  `sdelapenya1991@gmail.com`): publicado un plato de prueba con una de las fotos de postre ya
+  validadas contra SafeSearch, borrado desde el nuevo gesto, mismo resultado limpio en los logs.
+- **Long-press añadido**: `PlateGridItem` en `ProfileScreen.kt` pasó de `Card(onClick = ...)` a
+  `Card(modifier = modifier.combinedClickable(onClick, onLongClick))` — toque corto sigue
+  navegando al detalle, pulsación larga (solo en `Mis platos`, propios) abre el mismo
+  `EditPlateSheet` que ya tenía "Guardar" (descripción) y "Eliminar plato". No se creó un menú
+  nuevo: reutiliza el sheet ya probado. Verificado en el accessibility tree del emulador
+  (`long-clickable="true"` en el nodo del card) y con la interacción real (long-press abre el
+  sheet, toque corto abre el detalle, sin cruce entre los dos gestos). El icono de lápiz de la
+  esquina se mantiene tal cual, como entrada alternativa.
+- Icono de editar (miniatura, esquina superior izquierda) sin cambios de comportamiento.
+
+**Pendiente (2026-09-09): editar el nombre de un plato ya subido.** Un tester escribió
+"Coulant..." y el corrector del teclado se lo cambió a "Cortante patatas revolconas" sin que
+se diera cuenta; hoy no hay forma de arreglarlo salvo borrar el plato y volver a subirlo (ya
+posible desde v11). Se pidió explícitamente: **solo el nombre**, no la puntuación — la
+puntuación es un agregado (`averageScore`/`totalRatings` de todos los votos + XP de liga ya
+concedida) y tocarla es más delicado, se deja fuera a propósito.
+
+El nombre no es un campo suelto: forma parte del ID del documento (`{venueId}__{dishSlug}`,
+ver `docs/VENUES.md`, identidad canónica plato+local). Antes de tocar código, decidir:
+- **Caso simple y seguro**: el plato solo tiene el voto del propio usuario (`totalRatings == 1`
+  y `addedByUserId == uid`) → renombrar es solo mover a un `dishSlug` nuevo derivado del nombre
+  corregido, sin nadie más afectado.
+- **Caso con más gente**: si otro usuario ya valoró ese mismo plato+local con el nombre
+  correcto, el nuevo `dishSlug` coincidiría con un documento ya existente → habría que fusionar
+  (votos, media, entradas de liga de cada usuario) en vez de solo renombrar. Decidir si se
+  permite este caso en la primera versión o se bloquea el botón de editar nombre cuando
+  `totalRatings > 1` (más simple, y probablemente suficiente para la fase de testers).
+
+Piezas a tocar: `ProfileViewModel.kt` (nueva función tipo `updatePlateName`, análoga a
+`updatePlateDescription` pero moviendo el documento en vez de solo `update()`), `EditPlateSheet`
+en `ProfileScreen.kt` (campo de nombre editable), y revisar `firestore.rules` si el cambio de ID
+del documento necesita permisos distintos a un `update` normal.
+
 **Aviso pendiente de AdMob, sin prisa pero no olvidar**: Google avisó por email (2026-09-09,
 "Upcoming changes to coarse location collection in Google Mobile Ads SDK") de que una futura
 versión del GMA SDK usará también la ubicación aproximada para anuncios si el usuario ya dio

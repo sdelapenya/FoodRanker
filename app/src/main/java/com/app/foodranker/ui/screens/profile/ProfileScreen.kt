@@ -3,6 +3,8 @@ package com.app.foodranker.ui.screens.profile
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.background
@@ -1472,11 +1474,19 @@ private fun EditPlateSheet(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: Boolean = false, onEdit: () -> Unit = {}, onClick: () -> Unit = {}) {
     Card(
-        onClick = onClick,
-        modifier = modifier,
+        // combinedClickable en vez del onClick nativo de Card: así se distingue un
+        // toque normal (abre el plato) de una pulsación larga (abre editar/eliminar),
+        // sin depender de acertar en el icono pequeño de la esquina. Solo se activa
+        // en tus propios platos (showEditButton), igual que el icono.
+        modifier = modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = if (showEditButton) onEdit else null,
+            onLongClickLabel = if (showEditButton) "Editar o eliminar plato" else null
+        ),
         shape = MaterialTheme.shapes.small,
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.card)
