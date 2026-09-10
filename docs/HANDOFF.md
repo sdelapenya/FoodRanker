@@ -15,6 +15,12 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+**Nota (2026-09-10): v12 en espera, acumulando cambios.** El long-press de abajo es el único
+cambio de cliente sin publicar desde la v11 (`versionCode` sigue en 11 a propósito). Se decidió
+no subir versión solo por esto — esperar a tener algo más, p.ej. la edición de nombre de plato
+pendiente más abajo, antes de pedir otra subida a Play. El ajuste de moderación (`d1fc58e`) no
+cuenta para esto: es solo Cloud Function, ya desplegado y activo sin necesidad de nueva versión.
+
 **Verificado (2026-09-09): borrar plato + long-press para editar/eliminar.** El usuario pidió
 revisar que el botón de eliminar funcionara bien, y añadir un gesto de pulsación larga sobre
 la miniatura para abrir editar/eliminar sin depender del icono pequeño de la esquina.
