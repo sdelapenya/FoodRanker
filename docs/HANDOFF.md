@@ -15,6 +15,27 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+**Añadido (2026-09-10): `wipe-content` en `manageUser.js`.** El baneo (`ban <uid>`) solo bloqueaba
+el acceso; ahora hay una acción aparte para borrar también el contenido de un usuario cuando
+haga falta — deliberadamente separada del baneo (no todo baneo merece borrar contenido):
+
+```
+node scripts/manageUser.js wipe-content <uid>            # simulación: cuenta, no borra
+node scripts/manageUser.js wipe-content <uid> --confirm  # borra de verdad
+```
+
+Borra sus platos (uno a uno, dejando que `onPlateDeleted` ya desplegado haga su cascada
+habitual: XP revertida, ratings/comments/saves de ese plato, imagen de Cloudinary — no se
+reimplementa nada de eso), sus valoraciones dadas y sus comentarios. No toca `users/{uid}`
+(el perfil se queda, vacío) ni la cuenta de Auth — para eso está el borrado de cuenta propio
+(`deleteUserAccount`), pensado para que lo dispare el propio usuario, no un admin sobre otra
+cuenta. Limitación conocida y documentada en el propio script: al borrar valoraciones dadas
+en platos de OTROS, no recalcula el `averageScore`/`totalRatings` de esos platos ni revierte
+la XP que ganó su autor por recibirlas — mismo hueco que ya tenía `deleteUserAccount`, no se
+introduce nada nuevo. Probado en modo simulación contra una cuenta real (15 platos, 15
+valoraciones) sin tocar nada; el borrado real (`--confirm`) no se ha probado todavía por no
+tener a quién aplicárselo — probarlo de verdad la próxima vez que haga falta banear a alguien.
+
 **Nota (2026-09-10): v12 en espera, acumulando cambios.** El long-press de abajo es el único
 cambio de cliente sin publicar desde la v11 (`versionCode` sigue en 11 a propósito). Se decidió
 no subir versión solo por esto — esperar a tener algo más, p.ej. la edición de nombre de plato
