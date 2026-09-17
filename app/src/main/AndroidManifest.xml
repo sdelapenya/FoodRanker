@@ -56,6 +56,22 @@
             </intent-filter>
         </service>
 
+        <!-- Icono/color por defecto para las notificaciones push que Android dibuja él
+             mismo, SIN pasar por FoodRankerMessagingService.onMessageReceived: pasa con
+             cualquier push con bloque "notification" (like/comentario/moderación, ver
+             functions/src/index.ts) cuando la app está en segundo plano o cerrada — solo
+             el caso en primer plano pasa por onMessageReceived → NotificationHelper.show(),
+             que ya usa este mismo icono. Sin esto, Android usaba su propio icono por
+             defecto (distinto al tenedor y cuchillo), reportado por el usuario. Los
+             recordatorios locales (DailyReminderWorker) no son FCM, así que nunca
+             dependieron de esto — de ahí que solo fallara con likes/comentarios. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

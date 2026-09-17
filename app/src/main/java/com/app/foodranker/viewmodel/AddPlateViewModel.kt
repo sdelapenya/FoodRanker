@@ -64,6 +64,24 @@ class AddPlateViewModel @Inject constructor(
     private val _state = MutableStateFlow<AddPlateState>(AddPlateState.Idle)
     val state: StateFlow<AddPlateState> = _state
 
+    // auth.currentUser?.displayName no es de fiar tras el login por navegador (ver
+    // AuthRepository.signInWithGoogle) — Firestore users/{uid}.name es la fuente de verdad
+    // ya corregida en el login. Sin esto, publicar un plato con displayName vacío deja
+    // addedByUserName = "Usuario" para siempre (visto en producción en comentarios/valoraciones
+    // con el mismo fallo, ver PlateDetailViewModel.resolveCurrentUserNameAndPhoto).
+    private suspend fun resolveCurrentUserNameAndPhoto(): Pair<String, String> {
+        val user = auth.currentUser
+        val fallbackPhoto = user?.photoUrl?.toString() ?: ""
+        return try {
+            val snap = firestore.collection("users").document(user?.uid ?: "").get().await()
+            val name = snap.getString("name")?.takeIf { it.isNotBlank() } ?: "Usuario"
+            val photo = snap.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: fallbackPhoto
+            name.sanitized(InputLimits.USER_NAME) to photo
+        } catch (e: Exception) {
+            (user?.displayName?.takeIf { it.isNotBlank() } ?: "Usuario").sanitized(InputLimits.USER_NAME) to fallbackPhoto
+        }
+    }
+
     // ── Estado del formulario (persiste al navegar hacia atrás) ───────────────
     var formName by mutableStateOf("")
     var formDescription by mutableStateOf("")
@@ -286,7 +304,7 @@ class AddPlateViewModel @Inject constructor(
                 val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
                 val ratingId = "${plateId}_${user.uid}"
 
-                val safeUserName = (user.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME)
+                val (safeUserName, safeUserPhoto) = resolveCurrentUserNameAndPhoto()
                 val now = System.currentTimeMillis()
                 val plate = Plate(
                     id = plateId,
@@ -315,7 +333,7 @@ class AddPlateViewModel @Inject constructor(
                     plateId = plateId,
                     userId = user.uid,
                     userName = safeUserName,
-                    userPhotoUrl = user.photoUrl?.toString() ?: "",
+                    userPhotoUrl = safeUserPhoto,
                     flavorScore = safeFlavor,
                     presentationScore = safePresentation,
                     valueScore = safeValue,

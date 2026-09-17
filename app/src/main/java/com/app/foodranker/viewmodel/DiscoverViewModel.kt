@@ -70,6 +70,23 @@ class DiscoverViewModel @Inject constructor(
 
     val currentUserId: String get() = auth.currentUser?.uid ?: ""
 
+    // auth.currentUser?.displayName no es de fiar tras el login por navegador (ver
+    // AuthRepository.signInWithGoogle) — Firestore users/{uid}.name es la fuente de verdad
+    // ya corregida en el login. Mismo fallo y mismo arreglo que en
+    // PlateDetailViewModel.resolveCurrentUserNameAndPhoto / AddPlateViewModel.
+    private suspend fun resolveCurrentUserNameAndPhoto(): Pair<String, String> {
+        val user = auth.currentUser
+        val fallbackPhoto = user?.photoUrl?.toString() ?: ""
+        return try {
+            val snap = firestore.collection("users").document(user?.uid ?: "").get().await()
+            val name = snap.getString("name")?.takeIf { it.isNotBlank() } ?: "Usuario"
+            val photo = snap.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: fallbackPhoto
+            name.sanitized(InputLimits.USER_NAME) to photo
+        } catch (e: Exception) {
+            (user?.displayName?.takeIf { it.isNotBlank() } ?: "Usuario").sanitized(InputLimits.USER_NAME) to fallbackPhoto
+        }
+    }
+
     @Volatile private var lastDocument: DocumentSnapshot? = null
     private val PAGE_SIZE = 20L
     @Volatile private var lastLoadTime = 0L
@@ -370,10 +387,11 @@ class DiscoverViewModel @Inject constructor(
                 val safeValue = valueScore.coerceIn(1f, 10f)
                 val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
                 val ratingId = "${plateId}_${user.uid}"
+                val (userName, userPhotoUrl) = resolveCurrentUserNameAndPhoto()
                 val rating = Rating(
                     id = ratingId, plateId = plateId, userId = user.uid,
-                    userName = (user.displayName ?: "Usuario").sanitized(InputLimits.USER_NAME),
-                    userPhotoUrl = user.photoUrl?.toString() ?: "",
+                    userName = userName,
+                    userPhotoUrl = userPhotoUrl,
                     flavorScore = safeFlavor, presentationScore = safePresentation,
                     valueScore = safeValue, averageScore = avgScore,
                     comment = comment.sanitized(InputLimits.RATING_COMMENT),

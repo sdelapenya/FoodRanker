@@ -15,6 +15,39 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+**3 bugs reportados por el usuario (2026-09-17), arreglados en código pero SIN verificar en
+dispositivo real todavía** (compilan y los 41 tests unitarios pasan, pero son bugs visuales/
+runtime que hace falta confirmar a ojo — no había móvil ni emulador conectado en esta sesión):
+
+1. **Texto invisible al escribir un comentario.** El campo de comentarios en `PlateDetailScreen`
+   vive dentro de una `Card` con `containerColor = SurfaceWhite` fijo (no sigue el tema), pero
+   el color del texto del `OutlinedTextField` sí seguía el tema — en modo oscuro salía texto
+   claro sobre fondo blanco, invisible mientras se escribe. Fix: `focusedTextColor`/
+   `unfocusedTextColor` fijados a `TextPrimary` explícitamente.
+2. **Comentarios (y en general nombres nuevos) mostrando "Usuario" en vez del nombre real,
+   incluso en cuentas cuyo perfil SÍ tiene el nombre bien.** Causa real: `addComment` y
+   `submitRating` (`PlateDetailViewModel`), la valoración rápida del feed (`DiscoverViewModel`)
+   y publicar plato (`AddPlateViewModel`) leían `auth.currentUser?.displayName` directamente
+   para guardar `userName`/`addedByUserName` — el mismo campo que ya se sabía poco fiable tras
+   el login por navegador (ver el fix de "Usuario" de la sesión del 8-9 sept., que solo tocó
+   `AuthRepository`/el perfil, no estos 4 sitios). La prueba: la cuenta de Sergio mostraba
+   "Sergio De La Peña" en una valoración antigua pero "Usuario" en un comentario nuevo, MISMA
+   cuenta, MISMA sesión. Fix: nuevo `resolveCurrentUserNameAndPhoto()` (duplicado en los 3
+   ViewModels, seguidos el patrón ya existente en el repo de pequeños helpers repetidos en vez
+   de compartidos) que lee `users/{uid}.name` de Firestore — la fuente de verdad ya corregida
+   en el login — con `displayName` solo como último recurso si falla la lectura.
+3. **Icono de notificación distinto para likes/comentarios que para los recordatorios de la
+   app.** Causa: `FoodRankerMessagingService.onMessageReceived` (que sí usa el icono correcto,
+   `NotificationHelper.show`) **solo se ejecuta con la app en primer plano**; con la app en
+   segundo plano o cerrada, Android pinta él mismo las notificaciones con bloque `notification`
+   (todas las que manda `admin.messaging().send()` en `functions/src/index.ts` — likes,
+   comentarios, moderación) usando el icono por defecto, y el manifest no declaraba ninguno.
+   Los recordatorios (`DailyReminderWorker`) nunca lo sufrieron porque son locales (WorkManager,
+   sin FCM) y siempre pasan por `NotificationHelper.show`. Fix: meta-data
+   `com.google.firebase.messaging.default_notification_icon`/`..._color` en
+   `AndroidManifest.xml`, apuntando a los mismos `ic_notification`/`notification_color` que ya
+   usa el código. Confirmado en el manifest fusionado (`processDebugMainManifest`).
+
 **Añadido (2026-09-10): `wipe-content` en `manageUser.js`.** El baneo (`ban <uid>`) solo bloqueaba
 el acceso; ahora hay una acción aparte para borrar también el contenido de un usuario cuando
 haga falta — deliberadamente separada del baneo (no todo baneo merece borrar contenido):

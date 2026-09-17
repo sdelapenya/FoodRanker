@@ -487,7 +487,14 @@ fun PlateDetailScreen(
                                         shape = RoundedCornerShape(20.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = OrangePrimary,
-                                            unfocusedBorderColor = DividerColor
+                                            unfocusedBorderColor = DividerColor,
+                                            // Esta Card es SurfaceWhite fijo (no sigue el tema claro/oscuro),
+                                            // pero el color de texto por defecto del campo sí sigue el tema —
+                                            // en modo oscuro salía texto claro sobre fondo blanco, invisible
+                                            // mientras se escribe (reportado por el usuario).
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary,
+                                            cursorColor = OrangePrimary
                                         )
                                     )
                                     IconButton(

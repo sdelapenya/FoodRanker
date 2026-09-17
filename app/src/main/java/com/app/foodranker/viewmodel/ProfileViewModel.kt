@@ -79,10 +79,13 @@ class ProfileViewModel @Inject constructor(
                         if (isOwnProfile && firebaseUser != null) {
                             val userDoc = firestore.collection("users").document(userId).get().await()
                             if (userDoc.exists()) {
+                                // Si toObject() falla (doc con forma inesperada), el nombre
+                                // en bruto del propio doc sigue siendo mejor dato que
+                                // displayName, que puede venir vacío del login por navegador.
                                 userDoc.toObject(User::class.java) ?: User(
                                     id = firebaseUser.uid,
-                                    name = firebaseUser.displayName ?: "Usuario",
-                                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                                    name = userDoc.getString("name") ?: firebaseUser.displayName ?: "Usuario",
+                                    photoUrl = userDoc.getString("photoUrl") ?: firebaseUser.photoUrl?.toString() ?: ""
                                 )
                             } else {
                                 val newUser = User(
