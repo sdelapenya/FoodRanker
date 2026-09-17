@@ -48,6 +48,19 @@ runtime que hace falta confirmar a ojo — no había móvil ni emulador conectad
    `AndroidManifest.xml`, apuntando a los mismos `ic_notification`/`notification_color` que ya
    usa el código. Confirmado en el manifest fusionado (`processDebugMainManifest`).
 
+**Backfill aplicado (2026-09-17): `scripts/backfillUserNames.js`, 55 documentos reparados en
+producción.** El bug 2 de arriba no era solo de aquí en adelante — el usuario detectó en una
+captura que un comentario de Patricia no mostraba NINGÚN nombre (ni "Usuario", vacío del
+todo: `displayName` puede venir como cadena vacía `""`, no solo `null`, y `?: "Usuario"` no
+cubre ese caso). Escaneando `comments`/`ratings`/`plates.addedByUserName` contra el nombre
+real en `users/{uid}.name`: **2 comentarios, 29 valoraciones y 24 platos** con el nombre en
+blanco o en "Usuario", casi todos de Patricia (`I6ZAVZjsQjZTo0irlc5PVWgiQgw1`) y Dani
+(`2aJJ1rrTARUUMAUiiFLiQUVhoPh1`) — básicamente todo lo que habían publicado/valorado hasta
+ahora. Aplicado con `--confirm` tras revisar la simulación; verificado después que el escaneo
+vuelve a dar 0 desajustes. Solo toca el campo del nombre, nada de XP/votos/fechas. El script
+se queda en el repo por si hiciera falta repetir el escaneo más adelante (p.ej. si aparece
+otro sitio del código con el mismo fallo).
+
 **Añadido (2026-09-10): `wipe-content` en `manageUser.js`.** El baneo (`ban <uid>`) solo bloqueaba
 el acceso; ahora hay una acción aparte para borrar también el contenido de un usuario cuando
 haga falta — deliberadamente separada del baneo (no todo baneo merece borrar contenido):
