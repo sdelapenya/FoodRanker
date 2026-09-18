@@ -15,9 +15,32 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-**3 bugs reportados por el usuario (2026-09-17), arreglados en código pero SIN verificar en
-dispositivo real todavía** (compilan y los 41 tests unitarios pasan, pero son bugs visuales/
-runtime que hace falta confirmar a ojo — no había móvil ni emulador conectado en esta sesión):
+**3 bugs reportados por el usuario (2026-09-17), arreglados y VERIFICADOS en el Redmi real
+(2026-09-18).** `versionCode` subido a 12, AAB generado. Verificación en dispositivo:
+instalada la build de depuración sobre el Redmi (hubo que desinstalar la v11 de Play primero
+por firma distinta; se avisó y se confirmó con el usuario antes de hacerlo), con la cuenta
+`sergiodelapenya1991@gmail.com`:
+- **Texto del comentario**: escrito un comentario de prueba en "pulpo a la gallega", texto
+  perfectamente legible (letra oscura sobre blanco). Nota aparte: MIUI reportaba modo oscuro
+  del sistema activo (el teclado sí se veía oscuro) pero la app seguía renderizando en claro —
+  parece un tema propio de MIUI no relacionado con este fix (con el color ahora fijo, el fallo
+  original no puede repetirse pase lo que pase con el tema).
+- **Nombre en comentario nuevo**: el comentario de prueba salió como "Sergio De La Peña", no
+  "Usuario". De paso, confirmado también el backfill: la valoración de "Dani De la" en ese
+  mismo plato ya se ve bien.
+- **Icono de notificación**: con la app en segundo plano, se creó una valoración de prueba
+  desde otra cuenta (Sandra) directamente por Admin SDK para disparar el push real de Android
+  — el sistema pintó la notificación con el icono correcto (tenedor y cuchillo naranja),
+  confirmando que la meta-data del manifest funciona para notificaciones que Android renderiza
+  él mismo, no solo las que pasan por `onMessageReceived`. Limpiados después la valoración de
+  prueba, la media/contador del plato, la XP revertida y las notificaciones generadas — sin
+  dejar rastro en producción.
+
+**Pendiente**: subir el AAB (`app/build/outputs/bundle/release/app-release.aab`, ya generado
+con `versionCode 12`) a Play Console, prueba cerrada, y reinstalar la app real de Play en el
+Redmi cuando convenga (ahora mismo tiene la build de depuración de esta verificación).
+
+Bugs arreglados en detalle:
 
 1. **Texto invisible al escribir un comentario.** El campo de comentarios en `PlateDetailScreen`
    vive dentro de una `Card` con `containerColor = SurfaceWhite` fijo (no sigue el tema), pero
