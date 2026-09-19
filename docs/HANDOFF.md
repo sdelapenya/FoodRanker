@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-09-01
+**Actualizado:** 2026-09-19
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -36,9 +36,22 @@ por firma distinta; se avisó y se confirmó con el usuario antes de hacerlo), c
   prueba, la media/contador del plato, la XP revertida y las notificaciones generadas — sin
   dejar rastro en producción.
 
-**Pendiente**: subir el AAB (`app/build/outputs/bundle/release/app-release.aab`, ya generado
-con `versionCode 12`) a Play Console, prueba cerrada, y reinstalar la app real de Play en el
-Redmi cuando convenga (ahora mismo tiene la build de depuración de esta verificación).
+**v12 YA EN PRODUCCIÓN Y VERIFICADA (2026-09-19).** Subido el AAB a Play Console (prueba
+cerrada) sin incidencias — el único aviso que salió ("vista de extremo a extremo") estaba
+etiquetado a la v11 y ya resuelto en código desde antes, no bloqueaba nada. Reinstalada la
+app real de Play en el Redmi (no la build de depuración de la verificación anterior):
+
+- **Ojo con esto para la próxima**: Play Store, al pulsar "Instalar" desde la ficha, sirvió
+  primero la v11 en caché (versionCode seguía en 11 tras "instalar"). Hubo que forzar el
+  cierre de Play Store (`am force-stop com.android.vending`), reabrir la ficha
+  (`market://details?id=com.app.foodranker`) y pulsar **"Actualizar"** explícitamente para
+  que bajara la v12 de verdad. Mismo patrón ya visto en sesiones anteriores con versiones
+  servidas obsoletas — no fiarse de que "Instalar" trae siempre la última.
+- Confirmado `versionCode=12` instalado, la app arranca sin crashes (logcat limpio de
+  `AndroidRuntime`/`FATAL`).
+
+No queda nada pendiente de esta tanda de arreglos. Próxima sesión: retomar la edición de
+nombre de plato (más abajo) o lo que surja.
 
 Bugs arreglados en detalle:
 
