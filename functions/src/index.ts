@@ -1,5 +1,6 @@
 import { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions";
@@ -42,6 +43,116 @@ const XP_RECEIVE_RATING = 10;
 const XP_REFERRAL_REFERRER = 100;
 const XP_REFERRAL_REFERRED = 50;
 const XP_GIVE_COMMENT = 5;
+
+// ── Valoraciones: pesos, ranking y precio ─────────────────────────────────
+// Deben reflejar Rating.kt en el cliente. Ver docs/RATINGS.md.
+const WEIGHT_FLAVOR = 0.50;
+const WEIGHT_PRESENTATION = 0.20;
+const WEIGHT_SATISFACTION = 0.30;
+
+// Media bayesiana del ranking: un plato necesita BAYESIAN_MIN_VOTES votos para que su nota
+// pese por completo; con menos, tira hacia la media global. Impide que un voto solo (siempre
+// el del autor) encabece el ranking.
+const BAYESIAN_MIN_VOTES = 5;
+// Se usa si stats/global aún no existe (primer despliegue, o el job programado no ha corrido).
+const DEFAULT_GLOBAL_AVERAGE = 7.0;
+// Cuántas valoraciones recientes se miran para la mediana de precio. Acota el coste por voto
+// y, de paso, da más peso a lo reciente: los precios cambian.
+const PRICE_SAMPLE_LIMIT = 50;
+
+/**
+ * Nota ponderada de una valoración. Espejo de `Rating.computeAverage` en el cliente.
+ *
+ * Sin `satisfactionScore` (valoraciones anteriores al rediseño, y clientes que aún no han
+ * actualizado) se renormaliza sobre los ejes disponibles en vez de suponer un valor:
+ * `valueScore` medía precio/calidad, no saciedad, y reutilizarlo falsearía el dato.
+ */
+function weightedAverage(
+  flavorScore: number,
+  presentationScore: number,
+  satisfactionScore: number | null | undefined
+): number {
+  const weighted = WEIGHT_FLAVOR * flavorScore + WEIGHT_PRESENTATION * presentationScore;
+  if (typeof satisfactionScore !== "number") {
+    return weighted / (WEIGHT_FLAVOR + WEIGHT_PRESENTATION);
+  }
+  return weighted + WEIGHT_SATISFACTION * satisfactionScore;
+}
+
+/** Nota ponderada a partir del documento de un rating, venga en el formato que venga. */
+function ratingAverage(data: admin.firestore.DocumentData): number {
+  return weightedAverage(
+    data.flavorScore ?? 0,
+    data.presentationScore ?? 0,
+    typeof data.satisfactionScore === "number" ? data.satisfactionScore : null
+  );
+}
+
+/** Media bayesiana — lo que ordena el ranking. `averageScore` sigue siendo lo que se muestra. */
+function bayesianScore(average: number, count: number, globalAverage: number): number {
+  if (count <= 0) return 0;
+  return (count / (count + BAYESIAN_MIN_VOTES)) * average
+       + (BAYESIAN_MIN_VOTES / (count + BAYESIAN_MIN_VOTES)) * globalAverage;
+}
+
+async function getGlobalAverage(): Promise<number> {
+  try {
+    const snap = await db.collection("stats").doc("global").get();
+    const value = snap.get("averageScore");
+    return typeof value === "number" && value > 0 ? value : DEFAULT_GLOBAL_AVERAGE;
+  } catch (err) {
+    logger.warn("getGlobalAverage failed, using default:", err);
+    return DEFAULT_GLOBAL_AVERAGE;
+  }
+}
+
+/**
+ * Recalcula la mediana de precio del plato a partir de las valoraciones recientes que lo
+ * aportan. Mediana y no media: una errata de teclado (120 € en vez de 12 €) no la mueve.
+ * Se hace fuera de la transacción del voto a propósito — el precio no necesita atomicidad y
+ * así no se mete una query dentro de una transacción.
+ */
+async function refreshPriceAggregate(plateId: string): Promise<void> {
+  try {
+    const snap = await db.collection("ratings")
+      .where("plateId", "==", plateId)
+      .orderBy("createdAt", "desc")
+      .limit(PRICE_SAMPLE_LIMIT)
+      .get();
+
+    const prices: number[] = [];
+    snap.forEach((doc) => {
+      const price = doc.get("pricePaidCents");
+      if (typeof price === "number" && price > 0) prices.push(price);
+    });
+
+    // Se ha ido el último precio (rating borrado, o editado quitándolo): hay que limpiar el
+    // agregado. Sin esto el plato seguiría enseñando el precio de una valoración que ya no
+    // existe.
+    if (prices.length === 0) {
+      await db.collection("plates").doc(plateId).update({
+        priceMedianCents: null,
+        priceReportCount: 0,
+        priceUpdatedAt: 0,
+      });
+      return;
+    }
+
+    prices.sort((a, b) => a - b);
+    const mid = Math.floor(prices.length / 2);
+    const median = prices.length % 2 === 0
+      ? Math.round((prices[mid - 1] + prices[mid]) / 2)
+      : prices[mid];
+
+    await db.collection("plates").doc(plateId).update({
+      priceMedianCents: median,
+      priceReportCount: prices.length,
+      priceUpdatedAt: Date.now(),
+    });
+  } catch (err) {
+    logger.warn(`refreshPriceAggregate failed for plate ${plateId}:`, err);
+  }
+}
 
 const FAIL_LIKELIHOODS = new Set(["LIKELY", "VERY_LIKELY"]);
 // "racy" y "violence" dan falsos positivos frecuentes con fotos de comida reales:
@@ -429,6 +540,7 @@ async function approveplate(
   // Update plate status + apply initial rating score atomically.
   // Returns the rating author info only when this invocation actually set
   // processed=true, so XP/league are awarded exactly once even on retries.
+  const globalAverage = await getGlobalAverage();
   let awarded: { userName: string; userPhotoUrl: string } | null = null;
   try {
     awarded = await db.runTransaction(async (tx) => {
@@ -443,16 +555,22 @@ async function approveplate(
         return null;
       }
 
-      const fl = (ratingSnap.get("flavorScore") as number) || 0;
-      const pr = (ratingSnap.get("presentationScore") as number) || 0;
-      const vl = (ratingSnap.get("valueScore") as number) || 0;
-      const ratingAvg = (fl + pr + vl) / 3;
+      const ratingAvg = ratingAverage(ratingSnap.data()!);
+      const price = ratingSnap.get("pricePaidCents");
       tx.update(plateRef, {
         status: "approved",
         averageScore: ratingAvg,
         totalRatings: 1,
+        wouldOrderAgainCount: ratingSnap.get("wouldOrderAgain") === true ? 1 : 0,
+        wouldOrderAgainResponses: typeof ratingSnap.get("wouldOrderAgain") === "boolean" ? 1 : 0,
+        rankingScore: bayesianScore(ratingAvg, 1, globalAverage),
+        ...(typeof price === "number" && price > 0
+          ? { priceMedianCents: price, priceReportCount: 1, priceUpdatedAt: Date.now() }
+          : {}),
       });
-      tx.update(initialRatingRef, { processed: true });
+      // Igual que en onRatingCreated: la nota del rating se reescribe con la fórmula del
+      // servidor para que no discrepe de la que aporta al plato.
+      tx.update(initialRatingRef, { processed: true, averageScore: ratingAvg });
       return {
         userName: (ratingSnap.get("userName") as string) ?? "Usuario",
         userPhotoUrl: (ratingSnap.get("userPhotoUrl") as string) ?? "",
@@ -582,10 +700,7 @@ export const onRatingCreated = onDocumentCreated(
     const plateId: string = rating.plateId;
     const raterId: string = rating.userId;
     // Recompute average server-side — never trust client-supplied averageScore
-    const flavorScore: number = rating.flavorScore ?? 0;
-    const presentationScore: number = rating.presentationScore ?? 0;
-    const valueScore: number = rating.valueScore ?? 0;
-    const avgScore: number = (flavorScore + presentationScore + valueScore) / 3;
+    const avgScore: number = ratingAverage(rating);
 
     if (!plateId || !raterId) {
       logger.warn(`Rating ${ratingId}: missing plateId or userId`);
@@ -620,6 +735,7 @@ export const onRatingCreated = onDocumentCreated(
     }
 
     // Update plate score + mark processed (idempotent)
+    const globalAverage = await getGlobalAverage();
     let processed = false;
     try {
       await db.runTransaction(async (tx) => {
@@ -631,9 +747,21 @@ export const onRatingCreated = onDocumentCreated(
         const oldCount = (plateDoc.get("totalRatings") as number) || 0;
         const count = oldCount + 1;
         const avg = (oldAvg * oldCount + avgScore) / count;
+        const oldRepeats = (plateDoc.get("wouldOrderAgainCount") as number) || 0;
+        const oldResponses = (plateDoc.get("wouldOrderAgainResponses") as number) || 0;
+        const answered = typeof rating.wouldOrderAgain === "boolean";
 
-        tx.update(plateRef, { averageScore: avg, totalRatings: count });
-        tx.update(snap.ref, { processed: true });
+        tx.update(plateRef, {
+          averageScore: avg,
+          totalRatings: count,
+          wouldOrderAgainCount: rating.wouldOrderAgain === true ? oldRepeats + 1 : oldRepeats,
+          wouldOrderAgainResponses: answered ? oldResponses + 1 : oldResponses,
+          rankingScore: bayesianScore(avg, count, globalAverage),
+        });
+        // Se reescribe también la nota del propio rating: el cliente manda la suya, y un
+        // cliente antiguo la calcula con la fórmula vieja. Sin esto, la lista de valoraciones
+        // enseñaría un número distinto del que ese voto aporta al plato.
+        tx.update(snap.ref, { processed: true, averageScore: avgScore });
         processed = true;
       });
     } catch (err) {
@@ -644,6 +772,11 @@ export const onRatingCreated = onDocumentCreated(
     if (!processed) {
       logger.info(`Rating ${ratingId}: already processed, skipping`);
       return;
+    }
+
+    // Solo si este voto aporta precio: si no, la mediana del plato no puede haber cambiado.
+    if (typeof rating.pricePaidCents === "number") {
+      await refreshPriceAggregate(plateId);
     }
 
     // Award XP
@@ -768,16 +901,33 @@ export const onRatingUpdated = onDocumentUpdated(
     const after  = event.data?.after.data();
     if (!before || !after) return;
 
-    // Only process when scores actually changed
-    const scoreFields = ["flavorScore", "presentationScore", "valueScore"];
-    const changed = scoreFields.some((f) => before[f] !== after[f]);
-    if (!changed) return;
+    // Only process when something that feeds an aggregate actually changed
+    const scoreFields = ["flavorScore", "presentationScore", "satisfactionScore", "valueScore"];
+    const scoresChanged = scoreFields.some((f) => before[f] !== after[f]);
+    const repeatChanged = before.wouldOrderAgain !== after.wouldOrderAgain;
+    const priceChanged = before.pricePaidCents !== after.pricePaidCents;
+    if (!scoresChanged && !repeatChanged && !priceChanged) return;
 
     const plateId: string = after.plateId;
-    const oldAvg = ((before.flavorScore ?? 0) + (before.presentationScore ?? 0) + (before.valueScore ?? 0)) / 3;
-    const newAvg = ((after.flavorScore ?? 0) + (after.presentationScore ?? 0) + (after.valueScore ?? 0)) / 3;
+    const oldAvg = ratingAverage(before);
+    const newAvg = ratingAverage(after);
+
+    // Delta del contador de "lo volvería a pedir": solo cuenta el paso true↔no-true.
+    let repeatDelta = 0;
+    let responseDelta = 0;
+    if (repeatChanged) {
+      if (after.wouldOrderAgain === true) repeatDelta = 1;
+      else if (before.wouldOrderAgain === true) repeatDelta = -1;
+      // Contestar por primera vez (el caso de quien editó una valoración antigua) suma al
+      // denominador del porcentaje; cambiar de sí a no, no.
+      const answeredBefore = typeof before.wouldOrderAgain === "boolean";
+      const answeredAfter = typeof after.wouldOrderAgain === "boolean";
+      if (!answeredBefore && answeredAfter) responseDelta = 1;
+      else if (answeredBefore && !answeredAfter) responseDelta = -1;
+    }
 
     const plateRef = db.collection("plates").doc(plateId);
+    const globalAverage = await getGlobalAverage();
     try {
       await db.runTransaction(async (tx) => {
         const plateDoc = await tx.get(plateRef);
@@ -793,15 +943,150 @@ export const onRatingUpdated = onDocumentUpdated(
           return;
         }
         const currentAvg: number = plateDoc.get("averageScore") ?? 0;
-        const recalculated = (currentAvg * totalRatings - oldAvg + newAvg) / totalRatings;
-        tx.update(plateRef, { averageScore: recalculated });
+        const recalculated = scoresChanged
+          ? (currentAvg * totalRatings - oldAvg + newAvg) / totalRatings
+          : currentAvg;
+        const repeats = Math.max(
+          0,
+          ((plateDoc.get("wouldOrderAgainCount") as number) || 0) + repeatDelta
+        );
+        const responses = Math.max(
+          0,
+          ((plateDoc.get("wouldOrderAgainResponses") as number) || 0) + responseDelta
+        );
+
+        tx.update(plateRef, {
+          averageScore: recalculated,
+          wouldOrderAgainCount: repeats,
+          wouldOrderAgainResponses: responses,
+          rankingScore: bayesianScore(recalculated, totalRatings, globalAverage),
+        });
         tx.update(event.data!.after.ref, { averageScore: newAvg });
       });
     } catch (err) {
       logger.error(`onRatingUpdated error for rating ${event.params.ratingId}:`, err);
     }
+
+    if (priceChanged) {
+      await refreshPriceAggregate(plateId);
+    }
   }
 );
+
+// ── onRatingDeleted ───────────────────────────────────────────────────────
+
+/**
+ * Fires when a rating is deleted. The client can never delete one (firestore.rules:
+ * `allow delete: if false`), so this only runs for Admin SDK cascades — borrar un plato,
+ * borrar una cuenta o `manageUser.js wipe-content`.
+ *
+ * Sin esto, cada borrado dejaba `averageScore`/`totalRatings` inflados para siempre: el
+ * hueco que ya estaba documentado como limitación conocida de `wipe-content`. Con más
+ * agregados que mantener (ranking, repeticiones, precio) tocaba cerrarlo.
+ */
+export const onRatingDeleted = onDocumentDeleted(
+  "ratings/{ratingId}",
+  async (event) => {
+    const rating = event.data?.data();
+    if (!rating) return;
+
+    // Un rating que nunca se procesó no llegó a sumar en el plato: no hay nada que restar.
+    if (rating.processed !== true) return;
+
+    const plateId: string = rating.plateId;
+    if (!plateId) return;
+
+    const deletedAvg = ratingAverage(rating);
+    const plateRef = db.collection("plates").doc(plateId);
+    const globalAverage = await getGlobalAverage();
+
+    try {
+      await db.runTransaction(async (tx) => {
+        const plateDoc = await tx.get(plateRef);
+        // Cascada de onPlateDeleted: el plato ya no está y no hay nada que recalcular.
+        if (!plateDoc.exists) return;
+
+        const oldCount = (plateDoc.get("totalRatings") as number) || 0;
+        if (oldCount <= 0) return;
+
+        const oldAvg = (plateDoc.get("averageScore") as number) || 0;
+        const count = oldCount - 1;
+        const avg = count > 0 ? (oldAvg * oldCount - deletedAvg) / count : 0;
+        const repeats = Math.max(
+          0,
+          ((plateDoc.get("wouldOrderAgainCount") as number) || 0) -
+            (rating.wouldOrderAgain === true ? 1 : 0)
+        );
+        const responses = Math.max(
+          0,
+          ((plateDoc.get("wouldOrderAgainResponses") as number) || 0) -
+            (typeof rating.wouldOrderAgain === "boolean" ? 1 : 0)
+        );
+
+        tx.update(plateRef, {
+          averageScore: avg,
+          totalRatings: count,
+          wouldOrderAgainCount: repeats,
+          wouldOrderAgainResponses: responses,
+          rankingScore: count > 0 ? bayesianScore(avg, count, globalAverage) : 0,
+        });
+      });
+    } catch (err) {
+      logger.error(`onRatingDeleted error for rating ${event.params.ratingId}:`, err);
+      return;
+    }
+
+    if (typeof rating.pricePaidCents === "number") {
+      await refreshPriceAggregate(plateId);
+    }
+  }
+);
+
+// ── refreshGlobalStats ────────────────────────────────────────────────────
+
+/**
+ * Recalcula `stats/global.averageScore`: la media de las notas de los platos aprobados, que
+ * es la `C` de la media bayesiana del ranking. Diario sobra — C se mueve muy despacio, y si
+ * el documento falta se usa DEFAULT_GLOBAL_AVERAGE, así que nada depende de que esto corra.
+ *
+ * Solo recalcula la media global; NO reescribe el `rankingScore` de cada plato. Esos se van
+ * poniendo al día solos con cada voto. Para forzar un recálculo completo está el script de
+ * migración.
+ */
+export const refreshGlobalStats = onSchedule("every day 04:00", async () => {
+  try {
+    const snap = await db.collection("plates")
+      .where("status", "==", "approved")
+      .where("totalRatings", ">", 0)
+      .get();
+
+    if (snap.empty) {
+      logger.info("refreshGlobalStats: no approved plates yet, skipping");
+      return;
+    }
+
+    let sum = 0;
+    let count = 0;
+    snap.forEach((doc) => {
+      const avg = doc.get("averageScore");
+      if (typeof avg === "number" && avg > 0) {
+        sum += avg;
+        count++;
+      }
+    });
+    if (count === 0) return;
+
+    const average = sum / count;
+    await db.collection("stats").doc("global").set({
+      averageScore: average,
+      plateCount: count,
+      updatedAt: Date.now(),
+    }, { merge: true });
+    logger.info(`refreshGlobalStats: averageScore=${average.toFixed(3)} over ${count} plates`);
+  } catch (err) {
+    logger.error("refreshGlobalStats failed:", err);
+  }
+});
 
 // ── onReferralCreated ──────────────────────────────────────────────────────
 

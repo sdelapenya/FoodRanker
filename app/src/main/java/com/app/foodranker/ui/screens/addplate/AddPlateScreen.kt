@@ -57,7 +57,9 @@ fun AddPlateScreen(
     val selectedCategory = viewModel.formCategory
     val flavorScore      = viewModel.formFlavorScore
     val presentationScore = viewModel.formPresentationScore
-    val valueScore       = viewModel.formValueScore
+    val satisfactionScore = viewModel.formSatisfactionScore
+    val wouldOrderAgain  = viewModel.formWouldOrderAgain
+    val priceText        = viewModel.formPriceText
     val comment          = viewModel.formComment
     val imageUri         = viewModel.formImageUri
     val imageValidating  = viewModel.formImageValidating
@@ -288,9 +290,52 @@ fun AddPlateScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             ScoreSlider("Sabor", "😋", flavorScore) { viewModel.formFlavorScore = it }
                             ScoreSlider("Presentación", "🎨", presentationScore) { viewModel.formPresentationScore = it }
-                            ScoreSlider("Precio/Calidad", "💰", valueScore) { viewModel.formValueScore = it }
+                            ScoreSlider("¿Te quedas satisfecho?", "🍽️", satisfactionScore) { viewModel.formSatisfactionScore = it }
 
-                            val avg = (flavorScore + presentationScore + valueScore) / 3f
+                            // El precio es obligatorio SOLO aquí: quien publica acaba de comer y
+                            // tiene el ticket delante. Ver docs/RATINGS.md §1.3.
+                            FoodTextField(
+                                value = priceText,
+                                onValueChange = {
+                                    viewModel.formPriceText = it.filter { c -> c.isDigit() || c == ',' || c == '.' }
+                                },
+                                label = "¿Cuánto costó?",
+                                placeholder = "12,50",
+                                maxLength = 7,
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                                supportingText = if (priceText.isNotBlank() && com.app.foodranker.data.model.Rating.parsePriceToCents(priceText) == null)
+                                    "Pon un precio entre 0,01 € y 1.000 €"
+                                else "Lo que pagaste por este plato, no la cuenta entera"
+                            )
+
+                            Text(
+                                "¿Lo volverías a pedir?",
+                                fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                listOf(true to "Sí 👍", false to "No 👎").forEach { (value, label) ->
+                                    val selected = wouldOrderAgain == value
+                                    Button(
+                                        onClick = { viewModel.formWouldOrderAgain = value },
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (selected) OrangePrimary else Color.Transparent,
+                                            contentColor = if (selected) Color.White else TextSecondary
+                                        ),
+                                        border = if (selected) null
+                                                 else androidx.compose.foundation.BorderStroke(1.dp, TextSecondary.copy(alpha = 0.4f))
+                                    ) {
+                                        Text(label, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            val avg = com.app.foodranker.data.model.Rating
+                                .computeAverage(flavorScore, presentationScore, satisfactionScore).toFloat()
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = OrangePrimary.copy(alpha = 0.1f)
@@ -328,8 +373,11 @@ fun AddPlateScreen(
                 item {
                     // El local ya no se teclea: debe estar resuelto contra la CF, que es
                     // lo que aporta ciudad, país y coordenadas canónicas.
+                    val priceCents = com.app.foodranker.data.model.Rating.parsePriceToCents(priceText)
                     val isValid = plateName.isNotBlank() && viewModel.formVenue != null
                             && imageUri != null
+                            && priceCents != null
+                            && wouldOrderAgain != null
                     val btnScale by animateFloatAsState(
                         targetValue = if (state is AddPlateState.Loading) 0.97f else 1f,
                         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -349,7 +397,9 @@ fun AddPlateScreen(
                                     category = selectedCategory,
                                     flavorScore = flavorScore,
                                     presentationScore = presentationScore,
-                                    valueScore = valueScore,
+                                    satisfactionScore = satisfactionScore,
+                                    wouldOrderAgain = wouldOrderAgain == true,
+                                    pricePaidCents = priceCents ?: 0,
                                     comment = comment,
                                     imageUri = imageUri
                                 )
@@ -525,7 +575,10 @@ fun FoodTextField(
     singleLine: Boolean = true,
     maxLines: Int = 1,
     maxLength: Int? = null,
-    showCounter: Boolean = false
+    showCounter: Boolean = false,
+    keyboardType: androidx.compose.ui.text.input.KeyboardType =
+        androidx.compose.ui.text.input.KeyboardType.Text,
+    supportingText: String? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -539,9 +592,16 @@ fun FoodTextField(
         singleLine = singleLine,
         maxLines = maxLines,
         shape = RoundedCornerShape(12.dp),
-        supportingText = if (showCounter && maxLength != null) {
-            { Text("${value.length}/$maxLength", color = TextSecondary, fontSize = 11.sp) }
-        } else null,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
+        supportingText = when {
+            supportingText != null -> {
+                { Text(supportingText, color = TextSecondary, fontSize = 11.sp) }
+            }
+            showCounter && maxLength != null -> {
+                { Text("${value.length}/$maxLength", color = TextSecondary, fontSize = 11.sp) }
+            }
+            else -> null
+        },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = OrangePrimary,
             focusedLabelColor = OrangePrimary

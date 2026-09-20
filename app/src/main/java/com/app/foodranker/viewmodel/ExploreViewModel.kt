@@ -152,7 +152,7 @@ class ExploreViewModel @Inject constructor(
     private suspend fun performFetch() {
         try {
             val snapshot = firestore.collection("plates")
-                .orderBy("averageScore", Query.Direction.DESCENDING)
+                .orderBy("rankingScore", Query.Direction.DESCENDING)
                 .limit(100)
                 .get()
                 .await()
@@ -182,7 +182,7 @@ class ExploreViewModel @Inject constructor(
             it.city.contains(state.query, ignoreCase = true)
         }
         plates = when (state.sortBy) {
-            SortOption.SCORE   -> plates.sortedByDescending { it.averageScore }
+            SortOption.SCORE   -> plates.sortedByDescending { it.rankingScore }
             SortOption.RECENT  -> plates.sortedByDescending { it.createdAt }
             SortOption.RATINGS -> plates.sortedByDescending { it.totalRatings }
             SortOption.LIKES   -> plates.sortedByDescending { it.likes }

@@ -44,7 +44,6 @@ data class DiscoverUiState(
     val unreadNotificationCount: Int = 0,
     val seedingProgress: Pair<Int, Int>? = null,
     val reportFeedback: String? = null,
-    val ratingFeedback: String? = null,
     val savedPlateIds: Set<String> = emptySet(),
     val saveFeedback: String? = null,
     val dailyMissionProgress: Int = 0,
@@ -121,10 +120,10 @@ class DiscoverViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // Requiere índice compuesto en Firebase Console:
-                // Collection: plates | Fields: city ASC, averageScore DESC
+                // Collection: plates | Fields: city ASC, rankingScore DESC
                 val plates = firestore.collection("plates")
                     .whereEqualTo("city", city)
-                    .orderBy("averageScore", Query.Direction.DESCENDING)
+                    .orderBy("rankingScore", Query.Direction.DESCENDING)
                     .limit(30).get().await()
                     .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                     .filter { it.reportCount < 3 }
@@ -178,7 +177,7 @@ class DiscoverViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoadingMore = true)
             try {
                 val snapshot = firestore.collection("plates")
-                    .orderBy("averageScore", Query.Direction.DESCENDING)
+                    .orderBy("rankingScore", Query.Direction.DESCENDING)
                     .startAfter(cursor)
                     .limit(PAGE_SIZE)
                     .get().await()
@@ -237,7 +236,7 @@ class DiscoverViewModel @Inject constructor(
             )
             try {
                 val snapshot = firestore.collection("plates")
-                    .orderBy("averageScore", Query.Direction.DESCENDING)
+                    .orderBy("rankingScore", Query.Direction.DESCENDING)
                     .limit(PAGE_SIZE)
                     .get()
                     .await()
@@ -290,10 +289,6 @@ class DiscoverViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
         }
-    }
-
-    fun submitRatingAnalytics(score: Float, plateId: String) {
-        com.app.foodranker.utils.AnalyticsManager.logPlateRated(score, plateId)
     }
 
     fun toggleSave(plateId: String) {
@@ -368,67 +363,6 @@ class DiscoverViewModel @Inject constructor(
         }
     }
 
-    fun submitRating(plateId: String, flavorScore: Float, presentationScore: Float, valueScore: Float, comment: String) {
-        val user = auth.currentUser ?: return
-        viewModelScope.launch {
-            try {
-                val alreadyRated = firestore.collection("ratings")
-                    .document("${plateId}_${user.uid}")
-                    .get().await().exists()
-                if (alreadyRated) {
-                    _uiState.value = _uiState.value.copy(
-                        ratingFeedback = "Ya valoraste este plato"
-                    )
-                    return@launch
-                }
-
-                val safeFlavor = flavorScore.coerceIn(1f, 10f)
-                val safePresentation = presentationScore.coerceIn(1f, 10f)
-                val safeValue = valueScore.coerceIn(1f, 10f)
-                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
-                val ratingId = "${plateId}_${user.uid}"
-                val (userName, userPhotoUrl) = resolveCurrentUserNameAndPhoto()
-                val rating = Rating(
-                    id = ratingId, plateId = plateId, userId = user.uid,
-                    userName = userName,
-                    userPhotoUrl = userPhotoUrl,
-                    flavorScore = safeFlavor, presentationScore = safePresentation,
-                    valueScore = safeValue, averageScore = avgScore,
-                    comment = comment.sanitized(InputLimits.RATING_COMMENT),
-                    createdAt = System.currentTimeMillis()
-                )
-                firestore.collection("ratings").document(ratingId).set(rating).await()
-
-                // Score, XP, badges y notificación los actualiza onRatingCreated (Cloud Function).
-                // Calculamos el score localmente solo para el optimistic update de la UI.
-                val plate = _uiState.value.plates.find { it.id == plateId }
-                    ?: _uiState.value.followingPlates.find { it.id == plateId }
-                    ?: return@launch
-                val oldCount = plate.totalRatings
-                val newCount = oldCount + 1
-                val newAvg = (plate.averageScore * oldCount + avgScore) / newCount
-                applyPlateUpdate(plateId, plate.copy(averageScore = newAvg, totalRatings = newCount))
-
-                // Daily mission tracking
-                val newProgress = dailyMissionManager.incrementVote()
-                val newStreak = dailyMissionManager.getStreak()
-                val goal = _uiState.value.dailyMissionGoal
-                _uiState.value = _uiState.value.copy(
-                    dailyMissionProgress = newProgress,
-                    voteStreak = newStreak
-                )
-                if (newProgress == goal) {
-                    val streakMsg = if (newStreak >= 2) " · Racha: ${newStreak} días 🔥" else ""
-                    _uiState.value = _uiState.value.copy(
-                        ratingFeedback = "🎯 ¡Misión completada! Vota $goal platos al día para ganar XP$streakMsg"
-                    )
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("DiscoverVM", "Error submitRating: ${e.message}")
-            }
-        }
-    }
-
     private suspend fun sendLikeNotification(plateId: String, plate: Plate, fromUserId: String) {
         val ownerUserId = plate.addedByUserId
         if (ownerUserId.isEmpty() || ownerUserId == fromUserId) return
@@ -495,10 +429,6 @@ class DiscoverViewModel @Inject constructor(
 
     fun clearReportFeedback() {
         _uiState.value = _uiState.value.copy(reportFeedback = null)
-    }
-
-    fun clearRatingFeedback() {
-        _uiState.value = _uiState.value.copy(ratingFeedback = null)
     }
 
 }

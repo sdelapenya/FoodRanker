@@ -17,7 +17,7 @@ class PlateRepository @Inject constructor(
     suspend fun getTopPlates(limit: Long = 10): Result<List<Plate>> {
         return try {
             val snapshot = platesCollection
-                .orderBy("averageScore", Query.Direction.DESCENDING)
+                .orderBy("rankingScore", Query.Direction.DESCENDING)
                 .limit(limit + 5)  // over-fetch para compensar los filtrados por reportCount
                 .get()
                 .await()
@@ -36,7 +36,7 @@ class PlateRepository @Inject constructor(
             val limit = 20L
             val snapshot = platesCollection
                 .whereEqualTo("category", category.name)
-                .orderBy("averageScore", Query.Direction.DESCENDING)
+                .orderBy("rankingScore", Query.Direction.DESCENDING)
                 .limit(limit + 5) // over-fetch para compensar los filtrados por reportCount
                 .get()
                 .await()

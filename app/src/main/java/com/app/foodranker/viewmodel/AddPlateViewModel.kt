@@ -90,7 +90,10 @@ class AddPlateViewModel @Inject constructor(
     // (formVenue), que es la identidad canónica. Ver docs/VENUES.md.
     var formFlavorScore by mutableFloatStateOf(7f)
     var formPresentationScore by mutableFloatStateOf(7f)
-    var formValueScore by mutableFloatStateOf(7f)
+    var formSatisfactionScore by mutableFloatStateOf(7f)
+    var formWouldOrderAgain by mutableStateOf<Boolean?>(null)
+    /** Texto en euros tal cual lo teclea el usuario; se convierte a céntimos al publicar. */
+    var formPriceText by mutableStateOf("")
     var formComment by mutableStateOf("")
     var formImageUri by mutableStateOf<Uri?>(null)
     var formImageValidating by mutableStateOf(false)
@@ -197,7 +200,9 @@ class AddPlateViewModel @Inject constructor(
         clearVenue()
         formFlavorScore = 7f
         formPresentationScore = 7f
-        formValueScore = 7f
+        formSatisfactionScore = 7f
+        formWouldOrderAgain = null
+        formPriceText = ""
         formComment = ""
         formImageUri = null
         formImageValidating = false
@@ -212,7 +217,9 @@ class AddPlateViewModel @Inject constructor(
         category: PlateCategory,
         flavorScore: Float,
         presentationScore: Float,
-        valueScore: Float,
+        satisfactionScore: Float,
+        wouldOrderAgain: Boolean,
+        pricePaidCents: Int,
         comment: String,
         imageUri: Uri?
     ) {
@@ -300,8 +307,9 @@ class AddPlateViewModel @Inject constructor(
 
                 val safeFlavor = flavorScore.coerceIn(1f, 10f)
                 val safePresentation = presentationScore.coerceIn(1f, 10f)
-                val safeValue = valueScore.coerceIn(1f, 10f)
-                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
+                val safeSatisfaction = satisfactionScore.coerceIn(1f, 10f)
+                val safePrice = pricePaidCents.takeIf { it in 1..Rating.MAX_PRICE_CENTS }
+                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeSatisfaction)
                 val ratingId = "${plateId}_${user.uid}"
 
                 val (safeUserName, safeUserPhoto) = resolveCurrentUserNameAndPhoto()
@@ -336,7 +344,10 @@ class AddPlateViewModel @Inject constructor(
                     userPhotoUrl = safeUserPhoto,
                     flavorScore = safeFlavor,
                     presentationScore = safePresentation,
-                    valueScore = safeValue,
+                    satisfactionScore = safeSatisfaction,
+                    wouldOrderAgain = wouldOrderAgain,
+                    pricePaidCents = safePrice,
+                    verifiedAtVenue = venueRepository.isAtVenue(venue.id, venue.lat, venue.lng),
                     averageScore = avgScore,
                     comment = cleanComment,
                     createdAt = now

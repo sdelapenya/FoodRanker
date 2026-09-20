@@ -3,6 +3,7 @@ package com.app.foodranker.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.data.model.Rating
 import com.app.foodranker.data.model.Venue
 import com.app.foodranker.data.repository.VenueRepository
 import com.app.foodranker.data.repository.VenueSuggestion
@@ -84,6 +85,15 @@ class NearbyDishesViewModel @Inject constructor(
                     .filter { (_, distance) -> distance <= radiusMeters }
                     .sortedBy { (_, distance) -> distance }
 
+                // Check-in: de los locales ya resueltos aquí, los que estén lo bastante cerca
+                // como para dar por hecho que el usuario está DENTRO. Sirve para verificar un
+                // voto que escriba más tarde (ver VenueCheckInStore). No cuesta ninguna
+                // llamada extra: la ubicación y los venues ya estaban pedidos.
+                venueRepository.recordVenueCheckIns(
+                    nearby.filter { (_, distance) -> distance <= Rating.VENUE_RADIUS_METERS }
+                        .map { (venue, _) -> venue.id }
+                )
+
                 if (nearby.isEmpty()) {
                     _uiState.value = NearbyDishesUiState(results = emptyList())
                     return@launch
@@ -99,7 +109,7 @@ class NearbyDishesViewModel @Inject constructor(
                     .groupBy { it.venueId }
 
                 val results = nearby.mapNotNull { (venue, distance) ->
-                    val dishes = platesByVenue[venue.id]?.sortedByDescending { it.averageScore } ?: return@mapNotNull null
+                    val dishes = platesByVenue[venue.id]?.sortedByDescending { it.rankingScore } ?: return@mapNotNull null
                     if (dishes.isEmpty()) return@mapNotNull null
                     NearbyVenueDishes(venue = venue, distanceMeters = distance, dishes = dishes)
                 }

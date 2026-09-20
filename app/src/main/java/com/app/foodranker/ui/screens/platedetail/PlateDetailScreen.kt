@@ -422,6 +422,27 @@ fun PlateDetailScreen(
                                             onLike = { viewModel.toggleLike(plateId) }
                                         )
                                     }
+
+                                    // El % de repetición ACOMPAÑA a la nota, no la sustituye:
+                                    // la nota dice cuánto de bueno es, el % cuánta gente lo
+                                    // repetiría. Ver docs/RATINGS.md §1.4.
+                                    val repeatLabel = repeatSummary(plate.wouldOrderAgainCount, plate.wouldOrderAgainResponses)
+                                    val priceLabel = priceSummary(plate.priceMedianCents, plate.priceReportCount)
+                                    if (repeatLabel != null || priceLabel != null) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            repeatLabel?.let {
+                                                Text(it, color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                            }
+                                            priceLabel?.let {
+                                                Text(it, color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -783,13 +804,14 @@ fun PlateDetailScreen(
     if (showRatingSheet) {
         RatingBottomSheet(
             onDismiss = { showRatingSheet = false },
-            onSubmit = { flavor, presentation, value, comment ->
-                viewModel.submitRating(plateId, flavor, presentation, value, comment)
+            onSubmit = { flavor, presentation, satisfaction, repeat, priceCents, comment ->
+                viewModel.submitRating(plateId, flavor, presentation, satisfaction, repeat, priceCents, comment)
                 showRatingSheet = false
             },
             isLoading = uiState.isSubmittingRating,
             currentScore = uiState.plate?.averageScore ?: 0.0,
-            plateName = uiState.plate?.name ?: ""
+            plateName = uiState.plate?.name ?: "",
+            knownPriceCents = uiState.plate?.priceMedianCents
         )
     }
 
@@ -797,16 +819,20 @@ fun PlateDetailScreen(
         val ur = uiState.userRating!!
         RatingBottomSheet(
             onDismiss = { showEditRatingSheet = false },
-            onSubmit = { flavor, presentation, value, comment ->
-                viewModel.editRating(plateId, flavor, presentation, value, comment)
+            onSubmit = { flavor, presentation, satisfaction, repeat, priceCents, comment ->
+                viewModel.editRating(plateId, flavor, presentation, satisfaction, repeat, priceCents, comment)
                 showEditRatingSheet = false
             },
             isLoading = uiState.isSubmittingRating,
             currentScore = uiState.plate?.averageScore ?: 0.0,
             plateName = uiState.plate?.name ?: "",
+            knownPriceCents = uiState.plate?.priceMedianCents,
             initialFlavor = ur.flavorScore,
             initialPresentation = ur.presentationScore,
-            initialValue = ur.valueScore,
+            // Valoración anterior al rediseño: no tiene satisfacción, se arranca en el centro.
+            initialSatisfaction = ur.satisfactionScore ?: 5f,
+            initialWouldOrderAgain = ur.wouldOrderAgain,
+            initialPriceCents = ur.pricePaidCents,
             initialComment = ur.comment,
             isEditMode = true
         )
@@ -1067,7 +1093,20 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(rating.userName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(rating.userName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        // Distintivo de "valorado en el local". No pondera nada: es solo una
+                        // señal de confianza. Ver docs/RATINGS.md §1.1.
+                        if (rating.verifiedAtVenue) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "📍 en el local",
+                                fontSize = 10.sp,
+                                color = SuccessGreen,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("★ ${"%.1f".format(rating.averageScore)}", fontWeight = FontWeight.Bold, color = OrangePrimary, fontSize = 14.sp)
                         if (onEdit != null) {
@@ -1081,7 +1120,10 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MiniScore("😋", rating.flavorScore)
                     MiniScore("🎨", rating.presentationScore)
-                    MiniScore("💰", rating.valueScore)
+                    // El tercer eje solo existe desde el rediseño. En las valoraciones
+                    // anteriores no se enseña nada: `valueScore` (Precio/Calidad) medía otra
+                    // cosa y ya no se muestra, y en las nuevas vale 0. Ver docs/RATINGS.md §5.
+                    rating.satisfactionScore?.let { MiniScore("🍽️", it) }
                 }
                 if (rating.comment.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -1121,26 +1163,59 @@ fun MiniScore(emoji: String, score: Float) {
     Text("$emoji ${"%.1f".format(score)}", fontSize = 11.sp, color = TextSecondary)
 }
 
+/**
+ * "El 87 % lo repetiría" a partir de 5 respuestas; por debajo, la fracción ("4 de 5 lo
+ * repetirían"). Un porcentaje sacado de 3 votos aparenta una precisión que no existe, y
+ * esconderlo del todo dejaría la función invisible con el volumen actual. Null si nadie ha
+ * contestado todavía. Ver docs/RATINGS.md §1.4.
+ */
+internal fun repeatSummary(count: Int, responses: Int): String? = when {
+    responses <= 0 -> null
+    responses < 5 -> "👍 $count de $responses lo ${if (responses == 1) "repetiría" else "repetirían"}"
+    else -> "👍 ${Math.round(count * 100.0 / responses)} % lo repetiría"
+}
+
+/**
+ * El precio no promete más de lo que se sabe: con un solo reporte se dice quién lo pagó, no
+ * cuánto "cuesta". Ver docs/RATINGS.md §1.3.
+ */
+internal fun priceSummary(medianCents: Int?, reports: Int): String? {
+    if (medianCents == null || medianCents <= 0 || reports <= 0) return null
+    val price = "%.2f".format(medianCents / 100.0)
+    return if (reports == 1) "💰 1 persona pagó $price €" else "💰 suele costar $price €"
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RatingBottomSheet(
     onDismiss: () -> Unit,
-    onSubmit: (Float, Float, Float, String) -> Unit,
+    onSubmit: (Float, Float, Float, Boolean, Int?, String) -> Unit,
     isLoading: Boolean,
     currentScore: Double = 0.0,
     plateName: String = "",
+    /** Precio que ya conoce el plato: se preselecciona para confirmarlo de un toque. */
+    knownPriceCents: Int? = null,
     initialFlavor: Float = 5f,
     initialPresentation: Float = 5f,
-    initialValue: Float = 5f,
+    initialSatisfaction: Float = 5f,
+    initialWouldOrderAgain: Boolean? = null,
+    initialPriceCents: Int? = null,
     initialComment: String = "",
     isEditMode: Boolean = false
 ) {
+    // Quien edita ya declaró haberlo probado cuando valoró por primera vez.
+    var tastedConfirmed by remember { mutableStateOf(isEditMode) }
     var flavorScore by remember { mutableFloatStateOf(initialFlavor) }
     var presentationScore by remember { mutableFloatStateOf(initialPresentation) }
-    var valueScore by remember { mutableFloatStateOf(initialValue) }
+    var satisfactionScore by remember { mutableFloatStateOf(initialSatisfaction) }
+    var wouldOrderAgain by remember { mutableStateOf(initialWouldOrderAgain) }
+    var priceText by remember {
+        mutableStateOf(Rating.formatPrice(initialPriceCents ?: knownPriceCents))
+    }
     var comment by remember { mutableStateOf(initialComment) }
 
-    val myScore = (flavorScore + presentationScore + valueScore) / 3f
+    val myScore = Rating.computeAverage(flavorScore, presentationScore, satisfactionScore).toFloat()
+    val priceIsInvalid = priceText.isNotBlank() && Rating.parsePriceToCents(priceText) == null
 
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1162,9 +1237,39 @@ fun RatingBottomSheet(
                 else "⭐ Valorar este plato",
                 fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary
             )
+
+            // Puerta de entrada: la nota de un plato es la de quien se lo ha comido. Quien no
+            // lo ha probado tiene el like para decir "me apetece". Ver docs/RATINGS.md §1.1.
+            if (!tastedConfirmed) {
+                Text(
+                    "¿Has probado este plato?",
+                    fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary
+                )
+                Text(
+                    "Las notas de FoodRanker son de quien se lo ha comido de verdad. " +
+                    "Si aún no lo has probado, dale like para guardarlo para cuando te apetezca.",
+                    color = TextSecondary, fontSize = 13.sp
+                )
+                Button(
+                    onClick = { tastedConfirmed = true },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                ) {
+                    Text("Sí, lo he probado 🍽️", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Todavía no", color = TextSecondary)
+                }
+                return@Column
+            }
+
             ScoreSlider("Sabor", "😋", flavorScore) { flavorScore = it }
             ScoreSlider("Presentación", "🎨", presentationScore) { presentationScore = it }
-            ScoreSlider("Precio/Calidad", "💰", valueScore) { valueScore = it }
+            ScoreSlider("¿Te quedas satisfecho?", "🍽️", satisfactionScore) { satisfactionScore = it }
 
             // Live preview card
             Card(
@@ -1201,6 +1306,50 @@ fun RatingBottomSheet(
                 }
             }
 
+            // El precio es un DATO, no una opinión: por eso está fuera de los sliders y no
+            // entra en la nota. Al valorar es opcional — si el plato ya tiene precio viene
+            // puesto para confirmarlo de un toque. Ver docs/RATINGS.md §1.3.
+            FoodTextField(
+                value = priceText,
+                onValueChange = { priceText = it.filter { c -> c.isDigit() || c == ',' || c == '.' } },
+                label = "¿Cuánto costó? (opcional)",
+                placeholder = "12,50",
+                maxLength = 7,
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                supportingText = when {
+                    priceIsInvalid -> "Pon un precio entre 0,01 € y 1.000 €"
+                    knownPriceCents != null && initialPriceCents == null ->
+                        "Precio que han puesto otros — confírmalo o corrígelo"
+                    else -> "Lo que pagaste por este plato, no la cuenta entera"
+                }
+            )
+
+            Text(
+                "¿Lo volverías a pedir?",
+                fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                listOf(true to "Sí 👍", false to "No 👎").forEach { (value, label) ->
+                    val selected = wouldOrderAgain == value
+                    Button(
+                        onClick = { wouldOrderAgain = value },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selected) OrangePrimary else Color.Transparent,
+                            contentColor = if (selected) Color.White else TextSecondary
+                        ),
+                        border = if (selected) null
+                                 else androidx.compose.foundation.BorderStroke(1.dp, TextSecondary.copy(alpha = 0.4f))
+                    ) {
+                        Text(label, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
             FoodTextField(
                 value = comment,
                 onValueChange = { comment = it },
@@ -1214,10 +1363,13 @@ fun RatingBottomSheet(
             Button(
                 onClick = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    onSubmit(flavorScore, presentationScore, valueScore, comment)
+                    onSubmit(
+                        flavorScore, presentationScore, satisfactionScore,
+                        wouldOrderAgain == true, Rating.parsePriceToCents(priceText), comment
+                    )
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = !isLoading,
+                enabled = !isLoading && wouldOrderAgain != null && !priceIsInvalid,
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
             ) {

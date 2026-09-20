@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.app.foodranker.data.model.Comment
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.PlateCategory
@@ -57,7 +58,8 @@ class PlateDetailViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val plateRepository: PlateRepository,
-    private val functions: FirebaseFunctions
+    private val functions: FirebaseFunctions,
+    private val venueRepository: com.app.foodranker.data.repository.VenueRepository
 ) : ViewModel() {
 
     val currentUserId: String get() = auth.currentUser?.uid ?: ""
@@ -110,7 +112,20 @@ class PlateDetailViewModel @Inject constructor(
                     val ratingsDeferred = async {
                         firestore.collection("ratings")
                             .whereEqualTo("plateId", plateId)
+                            .orderBy("createdAt", Query.Direction.DESCENDING)
                             .limit(50).get().await()
+                    }
+                    // El rating propio se lee aparte por su id determinista: en un plato con
+                    // más de 50 valoraciones puede quedar fuera de la página, y entonces
+                    // hasUserRated/userRating darían falso negativo (botón de valorar visible
+                    // que luego falla con "Ya valoraste este plato").
+                    val ownRatingDeferred = async {
+                        if (userId.isNotEmpty()) {
+                            try {
+                                firestore.collection("ratings").document("${plateId}_$userId")
+                                    .get().await().toObject(Rating::class.java)
+                            } catch (e: Exception) { null }
+                        } else null
                     }
                     val commentsDeferred = async {
                         firestore.collection("comments")
@@ -164,15 +179,18 @@ class PlateDetailViewModel @Inject constructor(
                                 firestore.collection("plates")
                                     .whereEqualTo("status", com.app.foodranker.data.model.PlateStatus.APPROVED)
                                     .whereEqualTo("city", plate.city)
-                                    .whereGreaterThan("averageScore", plate.averageScore)
+                                    .whereGreaterThan("rankingScore", plate.rankingScore)
                                     .limit(100).get().await().size() + 1
                             } catch (e: Exception) { 0 }
                         }
                     } else null
 
-                    val ratings = ratingsDeferred.await().documents
+                    val loadedRatings = ratingsDeferred.await().documents
                         .mapNotNull { it.toObject(Rating::class.java) }
-                        .sortedByDescending { it.createdAt }
+                    val ownRating = ownRatingDeferred.await()
+                    val ratings = if (ownRating != null && loadedRatings.none { it.userId == userId }) {
+                        (loadedRatings + ownRating).sortedByDescending { it.createdAt }
+                    } else loadedRatings
 
                     val comments = commentsDeferred.await().documents
                         .mapNotNull { it.toObject(Comment::class.java) }
@@ -465,7 +483,9 @@ class PlateDetailViewModel @Inject constructor(
         plateId: String,
         flavorScore: Float,
         presentationScore: Float,
-        valueScore: Float,
+        satisfactionScore: Float,
+        wouldOrderAgain: Boolean,
+        pricePaidCents: Int?,
         comment: String
     ) {
         val user = auth.currentUser ?: return
@@ -485,10 +505,12 @@ class PlateDetailViewModel @Inject constructor(
 
                 val safeFlavor = flavorScore.coerceIn(1f, 10f)
                 val safePresentation = presentationScore.coerceIn(1f, 10f)
-                val safeValue = valueScore.coerceIn(1f, 10f)
-                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
+                val safeSatisfaction = satisfactionScore.coerceIn(1f, 10f)
+                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeSatisfaction)
                 val ratingId = "${plateId}_${user.uid}"
                 val (userName, userPhotoUrl) = resolveCurrentUserNameAndPhoto()
+                val currentPlate = _uiState.value.plate
+                val atVenue = venueRepository.isAtVenue(currentPlate?.venueId, currentPlate?.latitude, currentPlate?.longitude)
                 val rating = Rating(
                     id = ratingId,
                     plateId = plateId,
@@ -497,7 +519,10 @@ class PlateDetailViewModel @Inject constructor(
                     userPhotoUrl = userPhotoUrl,
                     flavorScore = safeFlavor,
                     presentationScore = safePresentation,
-                    valueScore = safeValue,
+                    satisfactionScore = safeSatisfaction,
+                    wouldOrderAgain = wouldOrderAgain,
+                    pricePaidCents = pricePaidCents?.takeIf { it in 1..Rating.MAX_PRICE_CENTS },
+                    verifiedAtVenue = atVenue,
                     averageScore = avgScore,
                     comment = comment.sanitized(InputLimits.RATING_COMMENT),
                     createdAt = System.currentTimeMillis()
@@ -528,7 +553,9 @@ class PlateDetailViewModel @Inject constructor(
         plateId: String,
         flavorScore: Float,
         presentationScore: Float,
-        valueScore: Float,
+        satisfactionScore: Float,
+        wouldOrderAgain: Boolean,
+        pricePaidCents: Int?,
         comment: String
     ) {
         val user = auth.currentUser ?: return
@@ -538,14 +565,17 @@ class PlateDetailViewModel @Inject constructor(
             try {
                 val safeFlavor = flavorScore.coerceIn(1f, 10f)
                 val safePresentation = presentationScore.coerceIn(1f, 10f)
-                val safeValue = valueScore.coerceIn(1f, 10f)
-                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeValue)
+                val safeSatisfaction = satisfactionScore.coerceIn(1f, 10f)
+                val safePrice = pricePaidCents?.takeIf { it in 1..Rating.MAX_PRICE_CENTS }
+                val avgScore = Rating.computeAverage(safeFlavor, safePresentation, safeSatisfaction)
                 val cleanComment = comment.sanitized(InputLimits.RATING_COMMENT)
                 firestore.collection("ratings").document(ratingId).update(
                     mapOf(
                         "flavorScore" to safeFlavor,
                         "presentationScore" to safePresentation,
-                        "valueScore" to safeValue,
+                        "satisfactionScore" to safeSatisfaction,
+                        "wouldOrderAgain" to wouldOrderAgain,
+                        "pricePaidCents" to safePrice,
                         "averageScore" to avgScore,
                         "comment" to cleanComment
                     )
@@ -553,7 +583,9 @@ class PlateDetailViewModel @Inject constructor(
                 val updatedRating = _uiState.value.userRating?.copy(
                     flavorScore = safeFlavor,
                     presentationScore = safePresentation,
-                    valueScore = safeValue,
+                    satisfactionScore = safeSatisfaction,
+                    wouldOrderAgain = wouldOrderAgain,
+                    pricePaidCents = safePrice,
                     averageScore = avgScore,
                     comment = cleanComment
                 )

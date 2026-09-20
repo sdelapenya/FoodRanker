@@ -109,11 +109,6 @@ fun DiscoverScreen(
     }
 
     // Snackbars
-    LaunchedEffect(uiState.ratingFeedback) {
-        val msg = uiState.ratingFeedback ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long)
-        viewModel.clearRatingFeedback()
-    }
     LaunchedEffect(uiState.reportFeedback) {
         val msg = uiState.reportFeedback ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long)

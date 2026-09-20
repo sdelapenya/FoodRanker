@@ -1,10 +1,15 @@
 package com.app.foodranker.data.repository
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
 import android.util.Log
+import androidx.core.content.ContextCompat
+import com.app.foodranker.data.model.Rating
 import com.app.foodranker.data.model.Venue
+import com.app.foodranker.utils.GeoUtils
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -40,7 +45,8 @@ data class VenueSuggestion(
 class VenueRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val placesClient: PlacesClient,
-    private val functions: FirebaseFunctions
+    private val functions: FirebaseFunctions,
+    private val checkInStore: com.app.foodranker.utils.VenueCheckInStore
 ) {
 
     private val fields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS)
@@ -90,6 +96,34 @@ class VenueRepository @Inject constructor(
             null
         }
     }
+
+    /**
+     * ¿El voto se puede dar por emitido en el local? Se usa solo para el distintivo
+     * "📍 en el local": **nunca bloquea ni pondera nada** (ver docs/RATINGS.md §1.1).
+     *
+     * Vale por dos vías, en este orden:
+     *  1. Un **check-in reciente** por ese local (24 h) — cubre a quien valora al salir o ya
+     *     en casa, que es el caso normal. Se resuelve sin encender el GPS.
+     *  2. Estar allí **ahora mismo**, dentro de [Rating.VENUE_RADIUS_METERS].
+     *
+     * Deliberadamente **no pide el permiso**: sin él devuelve false y la valoración sale sin
+     * verificar. Pedirlo justo al valorar metería fricción en la acción más valiosa de la app.
+     */
+    suspend fun isAtVenue(venueId: String?, lat: Double?, lng: Double?): Boolean {
+        if (checkInStore.wasRecentlyAt(venueId)) return true
+        if (lat == null || lng == null) return false
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) return false
+        val location = currentLocation() ?: return false
+        return GeoUtils.haversineMeters(
+            location.latitude, location.longitude, lat, lng
+        ) <= Rating.VENUE_RADIUS_METERS
+    }
+
+    /** Anota un paso por estos locales. Lo llama "Qué pido aquí" con lo que ya ha resuelto. */
+    fun recordVenueCheckIns(venueIds: List<String>) = checkInStore.record(venueIds)
 
     /** Búsqueda por texto, para quien no da permiso de ubicación o publica más tarde. */
     suspend fun searchVenues(query: String): Result<List<VenueSuggestion>> {

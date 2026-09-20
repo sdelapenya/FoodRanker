@@ -47,7 +47,7 @@ class TrendingViewModel @Inject constructor(
                     }
                     val ratedJob = async {
                         firestore.collection("plates")
-                            .orderBy("averageScore", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                            .orderBy("rankingScore", com.google.firebase.firestore.Query.Direction.DESCENDING)
                             .limit(30).get().await()
                             .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                             .filter { it.reportCount < 3 }
@@ -58,7 +58,7 @@ class TrendingViewModel @Inject constructor(
                 val mostLiked = likedDocs
                     .filter { it.likes > 0 }
                     .take(10)
-                    .ifEmpty { likedDocs.sortedByDescending { it.averageScore }.take(10) }
+                    .ifEmpty { likedDocs.sortedByDescending { it.rankingScore }.take(10) }
 
                 val topRated = ratedDocs
                     .filter { it.totalRatings >= 3 }
