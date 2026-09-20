@@ -15,6 +15,168 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔍 EN CURSO (2026-09-19): auditoría del sistema de valoraciones — rediseño en discusión
+
+El usuario plantea **reconstruir el sistema de valoración** (es el núcleo de la app). Antes de
+tocar nada se auditó cómo funciona hoy, de punta a punta. **Los problemas de abajo quedan
+APUNTADOS Y PENDIENTES a propósito**: primero se decide el rediseño (qué ejes se valoran, si
+entra un campo de precio real), y después se revisa cuáles de estos quedan corregidos de
+rebote y cuáles hay que arreglar aparte. No arreglar ninguno por separado todavía.
+
+**Cómo funciona hoy, en corto**: 3 sliders de 1-10 con paso 0,5 (Sabor / Presentación /
+Precio-Calidad, `Rating.kt`), nota = media aritmética simple de los 3. Documento de ID fijo
+`{plateId}_{userId}` → un voto por usuario y plato, editable tantas veces como se quiera
+(`PlateDetailViewModel.editRating`), **nunca borrable** (`firestore.rules:163`,
+`allow delete: if false`, para evitar el exploit borrar-y-revotar). La media del plato la
+recalcula **siempre el servidor** desde los 3 sub-scores, ignorando el `averageScore` que
+manda el cliente (`onRatingCreated`, `functions/src/index.ts:584-588`), en transacción
+idempotente vía `processed: true`. Al publicar un plato, el autor se auto-vota en el mismo
+batch (`AddPlateViewModel.kt:305-355`) y `approveplate` siembra el plato con esa nota y
+`totalRatings = 1` (`index.ts:446-454`). XP: 5 al votante, 10 al dueño, 55 al publicar.
+
+**Problemas detectados, por impacto:**
+
+1. **El ranking es manipulable y estadísticamente injusto — el problema gordo.** Se ordena por
+   `averageScore` puro en TODAS las pantallas (`DiscoverViewModel.kt:240`, `PlateRepository.kt:20`,
+   `ExploreViewModel.kt:155`, `TrendingViewModel.kt:50`, y el puesto en la ciudad en
+   `PlateDetailViewModel.kt:161-171`). Un plato con **1 voto de 10,0 queda por delante de uno
+   con 40 votos de 9,7**. Y ese primer voto es siempre el del propio autor: hoy cualquiera puede
+   publicar, auto-puntuarse 10/10/10 y encabezar el ranking de su ciudad. Con 9 usuarios no se
+   nota; con 200 el ranking pierde toda credibilidad. Solución estándar si no lo resuelve el
+   rediseño: **media bayesiana** (estilo IMDb) en un campo nuevo del plato para ordenar,
+   dejando `averageScore` intacto para mostrar (⚠️ haría falta añadir índices compuestos nuevos
+   en `firestore.indexes.json`, y ojo con la mina ya documentada de desplegar índices).
+2. **La "valoración rápida del feed" no existe: es código muerto.**
+   `DiscoverViewModel.submitRating` (`:371-430`) y `submitRatingAnalytics` (`:295`) no los llama
+   NADIE — verificado con grep, el único punto de entrada real es
+   `PlateDetailScreen.kt:787` → `PlateDetailViewModel.submitRating`. Arrastra consigo la
+   **misión diaria de votos**, que llama a `dailyMissionManager.incrementVote()` desde dentro de
+   esa función muerta (`DiscoverViewModel.kt:413-425`): **hoy la misión diaria nunca avanza**.
+   Para votar hay que entrar al detalle y abrir un bottom sheet de 3 sliders — fricción alta.
+3. **El detalle carga 50 valoraciones sin `orderBy`.** `PlateDetailViewModel.kt:110-113` hace
+   `whereEqualTo("plateId").limit(50)` y ordena en cliente (`:175`). Con >50 votos Firestore
+   devuelve 50 arbitrarias y `hasUserRated` (`:189`) puede dar falso negativo: el usuario vería
+   el botón de valorar y al pulsarlo recibiría "Ya valoraste este plato". **El índice ya existe**
+   (`firestore.indexes.json:69-76`, `plateId+createdAt`), solo falta usarlo. Arreglo barato.
+4. **Nadie sabe qué significa un 7,2.** 3 sliders que arrancan en 5, sin referencia de qué es
+   "normal". La nota final sale con granularidad 1/6 (7,1666…) y se muestra con `%.1f`, así que
+   dos platos que se ven idénticos ("★ 8,3") se ordenan distinto sin explicación visible.
+5. **Menores, ya conocidos**: no existe trigger `onRatingDeleted`, así que si el Admin SDK borra
+   ratings en cascada la media del plato queda obsoleta (mismo hueco ya documentado en
+   `wipe-content` más abajo); `onRatingUpdated` (`index.ts:796`) recalcula con
+   `(avg*n - oldAvg + newAvg)/n`, que acumula error de coma flotante con ediciones repetidas y
+   no tiene job de reconciliación; y `ratings` es de **lectura pública sin auth**
+   (`firestore.rules:140`) mientras que `comments` sí exige `isSignedIn()` (`:168`).
+
+**➡️ DISEÑO YA ACORDADO (2026-09-19): ver `docs/RATINGS.md`** — documento nuevo con el
+rediseño completo, el porqué de cada decisión y el plan de implementación por fases.
+**Nada implementado todavía.** En corto, lo acordado con el usuario:
+- **Solo vota quien declara haber probado el plato**; el like pasa a significar "me apetece".
+  GPS marca el voto como verificado, pero **nunca bloquea**.
+- **3 ejes con pesos desiguales**: Sabor 50 % · Presentación 20 % · Satisfacción 30 %.
+  Sale `valueScore` (Precio/Calidad, era una opinión sobre un hecho que la app no conocía),
+  entra `satisfactionScore` ("¿te quedas satisfecho?", formulado así para que el 10 siga
+  siendo el óptimo y el eje sea promediable).
+- **Precio en euros exactos** como dato objetivo, obligatorio al subir y confirmable al votar.
+  Mediana con fecha, nunca media. La UI no promete más de lo que sabe.
+- **"¿Lo volverías a pedir?"** binario → `%` estilo Rotten Tomatoes, **junto a la nota, no en
+  lugar de ella**, y fuera del ranking de momento.
+- **Ranking por media bayesiana** en un campo nuevo `rankingScore`; `averageScore` se queda
+  como lo que se muestra. Esto resuelve de paso el auto-voto del autor (problema 1).
+
+**➡️ IMPLEMENTADO EN LOCAL (2026-09-19). NADA DESPLEGADO NI PUBLICADO.**
+Fases 0 y 1 completas: cliente y Cloud Functions compilando, reglas validadas contra el
+emulador (15/15). De los 5 problemas de arriba quedan corregidos el **1** (bayesiana),
+el **2** (código muerto borrado), el **3** (carga de valoraciones) y la parte de
+`onRatingDeleted` del **5**.
+
+**✅ SERVIDOR YA DESPLEGADO Y MIGRADO (2026-09-20).** Hecho y verificado:
+
+1. ✅ `firestore.rules` desplegadas (aceptan los dos formatos a la vez).
+2. ✅ Cloud Functions desplegadas, incluidas las dos nuevas `onRatingDeleted` y
+   `refreshGlobalStats`. **Ojo para la próxima**: el primer intento falló porque faltaba
+   habilitar `cloudscheduler.googleapis.com` (lo pide la función programada); el propio CLI la
+   habilita y **basta con repetir el comando**.
+3. ✅ Migración aplicada: **53 documentos** (26 valoraciones + 27 platos) + `stats/global`.
+4. ✅ Verificado contra producción (solo lectura): 8/8 — todos los aprobados con
+   `rankingScore`, cada nota = media de sus valoraciones, cada bayesiana correcta, el
+   `valueScore` histórico intacto en las 33 valoraciones.
+
+**El ranking nuevo ya está vivo y hace lo que se buscaba**: "pulpo a la gallega" (10,00 con
+**un** voto) ha dejado de ser el primero; ahora encabezan "Paella" (9,62 con 3 votos) y "Lomo
+de orza" (9,61 con 2). El cambio de nota más grande de los 33 fue de **0,38 puntos**, y **no
+hubo ningún descuadre de votos** — por eso se decidió no avisar a los testers todavía.
+
+5. ✅ **Índices desplegados y verificados** (los ejecutó el usuario a mano: el clasificador de
+   seguridad bloquea ese comando, y con razón, porque es el que puede borrar índices). Hicieron
+   falta **dos** despliegues por la trampa de la dirección (ver abajo). Ninguno de los dos pidió
+   borrar nada, confirmando que el cambio fue puramente aditivo.
+6. ✅ **Las 8 consultas reales de la v13 probadas contra producción**: ranking principal,
+   cercanos, por categoría, aprobados, aprobados+categoría, puesto en la ciudad, job de
+   estadísticas y carga de valoraciones. Todas devuelven datos.
+
+⚠️ **Trampa nueva aprendida — la DIRECCIÓN del índice importa.** El "puesto en la ciudad"
+(`status == X AND city == Y AND rankingScore > N`) **no lleva `orderBy`**, y entonces Firestore
+ordena por el campo del rango en **ASCENDENTE**. El índice se había creado `DESCENDING` (que es
+lo que sirve para los rankings) y la consulta fallaba. Hizo falta un índice aparte con
+`rankingScore ASC`. Detalle en `docs/RATINGS.md`.
+De paso, eso explica por qué el badge **"#N en tu ciudad" no se ha visto nunca**: la consulta
+equivalente con `averageScore` tampoco tenía índice y falla en silencio (tiene un `catch` que
+devuelve 0). Ahora puede empezar a aparecer — no es nada nuevo, es algo viejo que se arregla.
+
+7. ✅ **UI VERIFICADA EN EL EMULADOR ANDROID, CICLO COMPLETO** (`FoodRanker_Test`, cuenta de
+   pruebas `bwUmH8m1…` "Sergio" de Madrid — **ojo, NO es la cuenta real del usuario**, que es
+   `rNpwrHo3…` "Sergio De La Peña"). Verificado contra producción real: ranking ordenado por
+   `rankingScore`, la puerta "¿Has probado este plato?", los 3 sliders, la nota ponderada en
+   vivo, el teclado decimal del precio, la validación del tope, el botón bloqueado hasta
+   contestar el binario, y la publicación de una valoración de verdad sobre "Bravas de Bimi"
+   (plato del usuario), que mostró **"👍 1 de 1 lo repetiría · 💰 1 persona pagó 9,80 €"**.
+   Después se limpió todo: rating borrado, XP global y de liga revertidos y notificación
+   eliminada. **`onRatingDeleted` validado**: el plato volvió exacto a 8,93 · 2 votos ·
+   repiten 0/0 · **sin precio** (probando también el arreglo del "precio fantasma").
+   Producción re-verificada después: coherente.
+
+🐛 **BUG REAL CAZADO AQUÍ, y solo aparecía en el móvil: con las reglas desplegadas NADIE podía
+valorar** (`PERMISSION_DENIED` en cada intento). Un data class de Kotlin **serializa todos sus
+campos**, así que el cliente seguía mandando `valueScore: 0` (el eje retirado, con su valor por
+defecto) y la regla exigía 1..10. Arreglado con `legacyScoreOk()` y **reglas redesplegadas**.
+Las pruebas del emulador no lo cazaron porque construían los documentos a mano en vez de
+replicar lo que serializa el cliente. Detalle y lección en `docs/RATINGS.md`.
+
+8. ✅ **Verificación por GPS implementada y probada (2026-09-20).**
+   `VenueRepository.isAtVenue(lat, lng)` compara la posición real con la del local (200 m,
+   `Rating.VENUE_RADIUS_METERS`); la usan el valorar y el publicar, y la UI pinta
+   **"📍 en el local"** junto al nombre. **No pide el permiso a propósito**: sin permiso el
+   voto sale sin verificar, y ya está. Probados los dos caminos: a 433,7 m del local dio
+   `false` (correcto) y, subiendo el radio a 500 m temporalmente, `true` con su distintivo en
+   pantalla. ⚠️ **El GPS del emulador `FoodRanker_Test` está congelado** en 40.4168,-3.7038 y
+   no hay forma de moverlo (`adb emu geo fix` y la consola por telnet dicen OK pero no
+   actualizan nada) — de ahí el truco del radio para probar el caso positivo.
+9. ✅ **Arreglado de paso**: la lista de valoraciones seguía pintando `MiniScore("💰",
+   valueScore)`, el eje retirado, así que las valoraciones nuevas habrían mostrado "💰 0.0".
+   Ahora enseña 🍽️ (satisfacción) solo cuando existe, y en las antiguas nada.
+
+**LO QUE FALTA:**
+
+1. **Publicar la v13** — `versionCode` sigue en **12**, hay que subirlo y generar el AAB.
+   Todo lo demás del rediseño ya está probado de punta a punta.
+2. Avisar a los testers de que actualicen, y semanas después endurecer las reglas.
+✅ **Check-in de 24 h implementado y probado (2026-09-20).** Sin él, la verificación solo
+pillaba a quien valoraba con el plato delante; lo normal es escribir la valoración al salir o
+ya en casa. `VenueCheckInStore` anota por qué locales se ha pasado (`SharedPreferences`,
+**local a propósito**: es un distintivo que no pondera nada y guardarlo en servidor sería
+registrar por dónde se mueve la gente), e `isAtVenue` lo mira **antes** que el GPS.
+**Coste cero**: los check-ins salen de lo que "Qué pido aquí" ya tenía resuelto — ni una
+llamada más a Places, Firestore ni GPS, y de hecho ahorra la lectura de ubicación cuando hay
+check-in válido. Solo se anotan locales a ≤ 200 m, no los 550/1.600 m que lista la pantalla.
+Probado con el truco del radio: se registra el check-in con 500 m, se vuelve a 200 (con lo que
+el GPS a 433,7 m ya **no** puede verificar), se vota y sale `verifiedAtVenue: true` — solo
+pudo ser por el check-in.
+
+Detalle completo, con el porqué de cada decisión, en `docs/RATINGS.md`.
+
+---
+
 **3 bugs reportados por el usuario (2026-09-17), arreglados y VERIFICADOS en el Redmi real
 (2026-09-18).** `versionCode` subido a 12, AAB generado. Verificación en dispositivo:
 instalada la build de depuración sobre el Redmi (hubo que desinstalar la v11 de Play primero
