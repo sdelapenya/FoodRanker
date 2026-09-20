@@ -156,11 +156,31 @@ replicar lo que serializa el cliente. Detalle y lección en `docs/RATINGS.md`.
    valueScore)`, el eje retirado, así que las valoraciones nuevas habrían mostrado "💰 0.0".
    Ahora enseña 🍽️ (satisfacción) solo cuando existe, y en las antiguas nada.
 
-**LO QUE FALTA:**
+### 🔶 v13 SUBIDA A PLAY (2026-09-21) — pendiente de aprobación y verificación
 
-1. **Publicar la v13** — `versionCode` sigue en **12**, hay que subirlo y generar el AAB.
-   Todo lo demás del rediseño ya está probado de punta a punta.
-2. Avisar a los testers de que actualicen, y semanas después endurecer las reglas.
+**AAB `versionCode 13` / `versionName 1.1` subido a Prueba cerrada.** Es la primera versión
+con `versionName` distinto: las 12 anteriores se llamaban todas "1.0" y en Play Console eran
+indistinguibles.
+
+Verificado antes de subir: el `versionCode`/`versionName` leídos **del propio artefacto** (no
+del `build.gradle`) con `aapt2 dump badging`, y que la build de **release** (con R8 y
+`shrinkResources`, que es lo que va a Play) arranca sin crashes hasta el login. ⚠️ **El flujo
+autenticado en release NO se pudo probar**: instalar la release obliga a desinstalar la debug
+por la firma, y eso borra la sesión. Ese flujo sí quedó verificado de punta a punta en debug.
+El riesgo de R8 sobre los modelos está cubierto por `-keep class ...data.model.** { *; }` en
+`proguard-rules.pro`, que incluye los campos nuevos de `Rating` y `Plate`.
+
+**RETOMAR AQUÍ cuando Google apruebe:**
+
+1. Instalar en el Redmi **desde Play**, no un APK local. ⚠️ Play sirve versiones cacheadas:
+   `am force-stop com.android.vending`, reabrir la ficha y pulsar **"Actualizar"**, no
+   "Instalar" (pasó con la v12). Confirmar que dice `versionCode 13`.
+2. **Probar el flujo autenticado en release**: valorar un plato y comprobar que se guarda —
+   es lo único que no se ha visto funcionar fuera de debug.
+3. **Avisar a los 9 testers de que actualicen.** Hasta que lo hagan verán el ranking con el
+   orden antiguo y no podrán aportar precio ni contestar al "¿lo volverías a pedir?".
+4. Semanas después, cuando el parque haya rotado: endurecer las reglas (exigir los campos
+   nuevos, prohibir `valueScore`).
 ✅ **Check-in de 24 h implementado y probado (2026-09-20).** Sin él, la verificación solo
 pillaba a quien valoraba con el plato delante; lo normal es escribir la valoración al salir o
 ya en casa. `VenueCheckInStore` anota por qué locales se ha pasado (`SharedPreferences`,
