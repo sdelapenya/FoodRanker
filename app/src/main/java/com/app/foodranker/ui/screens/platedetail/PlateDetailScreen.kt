@@ -1245,9 +1245,14 @@ fun RatingBottomSheet(
                     "¿Has probado este plato?",
                     fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary
                 )
+                // Ojo: aquí ponía "dale like", y el like NO es una lista de pendientes — es
+                // aprecio público, y no hay pantalla donde verlos. Lo que sí guarda para
+                // después es el marcador, que tiene su pestaña en el perfil. Un tester se
+                // quedó buscando una lista de likes que no existe (2026-09-21).
                 Text(
                     "Las notas de FoodRanker son de quien se lo ha comido de verdad. " +
-                    "Si aún no lo has probado, dale like para guardarlo para cuando te apetezca.",
+                    "Si aún no lo has probado, guárdalo con el marcador 🔖 y lo tendrás " +
+                    "en tu perfil para cuando te apetezca.",
                     color = TextSecondary, fontSize = 13.sp
                 )
                 Button(
