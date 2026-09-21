@@ -125,7 +125,8 @@ fun LeagueScreen(
                             }
                         }
                         Text(
-                            "⚔️ Liga ${uiState.city.ifEmpty { "Local" }}  ·  $weekLabel",
+                            if (uiState.isGlobalLeague) "⚔️ Liga semanal  ·  $weekLabel"
+                            else "⚔️ Liga ${uiState.city.ifEmpty { "Local" }}  ·  $weekLabel",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
@@ -147,8 +148,12 @@ fun LeagueScreen(
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                            // Aquí ponía "Top 3 gana badge 🏅": ese badge NO existe ni hay
+                            // nada que cierre la semana, así que la app prometía un premio
+                            // que no entregaba (lo notó un tester). Hasta que el cierre de
+                            // liga esté hecho, se dice solo lo que es verdad.
                             Text(
-                                "· Top 3 gana badge 🏅",
+                                "· Reinicia cada lunes",
                                 color = Color.White.copy(alpha = 0.72f),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium

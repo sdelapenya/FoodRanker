@@ -23,6 +23,8 @@ data class LeagueUiState(
     // true cuando el usuario no aparece en el top cargado (limit 20)
     val userOutsideTop: Boolean = false,
     val city: String = "",
+    /** La liga es una sola para todos, no por ciudad. Lo decide el servidor (LEAGUE_SCOPE). */
+    val isGlobalLeague: Boolean = false,
     val weekKey: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -52,19 +54,11 @@ class LeagueViewModel @Inject constructor(
                 val userSnap = firestore.collection("users").document(userId).get().await()
                 val city = userSnap.getString("city") ?: ""
 
-                if (city.isBlank()) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        city = "",
-                        weekKey = currentWeekKey(),
-                        error = "Añade tu ciudad en el perfil para participar en la liga"
-                    )
-                    return@launch
-                }
-
-                // El leagueId (ciudad normalizada + semana ISO) lo calcula siempre el
-                // servidor: evita que Kotlin y Cloud Functions reimplementen la misma
-                // lógica por separado y diverjan (causa raíz del bug de "liga vacía").
+                // Ya no se corta por no tener ciudad: el ámbito lo decide el servidor
+                // (LEAGUE_SCOPE). Mientras la liga sea global participa todo el mundo, y si
+                // algún día vuelve a ser por ciudad, el servidor responde con el error.
+                // El leagueId lo calcula siempre él: evita que Kotlin y Cloud Functions
+                // reimplementen la misma lógica y diverjan (causa del bug de "liga vacía").
                 val result = functions.getHttpsCallable("getLeagueId")
                     .call(mapOf("city" to city))
                     .await()
@@ -72,6 +66,7 @@ class LeagueViewModel @Inject constructor(
                 val data = result.data as Map<String, Any>
                 val leagueId = data["leagueId"] as String
                 val weekKey = data["weekKey"] as String
+                val isGlobal = (data["scope"] as? String) == "global"
 
                 val snap = firestore.collection("leagues")
                     .document(leagueId)
@@ -91,6 +86,7 @@ class LeagueViewModel @Inject constructor(
                     currentUserRank = userRank,
                     userOutsideTop = userEntry == null && entries.isNotEmpty(),
                     city = city,
+                    isGlobalLeague = isGlobal,
                     weekKey = weekKey,
                     isLoading = false
                 )

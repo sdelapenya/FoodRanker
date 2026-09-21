@@ -95,7 +95,8 @@ fun DiscoverScreen(
         listOf(
             "El ranking se actualiza con cada voto",
             "Vota 3 platos hoy y sube en la liga",
-            "Top 3 de la semana gana badge especial",
+            // Prometía un badge que no existe (ver LeagueScreen). Se sustituye por algo cierto.
+            "La liga semanal reinicia cada lunes",
             "¿Hay un récord en tu ciudad hoy?",
             "¡Nuevos platos añadidos cerca de ti!"
         )

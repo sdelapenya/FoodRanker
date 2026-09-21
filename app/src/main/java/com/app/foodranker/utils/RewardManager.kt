@@ -3,11 +3,13 @@ package com.app.foodranker.utils
 object RewardManager {
 
     // ── XP por acción ─────────────────────────────────────────────
-    const val XP_PLATE_WITH_PHOTO = 50
+    // Deben reflejar las constantes de functions/src/index.ts, que es quien las concede.
+    // Publicar vale más que valorar porque cuesta más (foto, local, datos), pero ya no once
+    // veces más: eso empujaba a llenar el ranking de platos que nadie llega a votar.
+    const val XP_PLATE_WITH_PHOTO = 30
     const val XP_PLATE_NO_PHOTO   = 10
-    const val XP_GIVE_RATING      = 5
+    const val XP_GIVE_RATING      = 15
     const val XP_RECEIVE_RATING   = 10
-    const val XP_RECEIVE_LIKE     = 3
     const val XP_REFERRAL         = 100
 
     // ── Definición de niveles ──────────────────────────────────────

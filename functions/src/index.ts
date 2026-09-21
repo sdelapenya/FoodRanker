@@ -37,8 +37,13 @@ function getVisionClient(): ImageAnnotatorClient {
 const db = admin.firestore();
 
 // XP amounts — must mirror RewardManager.kt constants
-const XP_PLATE_WITH_PHOTO = 50;
-const XP_GIVE_RATING = 5;
+//
+// ⚠️ Publicar daba 50 y valorar 5: subir un plato valía ONCE valoraciones, justo cuando el
+// problema de la app es que casi todos los platos tienen un único voto. La economía empujaba
+// a llenar el ranking de platos que nadie vota. Ahora publicar sigue valiendo más (tiene más
+// trabajo: foto, local, datos) pero ya no aplasta al resto: 45 contra 15, unas 3 veces.
+const XP_PLATE_WITH_PHOTO = 30;
+const XP_GIVE_RATING = 15;
 const XP_RECEIVE_RATING = 10;
 const XP_REFERRAL_REFERRER = 100;
 const XP_REFERRAL_REFERRED = 50;
@@ -239,6 +244,26 @@ function normalizeCity(city: string): string {
 }
 
 /**
+ * Ámbito de la liga semanal.
+ *
+ * Nació siendo por ciudad, y con el volumen actual eso la rompe: los usuarios están
+ * repartidos entre Madrid, Toledo, Alcázar y Casarrubios, así que cada "liga" tiene una o dos
+ * personas — compites contigo mismo. Y quien no ha puesto ciudad en su perfil **no participa
+ * en absoluto** y además pierde su XP de liga en silencio (le pasa a una tester real).
+ *
+ * Mientras no haya masa suficiente por ciudad, una sola liga para todos. Para volver a la
+ * liga local basta con cambiar esto a "city" y redesplegar: el cliente pregunta el id al
+ * servidor (getLeagueId), así que no hace falta versión nueva de la app.
+ */
+const LEAGUE_SCOPE: "global" | "city" = "global";
+
+/** Prefijo del doc de liga, o null si este usuario no puede participar. */
+function leagueScopeKey(city: string): string | null {
+  if (LEAGUE_SCOPE === "global") return "global";
+  return city || null;
+}
+
+/**
  * Adds xpDelta to the caller's weekly league entry (creating it if needed).
  * Looks up the user's city fresh each time so league placement always
  * reflects the current profile city. No-op if the user has no city set.
@@ -262,12 +287,13 @@ async function addLeagueXP(
   try {
     const userSnap = await db.collection("users").doc(userId).get();
     const city = normalizeCity((userSnap.get("city") as string) || "");
-    if (!city) return;
+    const scope = leagueScopeKey(city);
+    if (!scope) return;
 
     const wk = currentWeekKey();
     const leagueEntryRef = db
       .collection("leagues")
-      .doc(`${city}_${wk}`)
+      .doc(`${scope}_${wk}`)
       .collection("entries")
       .doc(userId);
 
@@ -294,7 +320,12 @@ async function addLeagueXP(
       // (un único batch atómico haría justo eso si el update() fallase).
       try {
         await sourceRatingRef.update({
-          leagueCity: city,
+          // Se estampa el PREFIJO de la liga donde realmente se escribió, no la ciudad del
+          // perfil: con LEAGUE_SCOPE="global" son cosas distintas, y los clawbacks
+          // (deleteRejectedPlate, revertAuthorXP) reconstruyen el id con este valor. Los
+          // ratings antiguos llevan aquí la ciudad, que entonces era el prefijo — así que
+          // siguen revirtiéndose bien sin tocar nada.
+          leagueCity: scope,
           leagueWeekKey: wk,
           leagueXpAmount: xpDelta,
         });
@@ -1309,10 +1340,13 @@ export const getLeagueId = onCall(
 
     const rawCity = (request.data?.city as string) ?? "";
     const city = normalizeCity(rawCity);
-    if (!city) throw new HttpsError("invalid-argument", "city is required");
+    // Con LEAGUE_SCOPE="global" la ciudad deja de hacer falta: participa todo el mundo,
+    // incluido quien no la tenga puesta en el perfil. Ver leagueScopeKey.
+    const scope = leagueScopeKey(city);
+    if (!scope) throw new HttpsError("invalid-argument", "city is required");
 
     const weekKey = currentWeekKey();
-    return { leagueId: `${city}_${weekKey}`, city, weekKey };
+    return { leagueId: `${scope}_${weekKey}`, city, weekKey, scope: LEAGUE_SCOPE };
   }
 );
 
