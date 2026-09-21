@@ -20,6 +20,8 @@ data class Rating(
     val verifiedAtVenue: Boolean = false,
     val averageScore: Double = 0.0,    // Calculado automáticamente
     val comment: String = "",
+    /** Reportes recibidos. A partir de 3 deja de mostrarse, igual que en comentarios. */
+    val reportCount: Int = 0,
     val createdAt: Long = 0L
 ) {
     companion object {

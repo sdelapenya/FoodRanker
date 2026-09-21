@@ -257,6 +257,48 @@ function normalizeCity(city: string): string {
  */
 const LEAGUE_SCOPE: "global" | "city" = "global";
 
+/**
+ * A partir de cuántas valoraciones al día una más deja de dar XP.
+ *
+ * Valorar exige declarar que has probado el plato, pero eso es solo una declaración: nada
+ * impide pulsar "sí" en todo. Con 27 platos y 15 XP cada uno, cualquiera podía sentarse diez
+ * minutos, votarlos todos y encabezar la liga sin comer nada.
+ *
+ * El tope es al **XP, no al voto**: la valoración se guarda y cuenta para la nota del plato
+ * (valorar mucho puede ser legítimo), pero deja de dar premio. Así mentir no renta, sin
+ * prohibirle opinar a nadie. Va en el servidor a propósito: un tope en el cliente se salta.
+ *
+ * 10 es de sobra para un día honesto — nadie come en diez sitios distintos — y permite
+ * valorar entrante, principal y postre de dos comidas sin acercarse.
+ */
+const MAX_DAILY_XP_RATINGS = 10;
+
+/**
+ * Cuántas valoraciones lleva hoy el usuario (incluida la que acaba de crear).
+ *
+ * ⚠️ **Fail-open a propósito**: necesita el índice `ratings` por `userId + createdAt`, y si no
+ * estuviera desplegado esta consulta lanza FAILED_PRECONDITION. Sin este try/catch, esa
+ * excepción tumbaría `onRatingCreated` entera y **ningún voto actualizaría la nota del plato**
+ * — muchísimo peor que el farmeo que este tope intenta frenar. Mismo criterio que el tope
+ * diario de platos en AddPlateViewModel.
+ */
+async function ratingsTodayCount(userId: string): Promise<number> {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const snap = await db
+      .collection("ratings")
+      .where("userId", "==", userId)
+      .where("createdAt", ">=", startOfDay.getTime())
+      .limit(MAX_DAILY_XP_RATINGS + 1)
+      .get();
+    return snap.size;
+  } catch (err) {
+    logger.warn(`ratingsTodayCount falló (¿falta el índice userId+createdAt?), no se aplica el tope:`, err);
+    return 0;
+  }
+}
+
 /** Prefijo del doc de liga, o null si este usuario no puede participar. */
 function leagueScopeKey(city: string): string | null {
   if (LEAGUE_SCOPE === "global") return "global";
@@ -753,11 +795,22 @@ export const onRatingCreated = onDocumentCreated(
       return;
     }
 
+    // Tope antifarmeo: pasadas MAX_DAILY_XP_RATINGS valoraciones en el día, esta sigue
+    // contando para la nota del plato pero ya no da XP (ni global ni de liga). Solo afecta a
+    // quien vota — el autor cobra su XP igual, que él no tiene culpa de nada.
+    const votedToday = await ratingsTodayCount(raterId);
+    const beyondDailyXpLimit = votedToday > MAX_DAILY_XP_RATINGS;
+    if (beyondDailyXpLimit) {
+      logger.info(`Rating ${ratingId}: ${raterId} lleva ${votedToday} valoraciones hoy, sin XP`);
+    }
+
     // League XP reflects voting activity regardless of moderation status —
     // otherwise votes cast while the plate is still pending are silently lost.
     // Pass snap.ref so the league city/weekKey actually used get stamped onto this
     // rating doc — needed for clawback if the plate is later rejected (see deleteRejectedPlate).
-    await addLeagueXP(raterId, rating.userName ?? "Usuario", rating.userPhotoUrl ?? "", XP_GIVE_RATING, snap.ref);
+    if (!beyondDailyXpLimit) {
+      await addLeagueXP(raterId, rating.userName ?? "Usuario", rating.userPhotoUrl ?? "", XP_GIVE_RATING, snap.ref);
+    }
 
     // Plate score, rater/owner XP, notifications and badges only apply once approved
     if (plateData.status !== "approved") {
@@ -810,8 +863,9 @@ export const onRatingCreated = onDocumentCreated(
       await refreshPriceAggregate(plateId);
     }
 
-    // Award XP
-    const xpTasks: Promise<void>[] = [awardXP(raterId, XP_GIVE_RATING)];
+    // Award XP — al votante solo si no ha pasado el tope diario (ver arriba)
+    const xpTasks: Promise<void>[] = [];
+    if (!beyondDailyXpLimit) xpTasks.push(awardXP(raterId, XP_GIVE_RATING));
     if (ownerId && ownerId !== raterId) {
       xpTasks.push(awardXP(ownerId, XP_RECEIVE_RATING));
     }

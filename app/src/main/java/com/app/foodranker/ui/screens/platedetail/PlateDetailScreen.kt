@@ -83,6 +83,7 @@ fun PlateDetailScreen(
     var showCollectionSheet by remember { mutableStateOf(false) }
     var showReportPlateDialog by remember { mutableStateOf(false) }
     var reportingCommentId by remember { mutableStateOf<String?>(null) }
+    var reportingRatingId by remember { mutableStateOf<String?>(null) }
     var showEngagementSheet by remember { mutableStateOf(false) }
     var contentVisible by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
@@ -622,6 +623,10 @@ fun PlateDetailScreen(
                                         rating = rating,
                                         onEdit = if (rating.userId == viewModel.currentUserId) {
                                             { showEditRatingSheet = true }
+                                        } else null,
+                                        // La propia no se reporta a uno mismo.
+                                        onReport = if (rating.userId != viewModel.currentUserId) {
+                                            { reportingRatingId = rating.id }
                                         } else null
                                     )
                                 }
@@ -774,6 +779,18 @@ fun PlateDetailScreen(
             onSelect = { reason ->
                 showReportPlateDialog = false
                 viewModel.reportPlate(plateId, reason)
+            }
+        )
+    }
+
+    reportingRatingId?.let { ratingId ->
+        ReportReasonDialog(
+            title = "Reportar valoración",
+            reasons = listOf("No ha probado el plato", "Nota injusta o malintencionada", "Spam"),
+            onDismiss = { reportingRatingId = null },
+            onSelect = { reason ->
+                reportingRatingId = null
+                viewModel.reportRating(plateId, ratingId, reason)
             }
         )
     }
@@ -1063,7 +1080,7 @@ fun LikeBadge(
 }
 
 @Composable
-fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null) {
+fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Unit)? = null) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
@@ -1113,6 +1130,12 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null) {
                             Spacer(Modifier.width(8.dp))
                             IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar valoración", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        if (onReport != null) {
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(onClick = onReport, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Default.Flag, contentDescription = "Reportar valoración", tint = TextSecondary, modifier = Modifier.size(16.dp))
                             }
                         }
                     }

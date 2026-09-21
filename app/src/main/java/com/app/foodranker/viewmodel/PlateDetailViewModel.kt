@@ -187,6 +187,7 @@ class PlateDetailViewModel @Inject constructor(
 
                     val loadedRatings = ratingsDeferred.await().documents
                         .mapNotNull { it.toObject(Rating::class.java) }
+                        .filter { it.reportCount < 3 }
                     val ownRating = ownRatingDeferred.await()
                     val ratings = if (ownRating != null && loadedRatings.none { it.userId == userId }) {
                         (loadedRatings + ownRating).sortedByDescending { it.createdAt }
@@ -386,6 +387,52 @@ class PlateDetailViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     successMessage = if (alreadyReported)
                         "Ya has reportado este plato anteriormente"
+                    else
+                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
+            }
+        }
+    }
+
+    /**
+     * Reporta una valoración. Es la única defensa contra alguien que miente en "lo he probado"
+     * para hundir o inflar un plato: esa declaración no se puede comprobar, así que lo que
+     * queda es poder señalarlo. Mismo patrón y mismo umbral (3) que platos y comentarios.
+     */
+    fun reportRating(plateId: String, ratingId: String, reason: String) {
+        val userId = auth.currentUser?.uid ?: return
+        if (ratingId.isBlank()) return
+        val cleanReason = reason.sanitized(InputLimits.REPORT_REASON)
+        viewModelScope.launch {
+            try {
+                val reportId = "${userId}_${ratingId}"
+                val reportRef = firestore.collection("reports").document(reportId)
+                val ratingRef = firestore.collection("ratings").document(ratingId)
+                val alreadyReported = firestore.runTransaction { tx ->
+                    if (tx.get(reportRef).exists()) return@runTransaction true
+                    tx.set(reportRef, mapOf(
+                        "id" to reportId,
+                        "plateId" to plateId,
+                        "ratingId" to ratingId,
+                        "reportedByUserId" to userId,
+                        "reason" to cleanReason,
+                        "createdAt" to System.currentTimeMillis()
+                    ))
+                    tx.update(ratingRef, "reportCount", FieldValue.increment(1))
+                    false
+                }.await()
+                if (!alreadyReported) {
+                    _uiState.value = _uiState.value.copy(
+                        ratings = _uiState.value.ratings
+                            .map { if (it.id == ratingId) it.copy(reportCount = it.reportCount + 1) else it }
+                            .filter { it.reportCount < 3 }
+                    )
+                }
+                _uiState.value = _uiState.value.copy(
+                    successMessage = if (alreadyReported)
+                        "Ya has reportado esta valoración anteriormente"
                     else
                         "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
                 )

@@ -198,7 +198,15 @@ service cloud.firestore {
                     && priceOk(request.resource.data)
                     && flagOk(request.resource.data, 'wouldOrderAgain')
                     && flagOk(request.resource.data, 'verifiedAtVenue')
+                    && request.resource.data.get('reportCount', 0) == 0
                     && !('processed' in request.resource.data);
+      // Reportar una valoración: mismo patrón que plates/comments (solo +1, y el id
+      // determinista del reporte impide contarlo dos veces). Hacía falta porque la
+      // declaración "lo he probado" no se puede comprobar: si alguien miente para hundir o
+      // inflar un plato, esto es lo único que permite señalarlo.
+      allow update: if isSignedIn()
+                    && changedKeys().hasOnly(['reportCount'])
+                    && request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1;
       // El autor puede actualizar sus puntuaciones y comentario (no userId/plateId/createdAt)
       allow update: if isSignedIn()
                     && resource.data.userId == request.auth.uid
