@@ -106,8 +106,12 @@ fun ReferralScreen(
                             fontSize = 20.sp,
                             textAlign = TextAlign.Center
                         )
+                        // Decía "y sube posiciones en la liga", y es falso: onReferralCreated
+                        // solo llama a awardXP (XP global), nunca a addLeagueXP. Invitar no
+                        // mueve la clasificación — y tampoco debería: sería subir en la liga
+                        // sin comer ni valorar nada.
                         Text(
-                            "Gana XP por cada amigo que se une\ny sube posiciones en la liga",
+                            "Gana XP por cada amigo que se une\ny sube de nivel más rápido",
                             color = Color.White.copy(alpha = 0.88f),
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center
