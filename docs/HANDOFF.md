@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-09-19
+**Actualizado:** 2026-09-23
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,49 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### ✅ LOGIN HÍBRIDO IMPLEMENTADO Y VERIFICADO (2026-09-23) — sin publicar todavía
+
+**Problema que resuelve.** Quien tiene de navegador por defecto uno sin Chrome Custom Tabs
+(el de Xiaomi, reportado por testers reales) **no podía entrar**: el flujo por navegador de
+Firebase da error con él. Con Chrome funcionaba.
+
+**Qué se hizo.** `AuthRepository.signInWithGoogle` intenta ahora dos caminos en orden:
+
+1. `tryNativeSignIn` — Credential Manager (hoja nativa de Android, sin navegador).
+2. Si ese no concluye, `signInWithBrowser` — **el flujo de siempre, sin tocar**.
+
+Cancelar **no** es fallo: si alguien cierra la hoja de cuentas se vuelve a Idle en silencio
+(`SignInCancelledException`), no se le abre un navegador detrás ni se le enseña un error.
+
+**Verificado en el emulador, los dos caminos:**
+
+| Caso | Resultado |
+|------|-----------|
+| Nativo, build debug | Hoja nativa → dentro. Sin navegador. |
+| Nativo, **build release (R8)** | Hoja nativa → dentro. R8 no rompe Credential Manager, y no hizo falta añadir reglas a `proguard-rules.pro`. |
+| Nativo roto a la fuerza | `W/AuthRepository: Login nativo no disponible (RuntimeException), se usa el navegador` → Custom Tab en `accounts.google.com` → dentro. |
+
+Los dos caminos acaban en **el mismo UID** (`bwUmH8m1hRMzfHQ3UNzSMu3avVY2` en la prueba),
+así que nadie parte su cuenta ni pierde progreso según por dónde entre.
+
+**⚠️ TRAMPA, para no perder el tiempo repitiéndola:** poner un `default_web_client_id`
+falso en `strings.xml` **no sirve** para probar el respaldo. Play Services del emulador
+emitió el token igualmente y el login nativo funcionó, así que parecía que el respaldo había
+entrado cuando en realidad nunca llegó a ejecutarse. La única forma fiable fue lanzar una
+excepción a mano dentro de `tryNativeSignIn`, compilar y mirar el logcat.
+
+**Riesgo asumido, conocido de antes:** el login nativo ya falló dos veces en builds reales de
+Play (ver "Décima sesión" más abajo), y eso no se puede reproducir ni en emulador ni en debug.
+La diferencia es que ahora ese fallo **no deja a nadie fuera**: cae al navegador. Si hubiera
+que dar marcha atrás, basta con borrar `tryNativeSignIn`.
+
+**Pendiente inmediato:** publicar la **v15** (el AAB que hay en Play Console es anterior a
+esto — hay que regenerarlo). Sigue pendiente también "Cerca de mí" (los locales sugeridos no
+tienen `onClick`, `NearbyDishesScreen.kt:109-114`) y los textos que se rompen con fuente
+grande (134 alturas fijas, 22 `maxLines = 1`).
+
+---
 
 ### 🔍 EN CURSO (2026-09-19): auditoría del sistema de valoraciones — rediseño en discusión
 

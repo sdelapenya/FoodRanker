@@ -50,15 +50,21 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun applyResult(result: Result<FirebaseUser>) {
-        _authState.value = if (result.isSuccess) {
-            AuthState.Success(result.getOrThrow())
-        } else {
-            val error = result.exceptionOrNull()
-            AuthState.Error(
-                (error as? Exception)?.let { com.app.foodranker.utils.ErrorMapper.toUserMessage(it) }
-                    ?: "Error desconocido"
-            )
+        if (result.isSuccess) {
+            _authState.value = AuthState.Success(result.getOrThrow())
+            return
         }
+        val error = result.exceptionOrNull()
+        // Cerrar la hoja de cuentas no es un fallo: se vuelve a Idle en silencio. Sin esto,
+        // al usuario le saldría un "algo salió mal" por haber decidido no entrar.
+        if (error is com.app.foodranker.data.repository.SignInCancelledException) {
+            _authState.value = AuthState.Idle
+            return
+        }
+        _authState.value = AuthState.Error(
+            (error as? Exception)?.let { com.app.foodranker.utils.ErrorMapper.toUserMessage(it) }
+                ?: "Error desconocido"
+        )
     }
 
     fun signOut() {

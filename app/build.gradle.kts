@@ -118,6 +118,15 @@ dependencies {
     // Firebase BOM (controla versiones automáticamente)
     implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
     implementation("com.google.firebase:firebase-auth")
+
+    // Login nativo de Google (Credential Manager). Se intenta ANTES del flujo por
+    // navegador de Firebase, que se queda como respaldo: ese depende de Chrome Custom Tabs
+    // y falla con navegadores que no los soportan (el de Xiaomi, por ejemplo).
+    // Ojo histórico: estas librerías estuvieron fijadas en 1.3.0 porque Kapt no leía sus
+    // metadatos de Kotlin. El proyecto ya usa KSP, así que esa atadura no existe.
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-analytics")
