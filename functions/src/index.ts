@@ -974,6 +974,10 @@ export const onNotificationCreated = onDocumentCreated(
           : `${fromUserName} ha comentado "${plateName}"`;
         break;
       }
+      case "follow":
+        title = "✨ Nuevo seguidor";
+        body = `${fromUserName} ha empezado a seguirte`;
+        break;
       default:
         return;
     }
@@ -1350,6 +1354,42 @@ export const onCommentCreated = onDocumentCreated(
       await awardXP(userId, XP_GIVE_COMMENT);
     } catch (err) {
       logger.error(`onCommentCreated error for ${event.params.commentId}:`, err);
+    }
+  }
+);
+
+/**
+ * Avisa a alguien de que tiene un seguidor nuevo.
+ *
+ * El id de la notificación es determinista (`follow_<seguidor>`), no autogenerado: así,
+ * seguir y dejar de seguir en bucle reescribe siempre el mismo documento en vez de acumular
+ * avisos. Como onDocumentCreated no se dispara al sobrescribir, tampoco se repite el push.
+ */
+export const onFollowCreated = onDocumentCreated(
+  "follows/{followId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const followerId: string | undefined = snap.get("followerId");
+    const followingId: string | undefined = snap.get("followingId");
+    if (!followerId || !followingId || followerId === followingId) return;
+
+    try {
+      const followerSnap = await db.collection("users").doc(followerId).get();
+      await db.collection("notifications").doc(followingId)
+        .collection("items").doc(`follow_${followerId}`)
+        .set({
+          id: `follow_${followerId}`,
+          type: "follow",
+          fromUserId: followerId,
+          fromUserName: (followerSnap.get("name") as string) || "Alguien",
+          plateId: "",
+          plateName: "",
+          isRead: false,
+          createdAt: Date.now(),
+        });
+    } catch (err) {
+      logger.warn(`onFollowCreated: no se pudo avisar a ${followingId}:`, err);
     }
   }
 );

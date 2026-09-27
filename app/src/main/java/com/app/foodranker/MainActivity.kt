@@ -358,6 +358,9 @@ fun FoodRankerNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPlate = { plateId ->
                     navController.navigate(Screen.PlateDetail.createRoute(plateId))
+                },
+                onNavigateToProfile = { userId ->
+                    navController.navigate(Screen.Profile.createRoute(userId))
                 }
             )
         }

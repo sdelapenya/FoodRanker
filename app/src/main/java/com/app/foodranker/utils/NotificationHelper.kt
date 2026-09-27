@@ -10,7 +10,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.app.foodranker.MainActivity
 import com.app.foodranker.R
-import java.util.concurrent.atomic.AtomicInteger
 
 object NotificationHelper {
 
@@ -20,8 +19,6 @@ object NotificationHelper {
 
     // Legacy alias kept for DailyReminderWorker compatibility
     const val CHANNEL_ID = CHANNEL_DAILY
-
-    private val notifIdCounter = AtomicInteger(0)
 
     fun createChannels(context: Context) {
         val nm = manager(context)
@@ -51,7 +48,11 @@ object NotificationHelper {
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             plateId?.let { putExtra("plateId", it) }
         }
-        val notifId = notifIdCounter.incrementAndGet()
+        // Id derivado del contenido, no un contador. El contador arrancaba de cero en cada
+        // arranque del proceso, así que tras reiniciar la app el primer aviso nuevo se
+        // colocaba con el id 1 y borraba de la bandeja uno anterior que siguiera ahí.
+        // Con esto dos avisos distintos nunca se pisan, y el mismo repetido se reemplaza.
+        val notifId = "$channelId|$title|$body|${plateId.orEmpty()}".hashCode()
         val pendingIntent = PendingIntent.getActivity(
             context,
             notifId,
@@ -68,8 +69,48 @@ object NotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            // Agrupar por canal: sin esto, cinco likes son cinco tarjetas sueltas
+            // compitiendo con el resto de la bandeja.
+            .setGroup(channelId)
             .build()
         manager(context).notify(notifId, notification)
+        actualizarResumen(context, channelId)
+    }
+
+    /**
+     * Publica (o retira) la tarjeta de resumen del grupo.
+     *
+     * Solo se muestra a partir de dos avisos: con uno solo, Android ya lo enseña entero y
+     * un resumen encima aparecería como una tarjeta de más, medio vacía.
+     */
+    private fun actualizarResumen(context: Context, channelId: String) {
+        val nm = manager(context)
+        val resumenId = channelId.hashCode()
+        val enElGrupo = try {
+            nm.activeNotifications.count { it.notification.group == channelId && it.id != resumenId }
+        } catch (e: Exception) {
+            return  // algunos fabricantes restringen activeNotifications: mejor sin resumen que romper
+        }
+        if (enElGrupo < 2) {
+            nm.cancel(resumenId)
+            return
+        }
+        val resumen = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.notification_color))
+            .setContentTitle(tituloDeCanal(channelId))
+            .setContentText("$enElGrupo novedades")
+            .setGroup(channelId)
+            .setGroupSummary(true)
+            .setAutoCancel(true)
+            .build()
+        nm.notify(resumenId, resumen)
+    }
+
+    private fun tituloDeCanal(channelId: String) = when (channelId) {
+        CHANNEL_MODERATION -> "Moderación de platos"
+        CHANNEL_DAILY      -> "Recordatorio diario"
+        else               -> "FoodRanker"
     }
 
     private fun manager(context: Context) =

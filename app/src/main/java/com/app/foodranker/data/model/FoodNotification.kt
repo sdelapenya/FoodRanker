@@ -2,8 +2,9 @@ package com.app.foodranker.data.model
 
 data class FoodNotification(
     val id: String = "",
-    // "like" | "rating" | "comment" | "moderation_approved" | "moderation_rejected"
+    // "like" | "rating" | "comment" | "follow" | "moderation_approved" | "moderation_rejected"
     val type: String = "",
+    val fromUserId: String = "",  // para abrir el perfil en las de tipo "follow"
     val fromUserName: String = "",
     val plateId: String = "",
     val plateName: String = "",

@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.profile
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -42,6 +44,7 @@ import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.Collections
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -659,6 +662,7 @@ private fun ProfileAccountDangerZone(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val ctxAjustes = androidx.compose.ui.platform.LocalContext.current
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -697,6 +701,36 @@ private fun ProfileAccountDangerZone(
                 arrowTint = OrangePrimary,
                 backgroundColor = Color(0xFFFFF3E0),
                 onClick = onReferral
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            ProfileMenuRow(
+                icon = Icons.Outlined.Notifications,
+                title = "Notificaciones",
+                subtitle = "Elige qué avisos quieres recibir",
+                iconTint = OrangePrimary.copy(alpha = 0.85f),
+                onClick = {
+                    // Se abren los ajustes del sistema en vez de montar interruptores
+                    // propios: desde Android 8 cada canal (likes, moderación, recordatorio)
+                    // se activa o silencia ahí, y duplicarlo daría dos mandos para lo mismo
+                    // que acabarían contradiciéndose.
+                    val abrir = runCatching {
+                        ctxAjustes.startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(Settings.EXTRA_APP_PACKAGE, ctxAjustes.packageName)
+                        )
+                    }
+                    if (abrir.isFailure) {
+                        // Algunos fabricantes no traen esa pantalla: se cae a la ficha de la app.
+                        runCatching {
+                            ctxAjustes.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    .setData(android.net.Uri.fromParts("package", ctxAjustes.packageName, null))
+                            )
+                        }
+                    }
+                }
             )
 
             Spacer(Modifier.height(6.dp))

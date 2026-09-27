@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit
 fun NotificationsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPlate: (String) -> Unit,
+    onNavigateToProfile: (String) -> Unit = {},
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -104,6 +105,9 @@ fun NotificationsScreen(
                                         "Este plato fue rechazado y eliminado. Puedes publicar uno nuevo.",
                                         android.widget.Toast.LENGTH_LONG
                                     ).show()
+                                } else if (notif.type == "follow") {
+                                    // No tiene plato: lleva al perfil de quien te sigue.
+                                    if (notif.fromUserId.isNotEmpty()) onNavigateToProfile(notif.fromUserId)
                                 } else if (notif.plateId.isNotEmpty()) {
                                     onNavigateToPlate(notif.plateId)
                                 }
@@ -131,6 +135,7 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
             "like"                -> "❤️" to Color(0xFFFFEBEE)
             "rating"              -> "⭐"  to Color(0xFFFFF8E1)
             "comment"             -> "💬" to Color(0xFFE8F4FD)
+            "follow"              -> "✨" to Color(0xFFF3E8FD)
             "moderation_approved" -> "✅" to Color(0xFFE8F5E9)
             "moderation_rejected" -> "⚠️" to Color(0xFFFDECEA)
             else                  -> "🔔" to Color(0xFFEEEEEE)
@@ -183,6 +188,7 @@ private fun buildAnnotatedText(n: FoodNotification): String = when (n.type) {
         "${n.fromUserName} ha comentado \"${n.plateName}\": ${n.commentText}"
     else
         "${n.fromUserName} ha comentado \"${n.plateName}\""
+    "follow" -> "${n.fromUserName} ha empezado a seguirte"
     "moderation_approved" -> "Tu plato \"${n.plateName}\" ya está publicado en el ranking"
     "moderation_rejected" -> {
         val reasonText = when {
