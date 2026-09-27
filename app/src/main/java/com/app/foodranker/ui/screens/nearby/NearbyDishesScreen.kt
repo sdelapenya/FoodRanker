@@ -4,11 +4,13 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
@@ -31,6 +33,8 @@ import com.app.foodranker.viewmodel.NearbyDishesViewModel
 fun NearbyDishesScreen(
     onNavigateBack: () -> Unit,
     onPlateClick: (String) -> Unit,
+    /** Lleva a publicar el primer plato de ese local, que es lo que promete el texto. */
+    onVenueClick: (String) -> Unit = {},
     viewModel: NearbyDishesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -107,10 +111,26 @@ fun NearbyDishesScreen(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                         uiState.placesSuggestions.forEach { suggestion ->
-                            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                Text(suggestion.name, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                                Text(suggestion.address, fontSize = 12.sp, color = TextSecondary)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onVenueClick(suggestion.placeId) }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(suggestion.name, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                    Text(suggestion.address, fontSize = 12.sp, color = TextSecondary)
+                                }
+                                // Sin una pista visual, la lista parecía decorativa: los
+                                // testers informaron de que no se podía "hacer nada" con ella.
+                                Icon(
+                                    Icons.Default.AddCircleOutline,
+                                    contentDescription = "Publicar un plato de este local",
+                                    tint = OrangePrimary
+                                )
                             }
+                            HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
                 }

@@ -208,7 +208,7 @@ fun FoodRankerNavigation() {
             DiscoverScreen(
                 onNavigateToExplore = { navController.navigate(Screen.Explore.route) },
                 onNavigateToExploreUsers = { navController.navigate(Screen.ExploreUsers.route) },
-                onNavigateToAddPlate = { navController.navigate(Screen.AddPlate.route) },
+                onNavigateToAddPlate = { navController.navigate(Screen.AddPlate.createRoute()) },
                 onNavigateToProfile = { userId ->
                     navController.navigate(Screen.Profile.createRoute(userId))
                 },
@@ -230,6 +230,9 @@ fun FoodRankerNavigation() {
         composable(Screen.Nearby.route) {
             NearbyDishesScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onVenueClick = { placeId ->
+                    navController.navigate(Screen.AddPlate.createRoute(placeId))
+                },
                 onPlateClick = { plateId ->
                     navController.navigate(Screen.PlateDetail.createRoute(plateId))
                 }
@@ -367,8 +370,14 @@ fun FoodRankerNavigation() {
             TermsOfServiceScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        composable(Screen.AddPlate.route) {
+        composable(
+            Screen.AddPlate.route,
+            arguments = listOf(navArgument("placeId") {
+                type = NavType.StringType; nullable = true; defaultValue = null
+            })
+        ) { backStackEntry ->
             AddPlateScreen(
+                preselectedPlaceId = backStackEntry.arguments?.getString("placeId"),
                 onNavigateBack = { navController.popBackStack() },
                 onSuccess = {
                     navController.navigate(Screen.Discover.route) {

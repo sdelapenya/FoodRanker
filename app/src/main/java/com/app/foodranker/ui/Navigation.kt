@@ -8,7 +8,15 @@ sealed class Screen(val route: String) {
     object Premium : Screen("premium")
     object Explore : Screen("explore")
     object ExploreUsers : Screen("explore_users")
-    object AddPlate : Screen("add_plate")
+    // placeId opcional: al llegar desde "Qué pido aquí" el local ya viene elegido,
+    // así no se obliga a buscarlo otra vez en una lista que se acaba de ver.
+    object AddPlate : Screen("add_plate?placeId={placeId}") {
+        // Se codifica aunque los placeId de Google suelen ser seguros: un solo carácter
+        // raro partiría la ruta y la navegación fallaría sin decir nada.
+        fun createRoute(placeId: String? = null) =
+            if (placeId.isNullOrBlank()) "add_plate"
+            else "add_plate?placeId=" + android.net.Uri.encode(placeId)
+    }
     object Profile : Screen("profile/{userId}") {
         fun createRoute(userId: String) = "profile/$userId"
     }

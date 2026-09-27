@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.app.foodranker.data.repository.VenueSuggestion
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +47,22 @@ fun AddPlateScreen(
     onNavigateBack: () -> Unit,
     onSuccess: () -> Unit,
     onNavigateToPlate: (String) -> Unit = {},
+    /** Local ya elegido al venir desde "Qué pido aquí"; null si se entra por el botón +. */
+    preselectedPlaceId: String? = null,
     viewModel: AddPlateViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+
+    // El local llega resuelto desde la pantalla anterior: se pide una sola vez, y solo
+    // si aún no hay ninguno elegido, para no pisar la selección al recomponer.
+    // resolveVenue solo necesita el placeId; nombre y dirección los devuelve él.
+    LaunchedEffect(preselectedPlaceId) {
+        val placeId = preselectedPlaceId
+        if (!placeId.isNullOrBlank() && viewModel.formVenue == null) {
+            viewModel.selectVenue(VenueSuggestion(placeId = placeId, name = "", address = ""))
+        }
+    }
+
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
