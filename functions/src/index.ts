@@ -523,7 +523,7 @@ export const moderatePlateImage = onDocumentCreated(
       }
 
       logger.info(`Plate ${plateId} approved. Match: ${matched.join(", ")}`);
-      await approveplate(snap.ref, plateId, authorId);
+      await approveplate(snap.ref, plateId, authorId, plateName);
     } catch (err) {
       // Fail-closed: si Vision falla (URL inválida, recurso no-imagen, timeout...),
       // NO aprobar sin moderar — imageUrl es enteramente controlado por el cliente,
@@ -601,7 +601,8 @@ export const validateFoodImage = onCall(
 async function approveplate(
   plateRef: admin.firestore.DocumentReference,
   plateId: string,
-  authorId: string | undefined
+  authorId: string | undefined,
+  plateName: string
 ): Promise<void> {
   if (!authorId) {
     await plateRef.update({ status: "approved" });
@@ -673,6 +674,26 @@ async function approveplate(
       checkAndAwardBadges(authorId),
       addLeagueXP(authorId, awarded.userName, awarded.userPhotoUrl, xpEarned, authorRatingRef),
     ]);
+
+    // Avisar al autor de que su plato salió. Hasta ahora solo se le avisaba del
+    // rechazo, así que publicar y que todo fuera bien era indistinguible de que se
+    // hubiera perdido. Va dentro de `awarded` porque ese es el flag de "primera
+    // aprobación real": en un reintento vale null y no se vuelve a notificar.
+    try {
+      const notifRef = db.collection("notifications").doc(authorId).collection("items").doc();
+      await notifRef.set({
+        id: notifRef.id,
+        type: "moderation_approved",
+        fromUserId: "",
+        fromUserName: "FoodRanker",
+        plateId,
+        plateName,
+        isRead: false,
+        createdAt: Date.now(),
+      });
+    } catch (err) {
+      logger.warn(`Plate ${plateId}: error sending approval notification:`, err);
+    }
   }
 }
 
@@ -938,6 +959,21 @@ export const onNotificationCreated = onDocumentCreated(
         body = `"${plateName}" no cumple las normas de la comunidad.`;
         channelId = "foodranker_moderation";
         break;
+      case "moderation_approved":
+        title = "✅ Tu plato ya está publicado";
+        body = `"${plateName}" ya aparece en el ranking.`;
+        channelId = "foodranker_moderation";
+        break;
+      case "comment": {
+        // El texto va en el cuerpo: una notificación de comentario sin el comentario
+        // obliga a abrir la app solo para saber si merece la pena mirarlo.
+        const texto: string = (notif.commentText as string) ?? "";
+        title = "💬 Nuevo comentario";
+        body = texto
+          ? `${fromUserName} en "${plateName}": ${texto}`
+          : `${fromUserName} ha comentado "${plateName}"`;
+        break;
+      }
       default:
         return;
     }
@@ -1273,6 +1309,30 @@ export const onCommentCreated = onDocumentCreated(
       if (!plateSnap.exists) {
         logger.warn(`Comment ${event.params.commentId}: plate ${plateId} not found, skipping XP`);
         return;
+      }
+
+      // Avisar al dueño del plato. Va ANTES del corte por XP a propósito: el XP de
+      // comentario solo se da una vez por usuario y plato, pero el dueño tiene que
+      // enterarse de TODOS los comentarios, no solo del primero de cada persona.
+      const ownerId: string | undefined = plateSnap.get("addedByUserId");
+      if (ownerId && ownerId !== userId) {
+        try {
+          const notifRef = db.collection("notifications").doc(ownerId).collection("items").doc();
+          await notifRef.set({
+            id: notifRef.id,
+            type: "comment",
+            fromUserId: userId,
+            fromUserName: (comment.userName as string) || "Alguien",
+            plateId,
+            plateName: (plateSnap.get("name") as string) ?? "tu plato",
+            commentText: String(comment.text ?? "").slice(0, 120),
+            isRead: false,
+            createdAt: Date.now(),
+          });
+        } catch (err) {
+          // Que no se pueda avisar no debe impedir el XP de quien comentó.
+          logger.warn(`Comment ${event.params.commentId}: error sending notification:`, err);
+        }
       }
 
       const markerRef = db.collection("plates").doc(plateId).collection("commentXpAwarded").doc(userId);

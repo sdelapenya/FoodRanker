@@ -130,6 +130,8 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
         val (icon, iconBg) = when (notification.type) {
             "like"                -> "❤️" to Color(0xFFFFEBEE)
             "rating"              -> "⭐"  to Color(0xFFFFF8E1)
+            "comment"             -> "💬" to Color(0xFFE8F4FD)
+            "moderation_approved" -> "✅" to Color(0xFFE8F5E9)
             "moderation_rejected" -> "⚠️" to Color(0xFFFDECEA)
             else                  -> "🔔" to Color(0xFFEEEEEE)
         }
@@ -177,6 +179,11 @@ private fun buildAnnotatedText(n: FoodNotification): String = when (n.type) {
         append(" ha valorado \"${n.plateName}\"")
         if (n.score > 0) append(" con ${"%.1f".format(n.score)}")
     }
+    "comment" -> if (n.commentText.isNotBlank())
+        "${n.fromUserName} ha comentado \"${n.plateName}\": ${n.commentText}"
+    else
+        "${n.fromUserName} ha comentado \"${n.plateName}\""
+    "moderation_approved" -> "Tu plato \"${n.plateName}\" ya está publicado en el ranking"
     "moderation_rejected" -> {
         val reasonText = when {
             n.reasons.contains("not_food")  -> "no parece comida"

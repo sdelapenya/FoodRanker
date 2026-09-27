@@ -340,6 +340,9 @@ fun FoodRankerNavigation() {
                 onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
                 onNavigateToHome = {
                     FoodRankerMessagingService.saveCurrentToken()
+                    // Ya hay sesión: es aquí donde el recordatorio diario empieza a
+                    // programarse (FoodRankerApp solo lo hace si ya había sesión al arrancar).
+                    com.app.foodranker.utils.DailyReminderWorker.schedule(context)
                     navController.navigate(Screen.Discover.route) {
                         popUpTo(Screen.Auth.route) { inclusive = true }
                     }

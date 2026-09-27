@@ -306,9 +306,16 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
       match /items/{itemId} {
         allow read, update, delete: if isOwner(userId);
-        // fromUserId debe ser el propio usuario que crea la notificación
+        // El cliente SOLO puede crear notificaciones de tipo 'like'. Los tipos
+        // 'rating', 'comment', 'moderation_approved' y 'moderation_rejected' los
+        // escribe el Admin SDK desde Cloud Functions, que no pasa por estas reglas.
+        // Sin restringir el type, cualquier usuario podía crear en el buzón de otro
+        // un 'moderation_rejected' — y como onNotificationCreated dispara push, le
+        // llegaba al móvil un "tu plato no cumple las normas" que parecía del sistema.
+        // fromUserId debe ser además el propio usuario que crea la notificación.
         allow create: if isSignedIn()
                       && request.resource.data.keys().hasAll(['type', 'fromUserId', 'createdAt'])
+                      && request.resource.data.type == 'like'
                       && request.resource.data.fromUserId == request.auth.uid
                       && request.resource.data.isRead == false;
       }

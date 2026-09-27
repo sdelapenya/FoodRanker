@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-09-23
+**Actualizado:** 2026-09-27
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,53 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🔶 NOTIFICACIONES ARREGLADAS (2026-09-27) — código listo, SIN desplegar ni publicar
+
+Revisión del sistema de notificaciones. **Entregar no fallaba**: los 11 usuarios tienen token
+FCM y de las 8 valoraciones a platos ajenos 7 habían notificado. Lo que pasaba es que había
+eventos que no avisaban de nada. Arreglado:
+
+1. **Comentar no avisaba a nadie** (7 comentarios reales en platos ajenos, 0 notificaciones).
+   El tipo `comment` no existía. Ahora lo crea `onCommentCreated`.
+   ⚠️ La notificación va **antes** del corte por XP a propósito: el XP de comentario solo se
+   da una vez por usuario y plato, así que colgarla al final habría avisado solo del primer
+   comentario de cada persona.
+2. **Aprobar un plato no avisaba**: solo se notificaba el rechazo, así que publicar y que
+   fuera bien era indistinguible de que se hubiera perdido. `approveplate` crea ahora
+   `moderation_approved`, dentro de `if (awarded)` — ese es el flag de primera aprobación
+   real, y en un reintento vale null y no duplica.
+3. **El recordatorio diario usaba el canal social**, no el suyo: silenciarlo desde Android
+   silenciaba también los likes, y al revés. `CHANNEL_DAILY` estaba declarado pero no lo
+   usaba nadie. Además ya no notifica sin sesión iniciada.
+4. **Agujero cerrado**: la regla de `notifications` no restringía el `type`, así que
+   cualquiera podía crear en el buzón de otro un `moderation_rejected` — y como dispara push,
+   le llegaba un "tu plato no cumple las normas" que parecía del sistema. Ahora el cliente
+   solo puede crear `like`; el resto lo escribe el Admin SDK.
+
+De paso, el canal en primer plano se resuelve por tipo (antes todo caía en el social).
+
+**Probado:** 10/10 en el emulador (`scratchpad/rulestest/notifRules.mjs`), incluido que el
+`like` del cliente sigue funcionando. `tsc --noEmit` y `compileDebugKotlin` en verde.
+Lo que NO está probado end-to-end son los dos triggers nuevos: el emulador de functions no
+sirve aquí porque `moderatePlateImage` borra los platos de prueba. Se verifica en producción
+tras desplegar, comentando desde una cuenta en un plato de la otra.
+
+⚠️ **Java para el emulador**: firebase-tools exige Java 21+. El JBR de Android Studio vale
+(21.0.6), pero **en Git Bash hay que meterlo en el PATH en formato POSIX**
+(`/c/Program Files/Java/jdk-26/bin`) — con `C:/...` los dos puntos parten el PATH y acaba
+cogiendo el Java viejo del sistema, con un error que parece de versión y no lo es.
+
+**Compatibilidad**: los tipos nuevos degradan bien en las versiones ya instaladas —
+`NotificationsScreen` tiene `else -> "🔔"` y "Nueva notificación sobre X", y el texto del push
+lo construye el servidor. Por eso **el servidor se puede desplegar sin esperar a publicar la
+app**.
+
+**Pendiente:** desplegar `functions` + `firestore.rules`, y decidir qué hacer con el resto de
+la revisión (agrupar notificaciones, ajustes de avisos, notificación de seguidor,
+"Cerca de mí" sin `onClick`, fuentes grandes).
+
+---
 
 ### ✅ LOGIN HÍBRIDO IMPLEMENTADO Y VERIFICADO (2026-09-23) — sin publicar todavía
 

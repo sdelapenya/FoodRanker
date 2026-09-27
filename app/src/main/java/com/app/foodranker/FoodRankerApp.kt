@@ -32,9 +32,11 @@ class FoodRankerApp : Application() {
         AnalyticsManager.initialize(this)
         RemoteConfigManager.initialize()
         NotificationHelper.createChannels(this)
-        com.app.foodranker.utils.DailyReminderWorker.schedule(this)
+        // El recordatorio diario solo se programa con sesión iniciada, igual que el token
+        // FCM. Tras registrarse lo programa MainActivity, así que nadie se queda sin él.
         if (FirebaseAuth.getInstance().currentUser != null) {
             FoodRankerMessagingService.saveCurrentToken()
+            com.app.foodranker.utils.DailyReminderWorker.schedule(this)
         }
     }
 }

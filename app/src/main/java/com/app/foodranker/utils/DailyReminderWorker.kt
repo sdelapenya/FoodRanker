@@ -2,12 +2,18 @@ package com.app.foodranker.utils
 
 import android.content.Context
 import androidx.work.*
+import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 class DailyReminderWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 
     override fun doWork(): Result {
+        // Sin sesión no se recuerda nada: quien instala la app y no llega a registrarse
+        // recibía igualmente el aviso de las 14:00, invitándole a "sumar XP" en una
+        // cuenta que no existe. El worker queda programado; simplemente no molesta.
+        if (FirebaseAuth.getInstance().currentUser == null) return Result.success()
+
         val messages = listOf(
             "¿Qué has comido hoy? 🍽️" to "Comparte tu mejor plato y suma XP",
             "¡Hora del almuerzo! 🌟" to "Descubre los mejores platos del mundo en FoodRanker",
@@ -16,7 +22,13 @@ class DailyReminderWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, 
             "¡Sube de nivel! ⭐" to "Publica un plato hoy y gana XP en FoodRanker"
         )
         val (title, body) = messages.random()
-        NotificationHelper.show(applicationContext, title, body)
+        // Canal propio, no el social. Compartiendo canal con los likes, silenciar el
+        // recordatorio diario desde los ajustes de Android silenciaba también los avisos
+        // de likes y valoraciones, y al revés — no había forma de separarlos.
+        NotificationHelper.show(
+            applicationContext, title, body,
+            channelId = NotificationHelper.CHANNEL_DAILY
+        )
         return Result.success()
     }
 

@@ -19,7 +19,15 @@ class FoodRankerMessagingService : FirebaseMessagingService() {
         val title = message.notification?.title ?: message.data["title"] ?: return
         val body = message.notification?.body ?: message.data["body"] ?: return
         val plateId = message.data["plateId"]
-        NotificationHelper.show(this, title, body, plateId)
+        // El canal hay que resolverlo aquí: en segundo plano lo aplica Android desde
+        // android.notification.channelId del push, pero en primer plano pasa por aquí y
+        // antes caía siempre en el social — un rechazo o una aprobación de moderación
+        // acababa mezclado con los likes y con su misma prioridad.
+        val channelId = when (message.data["type"]) {
+            "moderation_approved", "moderation_rejected" -> NotificationHelper.CHANNEL_MODERATION
+            else -> NotificationHelper.CHANNEL_SOCIAL
+        }
+        NotificationHelper.show(this, title, body, plateId, channelId)
     }
 
     override fun onNewToken(token: String) {
