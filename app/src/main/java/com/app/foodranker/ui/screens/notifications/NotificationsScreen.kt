@@ -201,7 +201,11 @@ private fun buildAnnotatedText(n: FoodNotification): String = when (n.type) {
         }
         "Tu plato \"${n.plateName}\" fue rechazado: $reasonText"
     }
-    else -> "Nueva notificación sobre \"${n.plateName}\""
+    // Respaldo para tipos que esta versión aún no conoce. Se comprueba el nombre
+    // porque no todos los avisos van sobre un plato — el de seguidor no lo lleva, y
+    // sin esto se leería: Nueva notificación sobre "".
+    else -> if (n.plateName.isNotBlank()) "Nueva notificación sobre \"${n.plateName}\""
+            else "Tienes una notificación nueva"
 }
 
 private fun timeAgo(timestamp: Long): String {
