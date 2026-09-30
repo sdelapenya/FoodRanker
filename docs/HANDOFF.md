@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-09-27
+**Actualizado:** 2026-09-30
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,38 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### ✅ FUENTES GRANDES (2026-09-30) — arreglado lo que se rompía de verdad
+
+No se tocaron los 298 `fontSize` ni las 134 alturas fijas a ciegas: `sp` ya escala solo y
+barrerlas todas era mucho riesgo para nada. En vez de eso se puso el emulador a
+**`font_scale 1.8`** (`adb shell settings put system font_scale 1.8`) y se recorrió la app
+viendo qué se rompía. Roturas encontradas y corregidas:
+
+1. **Pestañas del ranking**: "Siguiendo" se partía a media palabra y dejaba la "o" sola en
+   una segunda línea que desbordaba la pestaña. `TabRow` reparte el ancho a partes iguales y
+   tiene altura fija, así que se fuerza una línea con puntos suspensivos. Es un compromiso:
+   con fuente enorme se lee "Siguien…", pero el layout deja de deformarse.
+2. **Cabecera de la liga**: eran tres `Text` en un `Row`, y al crecer cada uno envolvía por su
+   cuenta — salía "· Reinicia" ARRIBA y "lunes" suelto debajo. Ahora es un único `Text` con
+   `buildAnnotatedString`, así que el salto de línea lo decide el texto.
+3. **Publicar plato**: "Paso X de 2" iba dentro del título de la `TopAppBar`, que tiene altura
+   fija, y salía cortado por la mitad. Se ha movido junto a la barra de progreso.
+4. **Nombres de la liga**: `entry.userName.take(8)` cortaba a 8 caracteres **siempre**, con
+   cualquier fuente — "Sergio De La Peña" salía "Sergio D" y "Patricia Nuñez", "Patricia".
+   Esto no era cuestión de accesibilidad, llevaba roto desde siempre.
+5. **Splash**: decía `v1.0` escrito a mano mientras la app iba por la 1.2. Ahora sale de
+   `BuildConfig.VERSION_NAME`.
+
+**Verificado en el emulador a 1.8 y otra vez a 1.0**, para confirmar que con fuente normal no
+se rompe nada (las pestañas siguen completas y el podio de la liga ahora se lee mejor que
+antes).
+
+**Lo que NO se ha tocado, a propósito:** chips de logros y de categoría se siguen cortando con
+fuente enorme. Son contenedores de ancho fijo con texto corto; arreglarlos obliga a rediseñar
+esas filas y no compensa.
+
+---
 
 ### 🔶 NOTIFICACIONES ARREGLADAS (2026-09-27) — código listo, SIN desplegar ni publicar
 

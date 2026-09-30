@@ -379,10 +379,16 @@ private fun RankingTopBar(
                         selected = selectedTab == index,
                         onClick  = { onTabSelected(index) },
                         text = {
+                            // Una línea: el TabRow reparte el ancho a partes iguales y
+                            // tiene altura fija, así que con la fuente del sistema grande
+                            // "Siguiendo" se partía a media palabra y dejaba la "o" sola
+                            // en una segunda línea que además desbordaba la pestaña.
                             Text(
                                 label,
                                 fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 color = if (selectedTab == index) OrangePrimary else TextSecondary
                             )
                         }

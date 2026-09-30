@@ -149,11 +149,12 @@ fun AddPlateScreen(
         containerColor = BackgroundLight,
         topBar = {
             TopAppBar(
+                // Solo el título: la TopAppBar tiene altura fija, así que con la fuente
+                // del sistema grande las dos líneas no cabían y "Paso X de 2" salía
+                // cortado por la mitad. El paso se indica ahora junto a la barra de
+                // progreso, que es donde puede crecer sin romper nada.
                 title = {
-                    Column {
-                        Text("Publicar plato", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
-                        Text("Paso $currentStep de 2", fontSize = 12.sp, color = TextSecondary)
-                    }
+                    Text("Publicar plato", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
                 },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -181,6 +182,12 @@ fun AddPlateScreen(
                 modifier = Modifier.fillMaxWidth().height(3.dp),
                 color = OrangePrimary,
                 trackColor = DividerColor
+            )
+            Text(
+                "Paso $currentStep de 2",
+                fontSize = 12.sp,
+                color = TextSecondary,
+                modifier = Modifier.padding(start = 16.dp, top = 6.dp)
             )
 
             AnimatedContent(

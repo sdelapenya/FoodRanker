@@ -15,6 +15,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -132,33 +136,30 @@ fun LeagueScreen(
                             fontSize = 20.sp
                         )
                         Spacer(Modifier.height(6.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                "Termina en",
-                                color = Color.White.copy(alpha = 0.72f),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                countdownText,
-                                color = OrangePrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            // Aquí ponía "Top 3 gana badge 🏅": ese badge NO existe ni hay
-                            // nada que cierre la semana, así que la app prometía un premio
-                            // que no entregaba (lo notó un tester). Hasta que el cierre de
-                            // liga esté hecho, se dice solo lo que es verdad.
-                            Text(
-                                "· Reinicia cada lunes",
-                                color = Color.White.copy(alpha = 0.72f),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        // Un único Text, no tres dentro de un Row: con la fuente del
+                        // sistema grande cada uno envolvía por su cuenta y la frase salía
+                        // descolocada ("· Reinicia" encima y "lunes" suelto debajo). Así
+                        // el salto de línea lo decide el texto, como cualquier párrafo.
+                        //
+                        // Aquí ponía "Top 3 gana badge 🏅": ese badge NO existe ni hay
+                        // nada que cierre la semana, así que la app prometía un premio
+                        // que no entregaba (lo notó un tester). Hasta que el cierre de
+                        // liga esté hecho, se dice solo lo que es verdad.
+                        Text(
+                            buildAnnotatedString {
+                                withStyle(SpanStyle(color = Color.White.copy(alpha = 0.72f))) {
+                                    append("Termina en ")
+                                }
+                                withStyle(SpanStyle(color = OrangePrimary, fontWeight = FontWeight.Bold)) {
+                                    append(countdownText)
+                                }
+                                withStyle(SpanStyle(color = Color.White.copy(alpha = 0.72f))) {
+                                    append("  ·  Reinicia cada lunes")
+                                }
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
 
                         if (uiState.entries.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
@@ -468,12 +469,18 @@ private fun PodiumSlot(
             ) { Text("👤", fontSize = 14.sp) }
         }
         Spacer(Modifier.height(4.dp))
+        // Antes cortaba a 8 caracteres a pelo, así que "Sergio De La Peña" salía como
+        // "Sergio D" incluso con la fuente normal. Se deja que sea el ancho disponible
+        // quien decida, y lo que sobre se marca con puntos suspensivos.
         Text(
-            entry.userName.take(8),
+            entry.userName,
             color = Color.White,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
         Text(
             "${entry.xp} XP",
@@ -558,7 +565,8 @@ private fun LeagueRow(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = TextPrimary,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 val subtitle = when {
                     isCurrentUser -> "Tu posición"

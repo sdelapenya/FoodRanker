@@ -74,7 +74,8 @@ fun SplashScreen(
         }
 
         Text(
-            text = "v1.0",
+            // Se lee del build: escrita a mano se quedó en v1.0 mientras la app iba por la 1.2.
+            text = "v" + com.app.foodranker.BuildConfig.VERSION_NAME,
             color = Color(0xFF11122E).copy(alpha = 0.38f),
             fontSize = 12.sp,
             modifier = Modifier
