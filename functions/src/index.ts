@@ -411,6 +411,32 @@ async function addLeagueXP(
 // Umbrales deben coincidir con RewardManager.LEVELS (app/src/main/java/com/app/foodranker/utils/RewardManager.kt).
 // El cliente recalcula el nivel a partir de xp para mostrarlo (no lee este campo), pero si los
 // umbrales divergen, el campo `level` guardado aquí dejaría de ser coherente con lo que ve el usuario.
+/**
+ * Nombres de nivel y de logro, solo para redactar el aviso.
+ *
+ * Están duplicados en RewardManager.kt, igual que ya lo están los umbrales de XP. Si se
+ * cambia un nombre aquí hay que cambiarlo allí: el servidor escribe el texto del push y la
+ * app escribe el de su propia lista, así que si divergen, el mismo logro se llamaría de dos
+ * formas según dónde lo leas.
+ */
+const NOMBRE_NIVEL: Record<number, string> = {
+  1: "🥄 Novato Foodie",
+  2: "🍴 Explorador",
+  3: "👨‍🍳 Crítico Gastronómico",
+  4: "🌟 Gourmand",
+  5: "🏆 Top Chef",
+  6: "💎 Leyenda Foodie",
+};
+
+const NOMBRE_LOGRO: Record<string, string> = {
+  first_plate: "📸 Primera foto",
+  globetrotter: "🌍 Globetrotter",
+  popular: "❤️ Popular",
+  critic: "⭐ Crítico",
+  top10: "🏆 Top 10",
+  league_winner: "🥇 Campeón semanal",
+};
+
 function getLevel(xp: number): number {
   if (xp >= 10000) return 6;
   if (xp >= 4000) return 5;
@@ -424,16 +450,41 @@ async function awardXP(userId: string, amount: number): Promise<void> {
   if (!userId || userId.startsWith("seed")) return;
   const ref = db.collection("users").doc(userId);
   try {
-    await db.runTransaction(async (tx) => {
+    const subioA = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      if (!snap.exists) return;
+      if (!snap.exists) return null;
       const current = (snap.get("xp") as number) || 0;
       // amount puede ser negativo (revertAuthorXP al borrar un plato). El suelo en 0
       // evita que un usuario acabe con XP negativo si el historial no cuadra.
       const updated = Math.max(0, current + amount);
-      tx.update(ref, { xp: updated, level: getLevel(updated) });
+      const antes = getLevel(current);
+      const despues = getLevel(updated);
+      tx.update(ref, { xp: updated, level: despues });
+      // Solo interesa SUBIR: amount puede ser negativo y bajar de nivel no se anuncia.
+      return despues > antes ? despues : null;
     });
     logger.debug(`XP +${amount} → ${userId}`);
+
+    if (subioA) {
+      // Id determinista por nivel: si el XP baja y vuelve a subir, se reescribe el mismo
+      // aviso en vez de acumular otro, y al no ser un documento nuevo tampoco repite push.
+      try {
+        const ref2 = db.collection("notifications").doc(userId).collection("items").doc(`level_${subioA}`);
+        await ref2.set({
+          id: `level_${subioA}`,
+          type: "level_up",
+          fromUserId: "",
+          fromUserName: "FoodRanker",
+          plateId: "",
+          plateName: NOMBRE_NIVEL[subioA] ?? `Nivel ${subioA}`,
+          level: subioA,
+          isRead: false,
+          createdAt: Date.now(),
+        });
+      } catch (err) {
+        logger.warn(`no se pudo avisar de la subida a nivel ${subioA} a ${userId}:`, err);
+      }
+    }
   } catch (err) {
     logger.warn(`awardXP failed for ${userId}:`, err);
   }
@@ -482,6 +533,27 @@ async function checkAndAwardBadges(userId: string): Promise<void> {
     if (newBadges.length > 0) {
       await userRef.update({ badges: admin.firestore.FieldValue.arrayUnion(...newBadges) });
       logger.info(`New badges for ${userId}: ${newBadges.join(", ")}`);
+
+      // Un logro que se concede en silencio es como no concederlo. El id del aviso es el
+      // del propio logro, así que aunque esta comprobación se repita no duplica nada.
+      for (const badgeId of newBadges) {
+        try {
+          const ref = db.collection("notifications").doc(userId).collection("items").doc(`badge_${badgeId}`);
+          await ref.set({
+            id: `badge_${badgeId}`,
+            type: "badge",
+            fromUserId: "",
+            fromUserName: "FoodRanker",
+            plateId: "",
+            plateName: NOMBRE_LOGRO[badgeId] ?? badgeId,
+            badgeId,
+            isRead: false,
+            createdAt: Date.now(),
+          });
+        } catch (err) {
+          logger.warn(`no se pudo avisar del logro ${badgeId} a ${userId}:`, err);
+        }
+      }
     }
   } catch (err) {
     logger.warn(`checkAndAwardBadges failed for ${userId}:`, err);
@@ -1009,6 +1081,18 @@ export const onNotificationCreated = onDocumentCreated(
         title = "✨ Nuevo seguidor";
         body = `${fromUserName} ha empezado a seguirte`;
         break;
+      case "level_up": {
+        const nivel: number = (notif.level as number) ?? 0;
+        title = "🎉 Has subido de nivel";
+        body = `Ya eres ${NOMBRE_NIVEL[nivel] ?? `nivel ${nivel}`}`;
+        break;
+      }
+      case "badge": {
+        const logro = NOMBRE_LOGRO[(notif.badgeId as string) ?? ""] ?? "un logro nuevo";
+        title = "🏅 Logro desbloqueado";
+        body = `Has conseguido ${logro}`;
+        break;
+      }
       case "league_result": {
         const puesto: number = (notif.position as number) ?? 0;
         const medalla = puesto === 1 ? "🥇" : puesto === 2 ? "🥈" : "🥉";

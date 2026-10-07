@@ -73,6 +73,8 @@ class NotificationsViewModel @Inject constructor(
                         score = doc.getDouble("score") ?: 0.0,
                         commentText = doc.getString("commentText") ?: "",
                         position = (doc.getLong("position") ?: 0L).toInt(),
+                        level = (doc.getLong("level") ?: 0L).toInt(),
+                        badgeId = doc.getString("badgeId") ?: "",
                         reasons = reasonsList,
                         isRead = doc.get("isRead") == true,
                         createdAt = doc.getLong("createdAt") ?: 0L

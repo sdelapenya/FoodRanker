@@ -71,6 +71,10 @@ class NotificationRepository @Inject constructor(
                                         "\"$plateName\" ya aparece en el ranking."
                                 "moderation_rejected" -> "Plato no aprobado" to
                                         "\"$plateName\" no cumple las normas de la comunidad."
+                                "level_up" -> "🎉 Has subido de nivel" to
+                                        "Ya eres $plateName"
+                                "badge" -> "🏅 Logro desbloqueado" to
+                                        "Has conseguido $plateName"
                                 "league_result" -> {
                                     val puesto = (data["position"] as? Long)?.toInt() ?: 0
                                     val medalla = if (puesto == 1) "🥇" else "🏅"

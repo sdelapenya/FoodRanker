@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.data.model.FoodNotification
 import com.app.foodranker.ui.theme.*
+import com.app.foodranker.utils.RewardManager
 import com.app.foodranker.viewmodel.NotificationsViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -137,6 +138,8 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
             "comment"             -> "💬" to Color(0xFFE8F4FD)
             "follow"              -> "✨" to Color(0xFFF3E8FD)
             "league_result"       -> (if (notification.position == 1) "🥇" else "🏅") to Color(0xFFFFF4E0)
+            "level_up"            -> "🎉" to Color(0xFFE8F5E9)
+            "badge"               -> "🏅" to Color(0xFFFFF4E0)
             "moderation_approved" -> "✅" to Color(0xFFE8F5E9)
             "moderation_rejected" -> "⚠️" to Color(0xFFFDECEA)
             else                  -> "🔔" to Color(0xFFEEEEEE)
@@ -190,6 +193,12 @@ private fun buildAnnotatedText(n: FoodNotification): String = when (n.type) {
     else
         "${n.fromUserName} ha comentado \"${n.plateName}\""
     "follow" -> "${n.fromUserName} ha empezado a seguirte"
+    // El nombre del nivel y del logro los resuelve RewardManager, no el texto que mandó el
+    // servidor: así la app enseña siempre su propia lista y no dos nombres distintos.
+    "level_up" -> "Has subido a ${RewardManager.LEVELS.find { it.number == n.level }
+        ?.let { "${it.emoji} ${it.name}" } ?: "nivel ${n.level}"}"
+    "badge" -> "Logro desbloqueado: ${RewardManager.getBadge(n.badgeId)
+        ?.let { "${it.emoji} ${it.name}" } ?: n.plateName}"
     "league_result" -> if (n.position == 1)
         "Ganaste la liga semanal 🥇"
     else

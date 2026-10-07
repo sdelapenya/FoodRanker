@@ -11,6 +11,8 @@ data class FoodNotification(
     val score: Double = 0.0,        // solo para tipo "rating"
     val commentText: String = "",   // solo para tipo "comment"
     val position: Int = 0,          // solo para tipo "league_result": el puesto del podio
+    val level: Int = 0,             // solo para tipo "level_up"
+    val badgeId: String = "",       // solo para tipo "badge"
     val reasons: List<String> = emptyList(), // solo para "moderation_rejected"
     val isRead: Boolean = false,
     val createdAt: Long = 0L
