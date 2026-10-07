@@ -1512,7 +1512,9 @@ export const onFollowCreated = onDocumentCreated(
           fromUserId: followerId,
           fromUserName: (followerSnap.get("name") as string) || "Alguien",
           plateId: "",
-          plateName: "",
+          // No va sobre un plato, pero las versiones que aún no conocen este tipo enseñan
+          // el nombre como respaldo: con la cadena vacía se leía Nueva notificación sobre "".
+          plateName: "Nuevo seguidor",
           isRead: false,
           createdAt: Date.now(),
         });
