@@ -64,10 +64,15 @@ class NotificationsViewModel @Inject constructor(
                     FoodNotification(
                         id = doc.id,
                         type = doc.getString("type") ?: "",
+                        // Este mapeo es a mano: todo campo nuevo del modelo hay que añadirlo
+                        // aquí también o llega vacío a la pantalla sin que nada falle.
+                        fromUserId = doc.getString("fromUserId") ?: "",
                         fromUserName = doc.getString("fromUserName") ?: "",
                         plateId = doc.getString("plateId") ?: "",
                         plateName = doc.getString("plateName") ?: "",
                         score = doc.getDouble("score") ?: 0.0,
+                        commentText = doc.getString("commentText") ?: "",
+                        position = (doc.getLong("position") ?: 0L).toInt(),
                         reasons = reasonsList,
                         isRead = doc.get("isRead") == true,
                         createdAt = doc.getLong("createdAt") ?: 0L

@@ -47,6 +47,11 @@ class NotificationRepository @Inject constructor(
                             val fromUser = data["fromUserName"] as? String ?: "Alguien"
                             val plateName = data["plateName"] as? String ?: "tu plato"
                             val plateId = data["plateId"] as? String
+                            // Esta lista tiene que cubrir TODOS los tipos que crea el
+                            // servidor. Es un camino paralelo al push de FCM, y lo que no
+                            // esté aquí se descarta sin dejar rastro: así los comentarios
+                            // aparecían en la campana pero no avisaban de nada (reportado
+                            // por un tester). Al añadir un tipo nuevo, añadirlo también aquí.
                             val (title, body) = when (type) {
                                 "like" -> "❤️ Nuevo me gusta" to
                                         "$fromUser le ha dado like a \"$plateName\""
@@ -55,9 +60,32 @@ class NotificationRepository @Inject constructor(
                                     "⭐ Nueva valoración" to
                                             "$fromUser ha valorado \"$plateName\" con ${"%.1f".format(score)}"
                                 }
+                                "comment" -> {
+                                    val texto = data["commentText"] as? String ?: ""
+                                    "💬 Nuevo comentario" to
+                                            if (texto.isNotBlank()) "$fromUser en \"$plateName\": $texto"
+                                            else "$fromUser ha comentado \"$plateName\""
+                                }
+                                "follow" -> "✨ Nuevo seguidor" to "$fromUser ha empezado a seguirte"
+                                "moderation_approved" -> "✅ Tu plato ya está publicado" to
+                                        "\"$plateName\" ya aparece en el ranking."
+                                "moderation_rejected" -> "Plato no aprobado" to
+                                        "\"$plateName\" no cumple las normas de la comunidad."
+                                "league_result" -> {
+                                    val puesto = (data["position"] as? Long)?.toInt() ?: 0
+                                    val medalla = if (puesto == 1) "🥇" else "🏅"
+                                    "$medalla Has quedado ${puesto}º en la liga" to
+                                            if (puesto == 1) "Ganaste la liga semanal."
+                                            else "La liga vuelve a empezar hoy."
+                                }
                                 else -> return@forEach
                             }
-                            NotificationHelper.show(context, title, body, plateId)
+                            val channelId = when (type) {
+                                "moderation_approved", "moderation_rejected" ->
+                                    NotificationHelper.CHANNEL_MODERATION
+                                else -> NotificationHelper.CHANNEL_SOCIAL
+                            }
+                            NotificationHelper.show(context, title, body, plateId, channelId)
                         }
                 }
                 isFirstLoad = false

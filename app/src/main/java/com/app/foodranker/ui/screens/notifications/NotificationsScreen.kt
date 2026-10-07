@@ -136,6 +136,7 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
             "rating"              -> "⭐"  to Color(0xFFFFF8E1)
             "comment"             -> "💬" to Color(0xFFE8F4FD)
             "follow"              -> "✨" to Color(0xFFF3E8FD)
+            "league_result"       -> (if (notification.position == 1) "🥇" else "🏅") to Color(0xFFFFF4E0)
             "moderation_approved" -> "✅" to Color(0xFFE8F5E9)
             "moderation_rejected" -> "⚠️" to Color(0xFFFDECEA)
             else                  -> "🔔" to Color(0xFFEEEEEE)
@@ -189,6 +190,10 @@ private fun buildAnnotatedText(n: FoodNotification): String = when (n.type) {
     else
         "${n.fromUserName} ha comentado \"${n.plateName}\""
     "follow" -> "${n.fromUserName} ha empezado a seguirte"
+    "league_result" -> if (n.position == 1)
+        "Ganaste la liga semanal 🥇"
+    else
+        "Terminaste ${n.position}º en la liga semanal"
     "moderation_approved" -> "Tu plato \"${n.plateName}\" ya está publicado en el ranking"
     "moderation_rejected" -> {
         val reasonText = when {

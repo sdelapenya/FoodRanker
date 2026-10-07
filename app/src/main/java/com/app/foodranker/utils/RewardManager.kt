@@ -56,7 +56,10 @@ object RewardManager {
         Badge("globetrotter", "🌍", "Globetrotter",      "Platos en 3 países distintos"),
         Badge("popular",      "❤️", "Popular",           "50 likes recibidos"),
         Badge("critic",       "⭐", "Crítico",           "10 valoraciones dadas"),
-        Badge("top10",        "🏆", "Top 10",            "Un plato tuyo en el Top 10")
+        Badge("top10",        "🏆", "Top 10",            "Un plato tuyo en el Top 10"),
+        // Lo concede closeWeeklyLeague al ganador de cada semana. Las versiones que no
+        // conozcan este id simplemente no lo pintan (ProfileScreen descarta los nulos).
+        Badge("league_winner", "🥇", "Campeón semanal",  "Ganaste una liga semanal")
     )
 
     fun getBadge(id: String): Badge? = ALL_BADGES.find { it.id == id }

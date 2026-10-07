@@ -10,6 +10,7 @@ data class FoodNotification(
     val plateName: String = "",
     val score: Double = 0.0,        // solo para tipo "rating"
     val commentText: String = "",   // solo para tipo "comment"
+    val position: Int = 0,          // solo para tipo "league_result": el puesto del podio
     val reasons: List<String> = emptyList(), // solo para "moderation_rejected"
     val isRead: Boolean = false,
     val createdAt: Long = 0L

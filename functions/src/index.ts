@@ -48,6 +48,15 @@ const XP_RECEIVE_RATING = 10;
 const XP_REFERRAL_REFERRER = 100;
 const XP_REFERRAL_REFERRED = 50;
 const XP_GIVE_COMMENT = 5;
+/**
+ * Premio del podio semanal. Deliberadamente del mismo orden que publicar un plato (30):
+ * una semana ganada en la liga vale como un par de platos, no como una fortuna. La
+ * economía ya se infló una vez y hubo que rebajarla, así que aquí se peca de corto.
+ *
+ * Este XP va al contador global (el del nivel), NO a la liga, que lleva su propio
+ * acumulado por semana — así ganar no da ventaja en la liga siguiente.
+ */
+const XP_LEAGUE_PODIUM = [50, 30, 15];
 
 // ── Valoraciones: pesos, ranking y precio ─────────────────────────────────
 // Deben reflejar Rating.kt en el cliente. Ver docs/RATINGS.md.
@@ -231,6 +240,25 @@ function currentWeekKey(): string {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); // Thursday of current week
+  const year = d.getFullYear();
+  const jan4 = new Date(year, 0, 4);
+  const week = 1 + Math.round(
+    ((d.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7
+  );
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
+/**
+ * Clave ISO de la semana ANTERIOR, que es la que se cierra cada lunes.
+ *
+ * Se calcula restando 7 días y reutilizando la misma fórmula, en vez de restar 1 al
+ * número de semana: en la primera semana del año eso daría "2026-W00", que no existe.
+ */
+function previousWeekKey(): string {
+  const hace7 = new Date(Date.now() - 7 * 86400000);
+  const d = new Date(hace7);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
   const year = d.getFullYear();
   const jan4 = new Date(year, 0, 4);
   const week = 1 + Math.round(
@@ -981,6 +1009,15 @@ export const onNotificationCreated = onDocumentCreated(
         title = "✨ Nuevo seguidor";
         body = `${fromUserName} ha empezado a seguirte`;
         break;
+      case "league_result": {
+        const puesto: number = (notif.position as number) ?? 0;
+        const medalla = puesto === 1 ? "🥇" : puesto === 2 ? "🥈" : "🥉";
+        title = `${medalla} Has quedado ${puesto}º en la liga`;
+        body = puesto === 1
+          ? "Ganaste la liga semanal. Nueva semana, a defender el puesto."
+          : `Terminaste ${puesto}º esta semana. La liga vuelve a empezar hoy.`;
+        break;
+      }
       default:
         // Un tipo que esta versión no sabe anunciar: se registra, porque si no el
         // aviso aparece en la campana de la app y el push no llega nunca, sin rastro.
@@ -1398,6 +1435,81 @@ export const onFollowCreated = onDocumentCreated(
     } catch (err) {
       logger.warn(`onFollowCreated: no se pudo avisar a ${followingId}:`, err);
     }
+  }
+);
+
+/**
+ * Cierra la liga de la semana que acaba de terminar y premia al podio.
+ *
+ * Hasta ahora la liga no se cerraba nunca: el documento cambiaba solo al cambiar la clave
+ * de la semana, así que nadie ganaba nada y a nadie se le avisaba — un tester jugó una
+ * semana entera creyendo que había ganado algo que no existía.
+ *
+ * Corre los lunes de madrugada, cuando `currentWeekKey()` ya apunta a la semana nueva y la
+ * anterior está cerrada del todo. La idempotencia va en el propio documento de la liga
+ * (`closedAt`) dentro de una transacción: si el planificador reintenta, no se premia dos veces.
+ */
+export const closeWeeklyLeague = onSchedule(
+  { schedule: "every monday 03:00", timeZone: "Europe/Madrid", region: "europe-west1" },
+  async () => {
+    const wk = previousWeekKey();
+    const leagueRef = db.collection("leagues").doc(`${LEAGUE_SCOPE}_${wk}`);
+
+    const entries = await leagueRef.collection("entries").get();
+    if (entries.size < 2) {
+      logger.info(`liga ${wk}: ${entries.size} participante(s), no se cierra`);
+      return;
+    }
+
+    // Marca de cierre ANTES de repartir: si algo falla a mitad, el reintento no duplica
+    // premios. Se prefiere un premio perdido a un premio doble.
+    const primeraVez = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(leagueRef);
+      if (snap.exists && snap.get("closedAt")) return false;
+      tx.set(leagueRef, { closedAt: Date.now(), weekKey: wk, participants: entries.size }, { merge: true });
+      return true;
+    });
+    if (!primeraVez) {
+      logger.info(`liga ${wk} ya estaba cerrada, no se repite`);
+      return;
+    }
+
+    // Desempate por updatedAt ascendente: con el mismo XP gana quien llegó antes, que es
+    // estable y explicable. Sin esto el orden dependería del capricho de Firestore.
+    const orden = entries.docs
+      .map((d) => ({ id: d.id, xp: (d.get("xp") as number) ?? 0, cuando: (d.get("updatedAt") as number) ?? 0 }))
+      .sort((a, b) => (b.xp - a.xp) || (a.cuando - b.cuando));
+
+    const podio = orden.slice(0, 3);
+    for (let i = 0; i < podio.length; i++) {
+      const { id: userId } = podio[i];
+      const puesto = i + 1;
+      try {
+        await awardXP(userId, XP_LEAGUE_PODIUM[i]);
+        if (puesto === 1) {
+          await db.collection("users").doc(userId).update({
+            badges: admin.firestore.FieldValue.arrayUnion("league_winner"),
+          });
+        }
+        const notifRef = db.collection("notifications").doc(userId).collection("items").doc(`league_${wk}`);
+        await notifRef.set({
+          id: `league_${wk}`,
+          type: "league_result",
+          fromUserId: "",
+          fromUserName: "FoodRanker",
+          plateId: "",
+          // Las versiones que aún no conocen este tipo enseñan el nombre como respaldo,
+          // así que aquí va algo legible en vez de una cadena vacía.
+          plateName: `Liga semanal ${wk}`,
+          position: puesto,
+          isRead: false,
+          createdAt: Date.now(),
+        });
+      } catch (err) {
+        logger.warn(`liga ${wk}: fallo premiando al puesto ${puesto} (${userId}):`, err);
+      }
+    }
+    logger.info(`liga ${wk} cerrada: ${entries.size} participantes, podio ${podio.map((p) => p.id).join(", ")}`);
   }
 );
 
