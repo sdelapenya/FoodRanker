@@ -256,7 +256,11 @@ class PlateDetailViewModel @Inject constructor(
                     "id" to notifId,
                     "type" to "like",
                     "fromUserId" to (auth.currentUser?.uid ?: ""),
-                    "fromUserName" to (auth.currentUser?.displayName ?: "Alguien"),
+                    // El nombre sale del documento del usuario, no de displayName: el elvis
+                    // solo salta con null, y displayName puede venir en BLANCO del login por
+                    // navegador. Así se guardaban likes con el remitente vacío, que luego se
+                    // leían como " le ha dado like a X" (visto en producción, 3 casos).
+                    "fromUserName" to resolveCurrentUserNameAndPhoto().first,
                     "plateId" to plateId,
                     "plateName" to plate.name,
                     "isRead" to false,
