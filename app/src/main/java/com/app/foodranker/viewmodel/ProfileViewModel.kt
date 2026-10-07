@@ -35,6 +35,8 @@ data class ProfileUiState(
     val isFollowing: Boolean = false,
     val followerCount: Int = 0,
     val followingCount: Int = 0,
+    /** Ligas semanales ganadas. Va suelto, no dentro de User — ver el comentario en load(). */
+    val leagueWins: Int = 0,
     val ratingsGiven: Int = 0,
     val likesGiven: Int = 0,
     val error: String? = null,
@@ -75,18 +77,23 @@ class ProfileViewModel @Inject constructor(
                 val isOwnProfile = currentUserId == userId
 
                 coroutineScope {
+                    // Devuelve también las ligas ganadas, que se leen sueltas del documento y
+                    // no desde User: la regla de creación de usuarios usa hasOnly() con los
+                    // campos del modelo, así que meter uno nuevo ahí sin tocar firestore.rules
+                    // haría fallar el alta de cualquier usuario nuevo.
                     val userDeferred = async {
                         if (isOwnProfile && firebaseUser != null) {
                             val userDoc = firestore.collection("users").document(userId).get().await()
+                            val wins = (userDoc.getLong("leagueWins") ?: 0L).toInt()
                             if (userDoc.exists()) {
                                 // Si toObject() falla (doc con forma inesperada), el nombre
                                 // en bruto del propio doc sigue siendo mejor dato que
                                 // displayName, que puede venir vacío del login por navegador.
-                                userDoc.toObject(User::class.java) ?: User(
+                                (userDoc.toObject(User::class.java) ?: User(
                                     id = firebaseUser.uid,
                                     name = userDoc.getString("name") ?: firebaseUser.displayName ?: "Usuario",
                                     photoUrl = userDoc.getString("photoUrl") ?: firebaseUser.photoUrl?.toString() ?: ""
-                                )
+                                )) to wins
                             } else {
                                 val newUser = User(
                                     id = firebaseUser.uid,
@@ -94,10 +101,11 @@ class ProfileViewModel @Inject constructor(
                                     photoUrl = firebaseUser.photoUrl?.toString() ?: ""
                                 )
                                 firestore.collection("users").document(firebaseUser.uid).set(newUser).await()
-                                newUser
+                                newUser to 0
                             }
                         } else {
-                            firestore.collection("users").document(userId).get().await().toObject(User::class.java)
+                            val doc = firestore.collection("users").document(userId).get().await()
+                            doc.toObject(User::class.java) to (doc.getLong("leagueWins") ?: 0L).toInt()
                         }
                     }
                     val platesDeferred = async {
@@ -128,7 +136,7 @@ class ProfileViewModel @Inject constructor(
                         } else false
                     }
 
-                    val user = userDeferred.await()
+                    val (user, leagueWins) = userDeferred.await()
 
                     // Rival query: closest user above in XP within same city (own profile only)
                     val rivalDeferred = if (isOwnProfile && user != null && user.city.isNotEmpty() && user.xp > 0) {
@@ -168,7 +176,7 @@ class ProfileViewModel @Inject constructor(
                     val cityRank = cityRankDeferred?.await() ?: 0
 
                     _uiState.value = _uiState.value.copy(
-                        user = user, plates = plates,
+                        user = user, plates = plates, leagueWins = leagueWins,
                         isLoading = false, isOwnProfile = isOwnProfile,
                         isFollowing = isFollowing,
                         followerCount = followerSnap.size(),

@@ -270,7 +270,7 @@ fun ProfileScreen(
                 item {
                     val xp = uiState.user?.xp ?: 0
                     val badges = uiState.user?.badges ?: emptyList()
-                    LevelCard(xp = xp, badges = badges)
+                    LevelCard(xp = xp, badges = badges, leagueWins = uiState.leagueWins)
                 }
 
                 // Rival card (own profile, rival found)
@@ -1105,7 +1105,7 @@ private fun isValidWebsite(input: String): Boolean {
 }
 
 @Composable
-private fun LevelCard(xp: Int, badges: List<String>) {
+private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
     val level = RewardManager.getLevel(xp)
     val progress = RewardManager.getProgress(xp)
     val nextXP = RewardManager.getNextLevelXP(xp)
@@ -1160,7 +1160,12 @@ private fun LevelCard(xp: Int, badges: List<String>) {
                                 modifier = Modifier.clickable { badgeDetail = badge }
                             ) {
                                 Text(
-                                    "${badge.emoji} ${badge.name}",
+                                    // El campeón semanal se puede ganar muchas veces, pero
+                                    // los logros son un conjunto sin repetición: sin este
+                                    // contador, ganar cinco ligas se vería igual que ganar una.
+                                    if (badge.id == "league_winner" && leagueWins > 1)
+                                        "${badge.emoji} ${badge.name} ×$leagueWins"
+                                    else "${badge.emoji} ${badge.name}",
                                     fontSize = 12.sp,
                                     color = OrangePrimary,
                                     fontWeight = FontWeight.Medium,

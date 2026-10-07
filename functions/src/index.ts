@@ -1573,8 +1573,16 @@ export const closeWeeklyLeague = onSchedule(
       try {
         await awardXP(userId, XP_LEAGUE_PODIUM[i]);
         if (puesto === 1) {
+          // El contador va aparte del badge a propósito: los badges son un array de ids
+          // sin repetición, así que ganar cinco veces daría exactamente el mismo icono.
+          //
+          // Y va FUERA del data class User de la app a propósito también: la regla de
+          // creación de usuarios usa hasOnly() con la lista de campos del modelo, así que
+          // añadirlo allí sin tocar firestore.rules rompería el alta de CUALQUIER usuario
+          // nuevo. El perfil lo lee suelto del documento.
           await db.collection("users").doc(userId).update({
             badges: admin.firestore.FieldValue.arrayUnion("league_winner"),
+            leagueWins: admin.firestore.FieldValue.increment(1),
           });
         }
         const notifRef = db.collection("notifications").doc(userId).collection("items").doc(`league_${wk}`);
