@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-09-30
+**Actualizado:** 2026-10-07
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,57 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🔶 v16 (1.3) LISTA PARA SUBIR (2026-10-07) — AAB generado, sin subir
+
+`app/build/outputs/bundle/release/app-release.aab`. Verificada en el emulador: arranca sin
+crashes, sesión intacta, notificaciones y perfil correctos.
+
+**Lo que lleva** (18+ commits acumulados): login híbrido, "Qué pido aquí" con locales que ya
+llevan a publicar, roturas con fuente grande, y todo el trabajo de notificaciones.
+
+#### El bug que reportó un tester, y su causa real
+
+"Llegan los avisos de me gusta pero no los de comentario; en la campana sí aparece."
+
+No era FCM. Se comprobó descargando el código desplegado (tenía su caso) y con una prueba
+real que dejó `push enviado: tipo=comment` en los registros. **La app muestra avisos por DOS
+caminos**: el push y un escuchador en tiempo real en `NotificationRepository`. Ese escuchador
+solo conocía `like` y `rating`; el resto caía en un `else` que lo descartaba sin rastro.
+⚠️ **Al añadir un tipo de notificación hay que tocar CUATRO sitios**: el switch de
+`onNotificationCreated`, el escuchador de `NotificationRepository`, el mapeo manual de
+`NotificationsViewModel` (campo a campo: lo que no esté ahí llega vacío sin fallar) y los
+textos de `NotificationsScreen`.
+
+#### Liga: ahora se cierra de verdad
+
+`closeWeeklyLeague`, lunes 03:00 Europe/Madrid, ya programada y ENABLED. Premia 50/30/15 XP
+al podio y da el distintivo `league_winner` al primero, con contador `leagueWins`.
+- El XP del premio va al contador global, **no al de la liga**: ganar no da ventaja la semana
+  siguiente.
+- Se marca `closedAt` **antes** de repartir: un reintento no premia dos veces.
+- Empates: gana quien llegó antes a esa puntuación (la W40 acabó empatada a 45).
+- ⚠️ `leagueWins` va **fuera** del data class `User` a propósito: la regla de creación usa
+  `hasOnly()` con los campos del modelo, así que añadirlo allí sin tocar `firestore.rules`
+  **rompería el alta de cualquier usuario nuevo**.
+
+#### Avisos nuevos ya desplegados y activos
+
+comentario, plato aprobado, seguidor, resultado de liga, subida de nivel y logro desbloqueado.
+Los tipos que una versión antigua no conoce caen en un respaldo genérico, por eso **todos
+llevan un `plateName` legible** aunque no vayan sobre un plato.
+
+#### Recompensas: NO tocar todavía (decidido con datos, 2026-10-07)
+
+- 4 de 7 usuarios activos tienen **0 platos de otros en su ciudad**: no pueden valorar nada
+  aunque quieran. De 51 valoraciones, solo **8** son a platos ajenos; el resto es el auto-voto.
+- 3 personas activas de 12 en 7 días. Patricia ha subido 31 de 43 platos.
+- El cuello de botella es **densidad geográfica**, no motivación. Ninguna recompensa lo mueve.
+- Ideas buenas, para cuando haya escala: `docs/REWARDS.md` §4.
+
+**Pendiente:** subir el AAB, pushear (son ya 20 commits), y los 12 testers que Play exige.
+
+---
 
 ### ✅ FUENTES GRANDES (2026-09-30) — arreglado lo que se rompía de verdad
 
