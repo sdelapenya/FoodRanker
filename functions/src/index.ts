@@ -933,7 +933,10 @@ export const onNotificationCreated = onDocumentCreated(
 
     const userSnap = await db.collection("users").doc(userId).get();
     const fcmToken = userSnap.get("fcmToken") as string | undefined;
-    if (!fcmToken) return;
+    if (!fcmToken) {
+      logger.warn(`push: ${userId} no tiene fcmToken, no se envía nada`);
+      return;
+    }
 
     const type: string = notif.type ?? "";
     const plateName: string = notif.plateName ?? "tu plato";
@@ -979,6 +982,9 @@ export const onNotificationCreated = onDocumentCreated(
         body = `${fromUserName} ha empezado a seguirte`;
         break;
       default:
+        // Un tipo que esta versión no sabe anunciar: se registra, porque si no el
+        // aviso aparece en la campana de la app y el push no llega nunca, sin rastro.
+        logger.warn(`push: tipo "${type}" sin caso en el switch, no se envía push a ${userId}`);
         return;
     }
 
@@ -998,6 +1004,7 @@ export const onNotificationCreated = onDocumentCreated(
           payload: { aps: { sound: "default", badge: 1 } },
         },
       });
+      logger.info(`push enviado: tipo=${type} a=${userId} canal=${channelId}`);
     } catch (err: any) {
       if (err.code === "messaging/registration-token-not-registered" ||
           err.code === "messaging/invalid-registration-token") {
