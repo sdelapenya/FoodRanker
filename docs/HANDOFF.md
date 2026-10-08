@@ -15,7 +15,26 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-### 🔶 IDIOMAS: FASE 0 Y FASE 1 HECHAS (2026-10-08) — sin publicar
+### 🔶 IDIOMAS: FASE 0 Y FASE 1 COMPLETAS (2026-10-08)
+
+La app se puede usar entera en inglés y castellano. 454 claves, todas en los dos idiomas (la
+única sin traducir es `default_web_client_id`, que es la credencial de OAuth).
+
+**Avisos del servidor (DESPLEGADO)**: la app guarda `language` en el perfil al entrar, junto
+al token FCM, y Cloud Functions elige el texto con ese campo (cae al castellano si falta).
+⚠️ `language` hubo que añadirlo a la lista blanca de `users` en firestore.rules. Verificado
+con el emulador que editar perfil y guardar el token siguen funcionando (6/6).
+Los nombres de nivel y logro se traducen en el servidor SOLO para el push: la lista de la app
+los resuelve con la suya, para que no acaben con dos nombres distintos.
+
+**Elegir idioma**: `locales_config.xml` + `android:localeConfig` → Android 13+ pone su propio
+selector por app; hay una fila "Idioma" en el perfil que lleva ahí. En Android 12 y anteriores
+esa pantalla no existe: la fila se oculta y la app sigue el idioma del móvil.
+
+**Lo que sigue en castellano**: términos y privacidad (ahí no es traducir, es decidir si el
+texto cubre bajo el **UK GDPR**).
+
+#### ⚠️ Trampas aprendidas
 
 Se abre la app a usuarios en Reino Unido (la prima de Sergio, en Edimburgo).
 
@@ -56,7 +75,14 @@ anteriores no existe esa pantalla: la fila se oculta y la app sigue el idioma de
   llevan ese prefijo, y `$?` tras una tubería es el del último comando, no el de Gradle. Así
   se coló un `&` sin escapar que tumbaba la build entera.
 
-**Pendiente de decidir**: el enlace de TheFork apunta a `thefork.es` para todo el mundo.
+- `ErrorMapper` lo llaman 21 sitios desde ViewModels que no pueden leer recursos: se le pasa
+  el contexto al arrancar (como AdManager) y la DECISIÓN de qué error es va aparte del texto,
+  porque sus tests comparaban el mensaje en castellano y se rompieron al traducirlo.
+- Un `remember` no admite `stringResource` dentro: se lee fuera y entra como clave.
+- Dentro de un `onClick` tampoco: se resuelve antes, en ámbito componible.
+
+**El enlace de TheFork** ya elige dominio y ruta por el país del local (thefork.co.uk, .fr,
+.it, .pt, .de), no por el idioma de quien mira: lo que se busca es ese sitio.
 
 ---
 
