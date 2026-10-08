@@ -50,6 +50,24 @@ class FoodRankerMessagingService : FirebaseMessagingService() {
             }
         }
 
+        /**
+         * Guarda el idioma del móvil en el perfil.
+         *
+         * Lo necesita el servidor: los push los redactan las Cloud Functions, que no tienen
+         * forma de saber en qué idioma habla cada persona. Se refresca junto al token, al
+         * entrar, para que siga a quien cambie el idioma del teléfono o el de la app.
+         */
+        fun saveCurrentLanguage() {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+            val idioma = java.util.Locale.getDefault().language.ifBlank { "es" }
+            FirebaseFirestore.getInstance()
+                .collection("users").document(userId)
+                .update("language", idioma)
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "Error guardando el idioma: ${e.message}")
+                }
+        }
+
         private fun saveTokenForUser(firestore: FirebaseFirestore, userId: String, token: String) {
             firestore
                 .collection("users")

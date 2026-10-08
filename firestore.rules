@@ -70,7 +70,10 @@ service cloud.firestore {
         // isPremium, xp, level, badges, banned: solo Cloud Functions/scripts via Admin SDK.
         isOwner(userId)
         && changedKeys().hasOnly([
-          'name', 'bio', 'city', 'website', 'photoUrl', 'fcmToken',
+          // 'language' es el idioma del móvil, que la app refresca al entrar. Lo necesita el
+          // servidor para redactar los push: las Cloud Functions escriben el título y el
+          // cuerpo, y sin esto no tienen forma de saber en qué idioma hablarle a cada uno.
+          'name', 'bio', 'city', 'website', 'photoUrl', 'fcmToken', 'language',
           'referralCode', 'referredByUserId'
         ])
         // referralCode solo se puede escribir si antes no existía

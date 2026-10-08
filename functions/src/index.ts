@@ -1084,6 +1084,94 @@ export const onRatingCreated = onDocumentCreated(
 
 // ── onNotificationCreated ─────────────────────────────────────────────────
 
+
+/**
+ * Textos de los avisos, por idioma.
+ *
+ * Los push los redacta el servidor, así que aquí hace falta saber en qué idioma habla cada
+ * persona: la app guarda `language` en su perfil al entrar. Sin ese campo se cae al
+ * castellano, que es lo que tenían todos hasta ahora.
+ *
+ * Solo se traduce lo que ve el usuario. Los nombres de nivel y de logro NO se mandan desde
+ * aquí: la app los resuelve con su propia lista al pintar la notificación, para que un mismo
+ * logro no acabe con dos nombres distintos según dónde se lea.
+ */
+type Idioma = "es" | "en";
+
+const TEXTOS: Record<Idioma, Record<string, string>> = {
+  es: {
+    like_t: "❤️ Nuevo me gusta",
+    like_b: '{from} le ha dado like a "{plate}"',
+    rating_t: "⭐ Nueva valoración",
+    rating_b: '{from} ha valorado "{plate}" con {score}',
+    rejected_t: "Plato no aprobado",
+    rejected_b: '"{plate}" no cumple las normas de la comunidad.',
+    approved_t: "✅ Tu plato ya está publicado",
+    approved_b: '"{plate}" ya aparece en el ranking.',
+    comment_t: "💬 Nuevo comentario",
+    comment_b: '{from} en "{plate}": {text}',
+    comment_b_plain: '{from} ha comentado "{plate}"',
+    follow_t: "✨ Nuevo seguidor",
+    follow_b: "{from} ha empezado a seguirte",
+    newplate_t: "🍽️ Plato nuevo",
+    newplate_b: '{from} ha publicado "{plate}"',
+    level_t: "🎉 Has subido de nivel",
+    level_b: "Ya eres {level}",
+    badge_t: "🏅 Logro desbloqueado",
+    badge_b: "Has conseguido {badge}",
+    league_t: "{medal} Has quedado {pos}º en la liga",
+    league_b_win: "Ganaste la liga semanal. Nueva semana, a defender el puesto.",
+    league_b_other: "Terminaste {pos}º esta semana. La liga vuelve a empezar hoy.",
+  },
+  en: {
+    like_t: "❤️ New like",
+    like_b: '{from} liked "{plate}"',
+    rating_t: "⭐ New rating",
+    rating_b: '{from} rated "{plate}" {score}',
+    rejected_t: "Dish not approved",
+    rejected_b: '"{plate}" does not meet the community rules.',
+    approved_t: "✅ Your dish is live",
+    approved_b: '"{plate}" is now in the ranking.',
+    comment_t: "💬 New comment",
+    comment_b: '{from} on "{plate}": {text}',
+    comment_b_plain: '{from} commented on "{plate}"',
+    follow_t: "✨ New follower",
+    follow_b: "{from} started following you",
+    newplate_t: "🍽️ New dish",
+    newplate_b: '{from} posted "{plate}"',
+    level_t: "🎉 You levelled up",
+    level_b: "You are now {level}",
+    badge_t: "🏅 Achievement unlocked",
+    badge_b: "You earned {badge}",
+    league_t: "{medal} You finished {pos} in the league",
+    league_b_win: "You won the weekly league. New week, time to defend it.",
+    league_b_other: "You finished {pos} this week. The league starts again today.",
+  },
+};
+
+/** Nombres de nivel y logro por idioma, solo para el texto del push. */
+const NOMBRES_I18N: Record<Idioma, { niveles: Record<number, string>; logros: Record<string, string> }> = {
+  es: { niveles: NOMBRE_NIVEL, logros: NOMBRE_LOGRO },
+  en: {
+    niveles: {
+      1: "🥄 Rookie Foodie", 2: "🍴 Explorer", 3: "👨‍🍳 Food Critic",
+      4: "🌟 Gourmand", 5: "🏆 Top Chef", 6: "💎 Foodie Legend",
+    },
+    logros: {
+      first_plate: "📸 First photo", globetrotter: "🌍 Globetrotter",
+      popular: "❤️ Popular", critic: "⭐ Critic", top10: "🏆 Top 10",
+      league_winner: "🥇 Weekly champion",
+    },
+  },
+};
+
+/** Sustituye {marcas} por sus valores. */
+function texto(idioma: Idioma, clave: string, vars: Record<string, string | number> = {}): string {
+  let t = TEXTOS[idioma][clave] ?? TEXTOS.es[clave] ?? "";
+  for (const [k, v] of Object.entries(vars)) t = t.split(`{${k}}`).join(String(v));
+  return t;
+}
+
 /**
  * Fires when a notification item is created in notifications/{userId}/items/{itemId}.
  * Sends a real FCM push to the recipient's device.
@@ -1107,71 +1195,72 @@ export const onNotificationCreated = onDocumentCreated(
     const plateName: string = notif.plateName ?? "tu plato";
     const fromUserName: string = notif.fromUserName ?? "Alguien";
 
+    // Idioma de quien RECIBE el aviso, no de quien lo provoca.
+    const lang: Idioma = ((userSnap.get("language") as string) || "es").startsWith("en") ? "en" : "es";
+    const t = (clave: string, vars?: Record<string, string | number>) => texto(lang, clave, vars);
+
     let title: string;
     let body: string;
     let channelId = "foodranker_social";
 
     switch (type) {
       case "like":
-        title = "❤️ Nuevo me gusta";
-        body = `${fromUserName} le ha dado like a "${plateName}"`;
+        title = t("like_t");
+        body = t("like_b", { from: fromUserName, plate: plateName });
         break;
       case "rating": {
         const score: number = notif.score ?? 0;
-        title = "⭐ Nueva valoración";
-        body = `${fromUserName} ha valorado "${plateName}" con ${score.toFixed(1)}`;
+        title = t("rating_t");
+        body = t("rating_b", { from: fromUserName, plate: plateName, score: score.toFixed(1) });
         break;
       }
       case "moderation_rejected":
-        title = "Plato no aprobado";
-        body = `"${plateName}" no cumple las normas de la comunidad.`;
+        title = t("rejected_t");
+        body = t("rejected_b", { plate: plateName });
         channelId = "foodranker_moderation";
         break;
       case "moderation_approved":
-        title = "✅ Tu plato ya está publicado";
-        body = `"${plateName}" ya aparece en el ranking.`;
+        title = t("approved_t");
+        body = t("approved_b", { plate: plateName });
         channelId = "foodranker_moderation";
         break;
       case "comment": {
         // El texto va en el cuerpo: una notificación de comentario sin el comentario
         // obliga a abrir la app solo para saber si merece la pena mirarlo.
-        const texto: string = (notif.commentText as string) ?? "";
-        title = "💬 Nuevo comentario";
-        body = texto
-          ? `${fromUserName} en "${plateName}": ${texto}`
-          : `${fromUserName} ha comentado "${plateName}"`;
+        const comentario: string = (notif.commentText as string) ?? "";
+        title = t("comment_t");
+        body = comentario
+          ? t("comment_b", { from: fromUserName, plate: plateName, text: comentario })
+          : t("comment_b_plain", { from: fromUserName, plate: plateName });
         break;
       }
       case "follow":
-        title = "✨ Nuevo seguidor";
-        body = `${fromUserName} ha empezado a seguirte`;
+        title = t("follow_t");
+        body = t("follow_b", { from: fromUserName });
         break;
-      case "new_plate": {
+      case "new_plate":
         // Solo suena el primero del día de cada autor (los siguientes son updates, y
         // onDocumentCreated no salta), así que aquí el contador siempre vale 1.
-        title = "🍽️ Plato nuevo";
-        body = `${fromUserName} ha publicado "${plateName}"`;
+        title = t("newplate_t");
+        body = t("newplate_b", { from: fromUserName, plate: plateName });
         break;
-      }
       case "level_up": {
         const nivel: number = (notif.level as number) ?? 0;
-        title = "🎉 Has subido de nivel";
-        body = `Ya eres ${NOMBRE_NIVEL[nivel] ?? `nivel ${nivel}`}`;
+        title = t("level_t");
+        body = t("level_b", { level: NOMBRES_I18N[lang].niveles[nivel] ?? String(nivel) });
         break;
       }
       case "badge": {
-        const logro = NOMBRE_LOGRO[(notif.badgeId as string) ?? ""] ?? "un logro nuevo";
-        title = "🏅 Logro desbloqueado";
-        body = `Has conseguido ${logro}`;
+        const id = (notif.badgeId as string) ?? "";
+        title = t("badge_t");
+        body = t("badge_b", { badge: NOMBRES_I18N[lang].logros[id] ?? id });
         break;
       }
       case "league_result": {
         const puesto: number = (notif.position as number) ?? 0;
         const medalla = puesto === 1 ? "🥇" : puesto === 2 ? "🥈" : "🥉";
-        title = `${medalla} Has quedado ${puesto}º en la liga`;
-        body = puesto === 1
-          ? "Ganaste la liga semanal. Nueva semana, a defender el puesto."
-          : `Terminaste ${puesto}º esta semana. La liga vuelve a empezar hoy.`;
+        title = t("league_t", { medal: medalla, pos: puesto });
+        body = puesto === 1 ? t("league_b_win") : t("league_b_other", { pos: puesto });
         break;
       }
       default:

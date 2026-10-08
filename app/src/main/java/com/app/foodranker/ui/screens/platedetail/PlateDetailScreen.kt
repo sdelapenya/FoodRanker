@@ -196,7 +196,19 @@ fun PlateDetailScreen(
                                 onClick = {
                                     uiState.plate?.let { plate ->
                                         val query = "${plate.restaurantName} ${plate.city}"
-                                        val uri = Uri.parse("https://www.thefork.es/busqueda?q=${Uri.encode(query)}")
+                                        // TheFork tiene un dominio y una ruta por país: enviar a
+                                        // un bar de Edimburgo al buscador español no encuentra
+                                        // nada. Se elige por el país del LOCAL, no por el idioma
+                                        // de quien mira, porque lo que se busca es ese sitio.
+                                        val (dominio, ruta) = when (plate.countryCode.uppercase()) {
+                                            "GB" -> "thefork.co.uk" to "search"
+                                            "FR" -> "thefork.fr" to "recherche"
+                                            "IT" -> "thefork.it" to "ricerca"
+                                            "PT" -> "thefork.pt" to "pesquisa"
+                                            "DE", "AT" -> "thefork.de" to "suche"
+                                            else -> "thefork.es" to "busqueda"
+                                        }
+                                        val uri = Uri.parse("https://www.$dominio/$ruta?q=${Uri.encode(query)}")
                                         context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                                     }
                                     showShareMenu = false

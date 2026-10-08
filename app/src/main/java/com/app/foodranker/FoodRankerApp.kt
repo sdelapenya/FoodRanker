@@ -38,6 +38,7 @@ class FoodRankerApp : Application() {
         // FCM. Tras registrarse lo programa MainActivity, así que nadie se queda sin él.
         if (FirebaseAuth.getInstance().currentUser != null) {
             FoodRankerMessagingService.saveCurrentToken()
+            FoodRankerMessagingService.saveCurrentLanguage()
             com.app.foodranker.utils.DailyReminderWorker.schedule(this)
         }
     }
