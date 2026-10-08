@@ -1,5 +1,10 @@
 package com.app.foodranker.data.model
 
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
+
 data class Plate(
     val id: String = "",
     val name: String = "",
@@ -72,28 +77,33 @@ object PlateStatus {
     const val REJECTED = "rejected"
 }
 
-enum class PlateCategory(val displayName: String, val emoji: String) {
-    PASTA("Pasta", "🍝"),
-    SUSHI("Sushi", "🍣"),
-    BURGER("Hamburguesa", "🍔"),
-    PIZZA("Pizza", "🍕"),
-    TAPAS("Tapas", "🥘"),
-    RAMEN("Ramen", "🍜"),
-    STEAK("Carne", "🥩"),
-    SEAFOOD("Mariscos", "🦞"),
-    DESSERT("Postres", "🍰"),
-    BREAKFAST("Desayuno", "🥐"),
-    SALAD("Ensaladas", "🥗"),
+/**
+ * El nombre va como referencia a recurso y no como texto: el enum se declara una sola
+ * vez al cargar la clase, mucho antes de saber en qué idioma está el móvil, así que un
+ * String aquí se quedaría clavado en castellano. Para pintarlo, [categoryName].
+ */
+enum class PlateCategory(@StringRes val nameRes: Int, val emoji: String) {
+    PASTA(R.string.cat_pasta, "🍝"),
+    SUSHI(R.string.cat_sushi, "🍣"),
+    BURGER(R.string.cat_burger, "🍔"),
+    PIZZA(R.string.cat_pizza, "🍕"),
+    TAPAS(R.string.cat_tapas, "🥘"),
+    RAMEN(R.string.cat_ramen, "🍜"),
+    STEAK(R.string.cat_steak, "🥩"),
+    SEAFOOD(R.string.cat_seafood, "🦞"),
+    DESSERT(R.string.cat_dessert, "🍰"),
+    BREAKFAST(R.string.cat_breakfast, "🥐"),
+    SALAD(R.string.cat_salad, "🥗"),
     // Añadidas tras ver que 28 de 50 platos reales caían en "Otros": 7 eran arroces y
     // paellas, 6 pescados, y el resto verduras, huevos y platos de cuchara. "Mariscos"
     // existía desde el principio, pero pescado no, que en una app española es raro.
-    RICE("Arroces", "🍚"),
-    FISH("Pescado", "🐟"),
-    VEGGIE("Verduras", "🥦"),
-    EGGS("Huevos", "🍳"),
-    SOUP("Sopas y guisos", "🍲"),
-    SANDWICH("Bocadillos", "🥪"),
-    OTHER("Otros", "🍽️");
+    RICE(R.string.cat_rice, "🍚"),
+    FISH(R.string.cat_fish, "🐟"),
+    VEGGIE(R.string.cat_veggie, "🥦"),
+    EGGS(R.string.cat_eggs, "🍳"),
+    SOUP(R.string.cat_soup, "🍲"),
+    SANDWICH(R.string.cat_sandwich, "🥪"),
+    OTHER(R.string.cat_other, "🍽️");
 
     companion object {
         /**
@@ -113,3 +123,7 @@ enum class PlateCategory(val displayName: String, val emoji: String) {
  * campo más del documento, y la lista blanca de `firestore.rules` rechazaría la publicación.
  */
 val Plate.categoryType: PlateCategory get() = PlateCategory.fromId(category)
+
+/** Nombre de la categoria en el idioma activo. */
+@Composable
+fun PlateCategory.categoryName(): String = stringResource(nameRes)

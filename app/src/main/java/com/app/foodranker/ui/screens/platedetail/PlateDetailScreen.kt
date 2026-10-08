@@ -49,6 +49,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.graphics.Brush
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.data.model.categoryType
+import com.app.foodranker.data.model.categoryName
 import com.app.foodranker.data.model.Comment
 import com.app.foodranker.data.model.Rating
 import com.app.foodranker.data.model.User
@@ -309,7 +310,7 @@ fun PlateDetailScreen(
                                         color = OrangePrimary
                                     ) {
                                         Text(
-                                            "${plate.categoryType.emoji} ${plate.categoryType.displayName}",
+                                            "${plate.categoryType.emoji} " + plate.categoryType.categoryName(),
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp,

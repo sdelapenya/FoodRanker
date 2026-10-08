@@ -145,4 +145,24 @@
         <item quantity="one">%1$s voto</item>
         <item quantity="other">%1$s votos</item>
     </plurals>
+
+    <!-- Categorias de plato -->
+    <string name="cat_pasta">Pasta</string>
+    <string name="cat_sushi">Sushi</string>
+    <string name="cat_burger">Hamburguesa</string>
+    <string name="cat_pizza">Pizza</string>
+    <string name="cat_tapas">Tapas</string>
+    <string name="cat_ramen">Ramen</string>
+    <string name="cat_steak">Carne</string>
+    <string name="cat_seafood">Mariscos</string>
+    <string name="cat_dessert">Postres</string>
+    <string name="cat_breakfast">Desayuno</string>
+    <string name="cat_salad">Ensaladas</string>
+    <string name="cat_rice">Arroces</string>
+    <string name="cat_fish">Pescado</string>
+    <string name="cat_veggie">Verduras</string>
+    <string name="cat_eggs">Huevos</string>
+    <string name="cat_soup">Sopas y guisos</string>
+    <string name="cat_sandwich">Bocadillos</string>
+    <string name="cat_other">Otros</string>
 </resources>

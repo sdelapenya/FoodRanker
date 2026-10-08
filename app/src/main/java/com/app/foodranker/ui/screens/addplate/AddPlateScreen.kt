@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.app.foodranker.data.model.PlateCategory
+import com.app.foodranker.data.model.categoryName
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.utils.InputLimits
 import com.app.foodranker.viewmodel.AddPlateState
@@ -252,7 +253,7 @@ fun AddPlateScreen(
                                     FilterChip(
                                         selected = selectedCategory == category,
                                         onClick = { viewModel.formCategory = category },
-                                        label = { Text("${category.emoji} ${category.displayName}", fontSize = 13.sp) },
+                                        label = { Text("${category.emoji} " + category.categoryName(), fontSize = 13.sp) },
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = OrangePrimary,
                                             selectedLabelColor = Color.White

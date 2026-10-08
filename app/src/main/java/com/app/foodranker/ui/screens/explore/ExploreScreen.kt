@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.data.model.PlateCategory
+import com.app.foodranker.data.model.categoryName
 import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.ui.components.EmptyStateCentered
 import com.app.foodranker.ui.components.PlateCardHorizontal
@@ -183,7 +184,7 @@ fun ExploreScreen(
                         FilterChip(
                             selected = uiState.selectedCategory == category,
                             onClick = { viewModel.onCategoryChange(category) },
-                            label = { Text("${category.emoji} ${category.displayName}") },
+                            label = { Text("${category.emoji} " + category.categoryName()) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = OrangePrimary,
                                 selectedLabelColor = SurfaceWhite

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.categoryType
+import com.app.foodranker.data.model.categoryName
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.ui.theme.AppElevation
 import com.app.foodranker.ui.theme.OrangePrimary
@@ -48,7 +49,7 @@ private fun PlateImagePlaceholder(category: PlateCategory, modifier: Modifier = 
             Text(category.emoji, fontSize = 42.sp)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                category.displayName,
+                category.categoryName(),
                 color = Color.White.copy(alpha = 0.75f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium

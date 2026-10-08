@@ -146,4 +146,24 @@
         <item quantity="one">%1$s vote</item>
         <item quantity="other">%1$s votes</item>
     </plurals>
+
+    <!-- Categorias de plato -->
+    <string name="cat_pasta">Pasta</string>
+    <string name="cat_sushi">Sushi</string>
+    <string name="cat_burger">Burger</string>
+    <string name="cat_pizza">Pizza</string>
+    <string name="cat_tapas">Tapas</string>
+    <string name="cat_ramen">Ramen</string>
+    <string name="cat_steak">Meat</string>
+    <string name="cat_seafood">Seafood</string>
+    <string name="cat_dessert">Desserts</string>
+    <string name="cat_breakfast">Breakfast</string>
+    <string name="cat_salad">Salads</string>
+    <string name="cat_rice">Rice dishes</string>
+    <string name="cat_fish">Fish</string>
+    <string name="cat_veggie">Vegetables</string>
+    <string name="cat_eggs">Eggs</string>
+    <string name="cat_soup">Soups and stews</string>
+    <string name="cat_sandwich">Sandwiches</string>
+    <string name="cat_other">Other</string>
 </resources>
