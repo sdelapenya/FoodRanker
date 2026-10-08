@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-10-07
+**Actualizado:** 2026-10-08
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,51 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🔶 IDIOMAS: FASE 0 Y FASE 1 HECHAS (2026-10-08) — sin publicar
+
+Se abre la app a usuarios en Reino Unido (la prima de Sergio, en Edimburgo).
+
+**Fase 0 — lo que corrompía datos (DESPLEGADO).**
+- El precio se guardaba sin moneda y con el € escrito a mano. La moneda sale ahora del país
+  del LOCAL, no del móvil de quien mira: el precio lo fija el sitio.
+- Los locales se pedían a Places fijados en castellano, y el documento del local es **único y
+  compartido**: un bar de Edimburgo habría quedado como "Edimburgo, Reino Unido" PARA TODOS.
+  Ahora la app manda el idioma de su móvil al dar de alta un sitio.
+- Eso obliga a guardar `countryCode` (ISO), porque el nombre del país pasa a venir en varios
+  idiomas y deja de servir para comparar. ⚠️ El logro Globetrotter contaba países por nombre:
+  habría contado "España" y "Spain" como dos.
+- ⚠️ `countryCode` hubo que añadirlo a la lista blanca de `plates` en firestore.rules o se
+  rompía TODA publicación. Verificado con el emulador (3/3).
+- Backfill hecho: 33 locales y 47 platos (ES y FR).
+
+**Fase 1 — las pantallas de entrada (NO desplegado, va en la v17).**
+Onboarding, login, ranking, publicar y ficha de plato: ~250 textos fuera del código, en
+`values/` (inglés, por defecto) y `values-es/`. Las 18 categorías también.
+Quedan sin tocar: perfil, liga, explorar, premium, notificaciones, términos y privacidad.
+
+**Elegir idioma**: `locales_config.xml` + `android:localeConfig` hacen que Android 13+ ponga
+su propio selector por app. Hay una fila "Idioma" en el perfil que lleva ahí. En Android 12 y
+anteriores no existe esa pantalla: la fila se oculta y la app sigue el idioma del móvil.
+
+#### ⚠️ Trampas aprendidas con los recursos
+- `stringResource` solo se puede llamar desde un `@Composable`. Los literales de listas
+  definidas a nivel de fichero (páginas del onboarding) pasan a `@StringRes Int`, y lo que va
+  dentro de un `remember` se lee FUERA y entra como clave.
+- Un **enum no puede guardar el texto**: se construye al cargar la clase, antes de saber el
+  idioma. Las categorías guardan `@StringRes val nameRes`.
+- En `strings.xml`: un apóstrofo suelto NO compila (va el tipográfico), un `&` tampoco
+  (`Soups & stews` tumbó la build), y los saltos de línea tienen que ser la secuencia
+  escapada, no un salto real, que Android colapsa.
+- Los plurales NO se hacen con un `if (n == 1)`: eso solo acierta en castellano e inglés.
+  Van con `<plurals>` (votos, racha, "lo repetirían").
+- ⚠️ **Al compilar, no filtrar la salida de Gradle por `^e: `**: los errores de recursos no
+  llevan ese prefijo, y `$?` tras una tubería es el del último comando, no el de Gradle. Así
+  se coló un `&` sin escapar que tumbaba la build entera.
+
+**Pendiente de decidir**: el enlace de TheFork apunta a `thefork.es` para todo el mundo.
+
+---
 
 ### 🔶 v16 (1.3) LISTA PARA SUBIR (2026-10-07) — AAB generado, sin subir
 

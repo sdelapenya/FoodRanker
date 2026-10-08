@@ -1,5 +1,8 @@
 package com.app.foodranker.ui.screens.platedetail
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.*
@@ -147,7 +150,7 @@ fun PlateDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.det_back), tint = TextPrimary)
                     }
                 },
                 actions = {
@@ -155,41 +158,41 @@ fun PlateDetailScreen(
                     IconButton(onClick = { viewModel.toggleSave(plateId) }) {
                         Icon(
                             imageVector = if (uiState.isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = if (uiState.isSaved) "Guardado" else "Guardar",
+                            contentDescription = if (uiState.isSaved) stringResource(R.string.det_saved) else stringResource(R.string.det_save),
                             tint = if (uiState.isSaved) OrangePrimary else TextPrimary
                         )
                     }
                     Box {
                         IconButton(onClick = { showShareMenu = true }) {
-                            Icon(Icons.Default.Share, contentDescription = "Compartir", tint = OrangePrimary)
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.det_share), tint = OrangePrimary)
                         }
                         DropdownMenu(
                             expanded = showShareMenu,
                             onDismissRequest = { showShareMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("📤 Compartir texto") },
+                                text = { Text(stringResource(R.string.det_share_text)) },
                                 onClick = {
                                     uiState.plate?.let { ShareManager.sharePlateText(context, it) }
                                     showShareMenu = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("📚 Añadir a lista") },
+                                text = { Text(stringResource(R.string.det_add_to_list)) },
                                 onClick = {
                                     showShareMenu = false
                                     showCollectionSheet = true
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("🖼️ Compartir como imagen") },
+                                text = { Text(stringResource(R.string.det_share_image)) },
                                 onClick = {
                                     showShareMenu = false
                                     showShareCard = true
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("🍴 Buscar en TheFork") },
+                                text = { Text(stringResource(R.string.det_search_thefork)) },
                                 onClick = {
                                     uiState.plate?.let { plate ->
                                         val query = "${plate.restaurantName} ${plate.city}"
@@ -200,7 +203,7 @@ fun PlateDetailScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("📊 Ver ranking completo") },
+                                text = { Text(stringResource(R.string.det_full_ranking)) },
                                 onClick = {
                                     val url = "https://foodranker.app/plate/$plateId"
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -209,7 +212,7 @@ fun PlateDetailScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("🚩 Reportar plato") },
+                                text = { Text(stringResource(R.string.det_report_plate)) },
                                 onClick = {
                                     showShareMenu = false
                                     showReportPlateDialog = true
@@ -217,7 +220,7 @@ fun PlateDetailScreen(
                             )
                             if (isPremium && uiState.plate?.addedByUserId == viewModel.currentUserId) {
                                 DropdownMenuItem(
-                                    text = { Text("👀 Quién ha interactuado") },
+                                    text = { Text(stringResource(R.string.det_who_interacted)) },
                                     onClick = {
                                         showShareMenu = false
                                         viewModel.loadEngagement(plateId)
@@ -246,7 +249,7 @@ fun PlateDetailScreen(
                 ) {
                     Icon(
                         Icons.Default.Star,
-                        contentDescription = "Valorar este plato",
+                        contentDescription = stringResource(R.string.det_rate_this),
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -370,7 +373,7 @@ fun PlateDetailScreen(
                                         ) {
                                             Icon(Icons.Default.Map, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(16.dp))
                                             Spacer(Modifier.width(4.dp))
-                                            Text("Ver en mapa", color = OrangePrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                            Text(stringResource(R.string.det_view_map), color = OrangePrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                         }
                                     }
                                     if (plate.description.isNotEmpty()) {
@@ -393,7 +396,7 @@ fun PlateDetailScreen(
                                                 contentPadding = PaddingValues(0.dp)
                                             ) {
                                                 Text(
-                                                    if (descExpanded) "Ver menos" else "Ver más",
+                                                    if (descExpanded) stringResource(R.string.det_see_less) else stringResource(R.string.det_see_more),
                                                     color = OrangePrimary,
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Medium
@@ -467,13 +470,13 @@ fun PlateDetailScreen(
                                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            "Ya has valorado este plato",
+                                            stringResource(R.string.det_already_rated),
                                             color = SuccessGreen,
                                             fontWeight = FontWeight.Medium,
                                             modifier = Modifier.weight(1f)
                                         )
                                         TextButton(onClick = { showEditRatingSheet = true }) {
-                                            Text("Editar", color = OrangePrimary, fontWeight = FontWeight.Bold)
+                                            Text(stringResource(R.string.det_edit), color = OrangePrimary, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -483,7 +486,7 @@ fun PlateDetailScreen(
                         // Sección comentarios
                         item {
                             Text(
-                                "💬 Comentarios (${uiState.comments.size})",
+                                stringResource(R.string.det_comments_count, uiState.comments.size),
                                 fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                             )
@@ -507,7 +510,7 @@ fun PlateDetailScreen(
                                                 commentText = new
                                             }
                                         },
-                                        placeholder = { Text("Escribe un comentario...", color = TextSecondary.copy(alpha = 0.5f)) },
+                                        placeholder = { Text(stringResource(R.string.det_write_comment), color = TextSecondary.copy(alpha = 0.5f)) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
                                         shape = RoundedCornerShape(20.dp),
@@ -535,7 +538,7 @@ fun PlateDetailScreen(
                                         if (uiState.isSubmittingComment) {
                                             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = OrangePrimary)
                                         } else {
-                                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = OrangePrimary)
+                                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.det_send), tint = OrangePrimary)
                                         }
                                     }
                                 }
@@ -544,7 +547,7 @@ fun PlateDetailScreen(
                         if (uiState.comments.isEmpty()) {
                             item {
                                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                    Text("Sé el primero en comentar 💬", color = TextSecondary, fontSize = 14.sp)
+                                    Text(stringResource(R.string.det_first_comment), color = TextSecondary, fontSize = 14.sp)
                                 }
                             }
                         } else {
@@ -570,7 +573,7 @@ fun PlateDetailScreen(
                                                     .background(ErrorRed),
                                                 contentAlignment = Alignment.CenterEnd
                                             ) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Borrar",
+                                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.det_delete),
                                                     tint = Color.White, modifier = Modifier.padding(end = 16.dp))
                                             }
                                         }
@@ -589,7 +592,7 @@ fun PlateDetailScreen(
                         // Sección valoraciones
                         item {
                             Text(
-                                "⭐ Valoraciones (${uiState.ratings.size})",
+                                stringResource(R.string.det_ratings_count, uiState.ratings.size),
                                 fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                             )
@@ -603,7 +606,7 @@ fun PlateDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        "Sé el primero en valorar este plato 🌟",
+                                        stringResource(R.string.det_first_rating),
                                         color = TextSecondary,
                                         textAlign = TextAlign.Center
                                     )
@@ -663,7 +666,7 @@ fun PlateDetailScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text("Ver anuncio y ganar +50 XP", color = OrangePrimary, fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.det_watch_ad), color = OrangePrimary, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -680,16 +683,16 @@ fun PlateDetailScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Quién ha interactuado", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text(stringResource(R.string.det_who_interacted), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
                 if (uiState.engagement.isLoading) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = OrangePrimary)
                     }
                 } else if (uiState.engagement.likedByUsers.isEmpty() && uiState.engagement.savedByUsers.isEmpty()) {
-                    Text("Nadie ha interactuado todavía.", fontSize = 14.sp, color = TextSecondary)
+                    Text(stringResource(R.string.det_nobody_yet), fontSize = 14.sp, color = TextSecondary)
                 } else {
                     if (uiState.engagement.likedByUsers.isNotEmpty()) {
-                        Text("❤️ Le ha gustado (${uiState.engagement.likedByUsers.size})", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
+                        Text(stringResource(R.string.det_liked_by, uiState.engagement.likedByUsers.size), fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
                         uiState.engagement.likedByUsers.forEach { EngagementUserRow(it) }
                     }
                     if (uiState.engagement.savedByUsers.isNotEmpty()) {
@@ -708,9 +711,9 @@ fun PlateDetailScreen(
         ModalBottomSheet(onDismissRequest = { showCollectionSheet = false }) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Añadir a lista", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text(stringResource(R.string.det_add_to_list), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
                 if (uiState.collections.isEmpty()) {
-                    Text("No tienes listas todavía. Crea una desde tu perfil.", fontSize = 14.sp, color = TextSecondary)
+                    Text(stringResource(R.string.det_no_lists), fontSize = 14.sp, color = TextSecondary)
                 } else {
                     uiState.collections.forEach { col ->
                         val alreadyAdded = plateId in col.plateIds
@@ -727,10 +730,10 @@ fun PlateDetailScreen(
                             Text(col.emoji, fontSize = 24.sp)
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(col.name, fontWeight = FontWeight.Medium, color = if (alreadyAdded) TextSecondary else TextPrimary)
-                                Text("${col.plateIds.size} platos", fontSize = 12.sp, color = TextSecondary)
+                                Text(stringResource(R.string.det_list_plates, col.plateIds.size), fontSize = 12.sp, color = TextSecondary)
                             }
                             if (alreadyAdded) {
-                                Text("Ya añadido", fontSize = 12.sp, color = SuccessGreen, fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.det_already_added), fontSize = 12.sp, color = SuccessGreen, fontWeight = FontWeight.Medium)
                             } else {
                                 Icon(Icons.Default.Add, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(20.dp))
                             }
@@ -757,7 +760,7 @@ fun PlateDetailScreen(
                         border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                             brush = androidx.compose.ui.graphics.SolidColor(Color.White.copy(alpha = 0.5f))
                         )
-                    ) { Text("Cancelar") }
+                    ) { Text(stringResource(R.string.det_cancel)) }
                     Button(
                         onClick = {
                             showShareCard = false
@@ -769,7 +772,7 @@ fun PlateDetailScreen(
                             com.app.foodranker.utils.AnalyticsManager.logPlateShared("image")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-                    ) { Text("Compartir 📤", fontWeight = FontWeight.Bold) }
+                    ) { Text(stringResource(R.string.det_share), fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -777,8 +780,8 @@ fun PlateDetailScreen(
 
     if (showReportPlateDialog) {
         ReportReasonDialog(
-            title = "Reportar plato",
-            reasons = listOf("No es comida real", "Contenido ofensivo", "Spam"),
+            title = stringResource(R.string.det_report_plate),
+            reasons = listOf(stringResource(R.string.det_reason_not_food), stringResource(R.string.det_reason_offensive), stringResource(R.string.det_reason_spam)),
             onDismiss = { showReportPlateDialog = false },
             onSelect = { reason ->
                 showReportPlateDialog = false
@@ -789,8 +792,8 @@ fun PlateDetailScreen(
 
     reportingRatingId?.let { ratingId ->
         ReportReasonDialog(
-            title = "Reportar valoración",
-            reasons = listOf("No ha probado el plato", "Nota injusta o malintencionada", "Spam"),
+            title = stringResource(R.string.det_report_rating),
+            reasons = listOf(stringResource(R.string.det_reason_not_tasted), stringResource(R.string.det_reason_unfair), stringResource(R.string.det_reason_spam)),
             onDismiss = { reportingRatingId = null },
             onSelect = { reason ->
                 reportingRatingId = null
@@ -801,8 +804,8 @@ fun PlateDetailScreen(
 
     reportingCommentId?.let { commentId ->
         ReportReasonDialog(
-            title = "Reportar comentario",
-            reasons = listOf("Contenido ofensivo", "Spam"),
+            title = stringResource(R.string.det_report_comment),
+            reasons = listOf(stringResource(R.string.det_reason_offensive), stringResource(R.string.det_reason_spam)),
             onDismiss = { reportingCommentId = null },
             onSelect = { reason ->
                 reportingCommentId = null
@@ -906,7 +909,7 @@ private fun ImageZoomViewer(imageUrl: String, onDismiss: () -> Unit) {
             // Hint
             if (scale == 1f) {
                 Text(
-                    "Pellizca para hacer zoom",
+                    stringResource(R.string.det_pinch_zoom),
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 12.sp,
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)
@@ -939,7 +942,7 @@ fun EngagementUserRow(user: User) {
             }
         }
         Spacer(modifier = Modifier.width(10.dp))
-        Text(user.name.ifBlank { "Usuario" }, fontSize = 14.sp, color = TextPrimary)
+        Text(user.name.ifBlank { stringResource(R.string.det_user_fallback) }, fontSize = 14.sp, color = TextPrimary)
     }
 }
 
@@ -975,11 +978,11 @@ fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit, onReport
             }
             if (isOwn) {
                 IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Borrar", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.det_delete), tint = TextSecondary, modifier = Modifier.size(16.dp))
                 }
             } else {
                 IconButton(onClick = onReport, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Flag, contentDescription = "Reportar", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.det_report), tint = TextSecondary, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -1006,7 +1009,7 @@ fun ReportReasonDialog(
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.det_cancel)) } }
     )
 }
 
@@ -1068,7 +1071,7 @@ fun LikeBadge(
     ) {
         Icon(
             imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-            contentDescription = if (isLiked) "Quitar like" else "Dar like",
+            contentDescription = if (isLiked) stringResource(R.string.det_unlike) else stringResource(R.string.det_like),
             tint = heartColor,
             modifier = Modifier
                 .size(26.dp)
@@ -1123,7 +1126,7 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
                         if (rating.verifiedAtVenue) {
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                "📍 en el local",
+                                stringResource(R.string.det_at_venue),
                                 fontSize = 10.sp,
                                 color = SuccessGreen,
                                 fontWeight = FontWeight.Medium
@@ -1135,13 +1138,13 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
                         if (onEdit != null) {
                             Spacer(Modifier.width(8.dp))
                             IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Edit, contentDescription = "Editar valoración", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.det_edit_rating), tint = TextSecondary, modifier = Modifier.size(16.dp))
                             }
                         }
                         if (onReport != null) {
                             Spacer(Modifier.width(4.dp))
                             IconButton(onClick = onReport, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Flag, contentDescription = "Reportar valoración", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.det_report_rating), tint = TextSecondary, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -1174,7 +1177,7 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
                             contentPadding = PaddingValues(0.dp)
                         ) {
                             Text(
-                                if (commentExpanded) "Ver menos" else "Ver más",
+                                if (commentExpanded) stringResource(R.string.det_see_less) else stringResource(R.string.det_see_more),
                                 color = OrangePrimary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
@@ -1198,23 +1201,26 @@ fun MiniScore(emoji: String, score: Float) {
  * esconderlo del todo dejaría la función invisible con el volumen actual. Null si nadie ha
  * contestado todavía. Ver docs/RATINGS.md §1.4.
  */
+@Composable
 internal fun repeatSummary(count: Int, responses: Int): String? = when {
     responses <= 0 -> null
-    responses < 5 -> "👍 $count de $responses lo ${if (responses == 1) "repetiría" else "repetirían"}"
-    else -> "👍 ${Math.round(count * 100.0 / responses)} % lo repetiría"
+    // El singular lo decide el sistema de plurales, no un if: cada idioma tiene sus reglas.
+    responses < 5 -> pluralStringResource(R.plurals.det_repeat_count, responses, count, responses)
+    else -> stringResource(R.string.det_repeat_pct, Math.round(count * 100.0 / responses).toInt())
 }
 
 /**
  * El precio no promete más de lo que se sabe: con un solo reporte se dice quién lo pagó, no
  * cuánto "cuesta". Ver docs/RATINGS.md §1.3.
  */
+@Composable
 internal fun priceSummary(medianCents: Int?, reports: Int, countryCode: String = ""): String? {
     if (medianCents == null || medianCents <= 0 || reports <= 0) return null
     val price = "%.2f".format(medianCents / 100.0)
     // La moneda sale del país del local, no del móvil de quien mira: el precio es del sitio.
     val moneda = Rating.currencySymbol(countryCode)
-    return if (reports == 1) "💰 1 persona pagó $price $moneda"
-    else "💰 suele costar $price $moneda"
+    return if (reports == 1) stringResource(R.string.det_price_one, price, moneda)
+    else stringResource(R.string.det_price_usual, price, moneda)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1266,9 +1272,9 @@ fun RatingBottomSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                if (isEditMode) "✏️ Editar valoración"
-                else if (plateName.isNotEmpty()) "⭐ Valorar: $plateName"
-                else "⭐ Valorar este plato",
+                if (isEditMode) stringResource(R.string.det_edit_title)
+                else if (plateName.isNotEmpty()) stringResource(R.string.det_rate_title, plateName)
+                else stringResource(R.string.det_rate_generic),
                 fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary
             )
 
@@ -1276,7 +1282,7 @@ fun RatingBottomSheet(
             // lo ha probado tiene el like para decir "me apetece". Ver docs/RATINGS.md §1.1.
             if (!tastedConfirmed) {
                 Text(
-                    "¿Has probado este plato?",
+                    stringResource(R.string.det_tasted_q),
                     fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary
                 )
                 // Ojo: aquí ponía "dale like", y el like NO es una lista de pendientes — es
@@ -1285,8 +1291,7 @@ fun RatingBottomSheet(
                 // quedó buscando una lista de likes que no existe (2026-09-21).
                 Text(
                     "Las notas de FoodRanker son de quien se lo ha comido de verdad. " +
-                    "Si aún no lo has probado, guárdalo con el marcador 🔖 y lo tendrás " +
-                    "en tu perfil para cuando te apetezca.",
+                    stringResource(R.string.det_tasted_hint),
                     color = TextSecondary, fontSize = 13.sp
                 )
                 Button(
@@ -1295,20 +1300,20 @@ fun RatingBottomSheet(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
                 ) {
-                    Text("Sí, lo he probado 🍽️", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.det_tasted_yes), fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Todavía no", color = TextSecondary)
+                    Text(stringResource(R.string.det_tasted_not_yet), color = TextSecondary)
                 }
                 return@Column
             }
 
-            ScoreSlider("Sabor", "😋", flavorScore) { flavorScore = it }
-            ScoreSlider("Presentación", "🎨", presentationScore) { presentationScore = it }
-            ScoreSlider("¿Te quedas satisfecho?", "🍽️", satisfactionScore) { satisfactionScore = it }
+            ScoreSlider(stringResource(R.string.det_flavor), "😋", flavorScore) { flavorScore = it }
+            ScoreSlider(stringResource(R.string.det_presentation), "🎨", presentationScore) { presentationScore = it }
+            ScoreSlider(stringResource(R.string.det_satisfaction), "🍽️", satisfactionScore) { satisfactionScore = it }
 
             // Live preview card
             Card(
@@ -1322,7 +1327,7 @@ fun RatingBottomSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Tu nota final", color = Color.White.copy(alpha = 0.65f), fontSize = 11.sp)
+                        Text(stringResource(R.string.det_final_score), color = Color.White.copy(alpha = 0.65f), fontSize = 11.sp)
                         Text(
                             "${"%.1f".format(myScore)} / 10",
                             color = OrangePrimary,
@@ -1333,9 +1338,9 @@ fun RatingBottomSheet(
                     if (currentScore > 0.0) {
                         val diff = myScore - currentScore.toFloat()
                         val (impactIcon, impactText, impactColor) = when {
-                            diff > 0.15f -> Triple("📈", "Subiría el plato", Color(0xFF4CAF50))
-                            diff < -0.15f -> Triple("📉", "Bajaría el plato", Color(0xFFE53935))
-                            else -> Triple("➡️", "Mantendría la nota", Color(0xFF90A4AE))
+                            diff > 0.15f -> Triple("📈", stringResource(R.string.det_would_raise), Color(0xFF4CAF50))
+                            diff < -0.15f -> Triple("📉", stringResource(R.string.det_would_lower), Color(0xFFE53935))
+                            else -> Triple("➡️", stringResource(R.string.det_would_keep), Color(0xFF90A4AE))
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(impactIcon, fontSize = 18.sp)
@@ -1351,7 +1356,7 @@ fun RatingBottomSheet(
             FoodTextField(
                 value = priceText,
                 onValueChange = { priceText = it.filter { c -> c.isDigit() || c == ',' || c == '.' } },
-                label = "¿Cuánto costó? (opcional)",
+                label = stringResource(R.string.det_price_q),
                 placeholder = "12,50",
                 maxLength = 7,
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
@@ -1359,20 +1364,20 @@ fun RatingBottomSheet(
                     priceIsInvalid -> "Pon un precio entre 0,01 y 1.000 " +
                         Rating.currencySymbol(countryCode)
                     knownPriceCents != null && initialPriceCents == null ->
-                        "Precio que han puesto otros — confírmalo o corrígelo"
-                    else -> "Lo que pagaste por este plato, no la cuenta entera"
+                        stringResource(R.string.det_price_others)
+                    else -> stringResource(R.string.det_price_hint)
                 }
             )
 
             Text(
-                "¿Lo volverías a pedir?",
+                stringResource(R.string.det_order_again),
                 fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                listOf(true to "Sí 👍", false to "No 👎").forEach { (value, label) ->
+                listOf(true to stringResource(R.string.det_yes), false to stringResource(R.string.det_no)).forEach { (value, label) ->
                     val selected = wouldOrderAgain == value
                     Button(
                         onClick = { wouldOrderAgain = value },
@@ -1393,8 +1398,8 @@ fun RatingBottomSheet(
             FoodTextField(
                 value = comment,
                 onValueChange = { comment = it },
-                label = "Comentario (opcional)",
-                placeholder = "¿Qué te pareció?",
+                label = stringResource(R.string.det_comment_optional),
+                placeholder = stringResource(R.string.det_what_think),
                 singleLine = false,
                 maxLines = 3,
                 maxLength = com.app.foodranker.utils.InputLimits.RATING_COMMENT,
@@ -1417,7 +1422,7 @@ fun RatingBottomSheet(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
                     Text(
-                        if (isEditMode) "Actualizar valoración ✏️" else "Publicar valoración 🚀",
+                        if (isEditMode) stringResource(R.string.det_update_rating) else stringResource(R.string.det_publish_rating),
                         fontWeight = FontWeight.Bold, color = Color.White
                     )
                 }
