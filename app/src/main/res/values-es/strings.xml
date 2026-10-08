@@ -89,4 +89,25 @@
 
     <!-- Offline -->
     <string name="offline_banner">Sin conexión — mostrando datos en caché</string>
+
+    <!-- Onboarding -->
+    <string name="onb_1_title">Descubre los mejores\nplatos del mundo</string>
+    <string name="onb_1_body">Explora un feed infinito de platos increíbles publicados por foodies como tú, de cualquier rincón del mundo.</string>
+    <string name="onb_2_title">Valora, comenta\ny comparte</string>
+    <string name="onb_2_body">Puntúa cada plato por sabor, presentación y lo que lo disfrutaste. Deja tu opinión y comparte tus descubrimientos.</string>
+    <string name="onb_3_title">Sube de nivel\ny gana badges</string>
+    <string name="onb_3_body">Cuanto más activo seas, más XP ganas. Desbloquea badges exclusivos y llega a ser un 💎 Leyenda Foodie.</string>
+    <string name="onb_skip">Saltar</string>
+    <string name="onb_next">Siguiente →</string>
+    <string name="onb_start">¡Empezar a descubrir! 🚀</string>
+
+    <!-- Inicio de sesión -->
+    <string name="auth_tagline">Descubre los mejores platos del mundo,\nvalorados por foodies como tú</string>
+    <string name="auth_continue_google">Continuar con Google</string>
+    <string name="auth_error_google">No se pudo iniciar sesión con Google. Inténtalo de nuevo.</string>
+    <string name="auth_feature_global">Global</string>
+    <string name="auth_feature_rate">Valorar</string>
+    <string name="auth_feature_share">Compartir</string>
+    <string name="auth_terms">Términos</string>
+    <string name="auth_privacy">Privacidad</string>
 </resources>

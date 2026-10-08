@@ -18,13 +18,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import com.app.foodranker.ui.theme.OrangePrimary
 import kotlinx.coroutines.launch
 
 data class OnboardingPage(
     val emoji: String,
-    val title: String,
-    val description: String,
+    // Referencias, no texto: la lista de páginas se define fuera de un @Composable y ahí
+    // no se puede leer un recurso. Se resuelven al pintar.
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
     val gradientStart: Color,
     val gradientEnd: Color
 )
@@ -32,22 +37,22 @@ data class OnboardingPage(
 private val pages = listOf(
     OnboardingPage(
         emoji = "🍽️",
-        title = "Descubre los mejores\nplatos del mundo",
-        description = "Explora un feed infinito de platos increíbles publicados por foodies como tú, de cualquier rincón del mundo.",
+        titleRes = R.string.onb_1_title,
+        descriptionRes = R.string.onb_1_body,
         gradientStart = Color(0xFF1A0A00),
         gradientEnd = OrangePrimary
     ),
     OnboardingPage(
         emoji = "⭐",
-        title = "Valora, comenta\ny comparte",
-        description = "Puntúa cada plato por sabor, presentación y precio. Deja tu opinión y comparte tus descubrimientos con tu red.",
+        titleRes = R.string.onb_2_title,
+        descriptionRes = R.string.onb_2_body,
         gradientStart = Color(0xFF0A1628),
         gradientEnd = Color(0xFF2D7AAF)
     ),
     OnboardingPage(
         emoji = "🏆",
-        title = "Sube de nivel\ny gana badges",
-        description = "Cuanto más activo seas, más XP ganas. Desbloquea badges exclusivos y llega a ser un 💎 Leyenda Foodie.",
+        titleRes = R.string.onb_3_title,
+        descriptionRes = R.string.onb_3_body,
         gradientStart = Color(0xFF1A0A00),
         gradientEnd = Color(0xFFBF3D10)
     )
@@ -114,7 +119,8 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
             ) {
                 Text(
-                    if (pagerState.currentPage < pages.size - 1) "Siguiente →" else "¡Empezar a descubrir! 🚀",
+                    if (pagerState.currentPage < pages.size - 1) stringResource(R.string.onb_next)
+                    else stringResource(R.string.onb_start),
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 16.sp
                 )
@@ -123,7 +129,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             // Skip
             if (pagerState.currentPage < pages.size - 1) {
                 TextButton(onClick = onFinish) {
-                    Text("Saltar", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                    Text(stringResource(R.string.onb_skip), color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
                 }
             }
         }
@@ -160,7 +166,7 @@ private fun OnboardingPage(page: OnboardingPage) {
             }
 
             Text(
-                page.title,
+                stringResource(page.titleRes),
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 28.sp,
                 color = Color.White,
@@ -169,7 +175,7 @@ private fun OnboardingPage(page: OnboardingPage) {
             )
 
             Text(
-                page.description,
+                stringResource(page.descriptionRes),
                 fontSize = 16.sp,
                 color = Color.White.copy(alpha = 0.82f),
                 textAlign = TextAlign.Center,

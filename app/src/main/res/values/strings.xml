@@ -90,4 +90,25 @@
 
     <!-- Offline -->
     <string name="offline_banner">Offline — showing cached data</string>
+
+    <!-- Onboarding -->
+    <string name="onb_1_title">Discover the best\ndishes in the world</string>
+    <string name="onb_1_body">Browse an endless feed of amazing dishes posted by foodies like you, from every corner of the world.</string>
+    <string name="onb_2_title">Rate, comment\nand share</string>
+    <string name="onb_2_body">Score every dish on taste, presentation and how much you enjoyed it. Say what you think and share what you find.</string>
+    <string name="onb_3_title">Level up\nand earn badges</string>
+    <string name="onb_3_body">The more active you are, the more XP you earn. Unlock badges and work your way up to 💎 Foodie Legend.</string>
+    <string name="onb_skip">Skip</string>
+    <string name="onb_next">Next →</string>
+    <string name="onb_start">Start discovering! 🚀</string>
+
+    <!-- Sign in -->
+    <string name="auth_tagline">Discover the best dishes in the world,\nrated by foodies like you</string>
+    <string name="auth_continue_google">Continue with Google</string>
+    <string name="auth_error_google">Couldn’t sign in with Google. Please try again.</string>
+    <string name="auth_feature_global">Global</string>
+    <string name="auth_feature_rate">Rate</string>
+    <string name="auth_feature_share">Share</string>
+    <string name="auth_terms">Terms</string>
+    <string name="auth_privacy">Privacy</string>
 </resources>

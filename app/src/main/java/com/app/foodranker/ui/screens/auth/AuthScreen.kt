@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.auth
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.app.Activity
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -59,10 +61,14 @@ fun AuthScreen(
         }
     }
 
+    // Se resuelve aquí, en el ámbito @Composable: dentro de la función de abajo no se puede
+    // leer un recurso, porque no es componible.
+    val mensajeErrorLogin = stringResource(R.string.auth_error_google)
+
     fun launchGoogleSignIn() {
         val activity = context as? Activity
         if (activity == null) {
-            errorMessage = "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+            errorMessage = mensajeErrorLogin
             return
         }
         viewModel.signInWithGoogle(activity)
@@ -127,7 +133,7 @@ fun AuthScreen(
                 enter = fadeIn(tween(800, delayMillis = 400))
             ) {
                 Text(
-                    text = "Descubre los mejores platos del mundo,\nvalorados por foodies como tú",
+                    text = stringResource(R.string.auth_tagline),
                     fontSize = 15.sp,
                     color = Color.White.copy(alpha = 0.80f),
                     textAlign = TextAlign.Center,
@@ -147,9 +153,9 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FeaturePill(icon = Icons.Outlined.Public, label = "Global", modifier = Modifier.weight(1f))
-                    FeaturePill(icon = Icons.Outlined.StarOutline, label = "Valorar", modifier = Modifier.weight(1f))
-                    FeaturePill(icon = Icons.Outlined.Share, label = "Compartir", modifier = Modifier.weight(1f))
+                    FeaturePill(icon = Icons.Outlined.Public, label = stringResource(R.string.auth_feature_global), modifier = Modifier.weight(1f))
+                    FeaturePill(icon = Icons.Outlined.StarOutline, label = stringResource(R.string.auth_feature_rate), modifier = Modifier.weight(1f))
+                    FeaturePill(icon = Icons.Outlined.Share, label = stringResource(R.string.auth_feature_share), modifier = Modifier.weight(1f))
                 }
             }
 
@@ -188,7 +194,7 @@ fun AuthScreen(
                     } else {
                         Text("G", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4285F4))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Continuar con Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.auth_continue_google), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -212,11 +218,11 @@ fun AuthScreen(
             ) {
                 Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                     TextButton(onClick = onNavigateToTerms, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        Text("Términos", fontSize = 12.sp, color = Color.White.copy(alpha = 0.55f))
+                        Text(stringResource(R.string.auth_terms), fontSize = 12.sp, color = Color.White.copy(alpha = 0.55f))
                     }
                     Text("·", fontSize = 12.sp, color = Color.White.copy(alpha = 0.4f), modifier = Modifier.align(Alignment.CenterVertically))
                     TextButton(onClick = onNavigateToPrivacy, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        Text("Privacidad", fontSize = 12.sp, color = Color.White.copy(alpha = 0.55f))
+                        Text(stringResource(R.string.auth_privacy), fontSize = 12.sp, color = Color.White.copy(alpha = 0.55f))
                     }
                 }
             }
