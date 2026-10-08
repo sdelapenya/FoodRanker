@@ -111,4 +111,39 @@
     <string name="auth_feature_share">Share</string>
     <string name="auth_terms">Terms</string>
     <string name="auth_privacy">Privacy</string>
+
+    <!-- Ranking (Discover) -->
+    <string name="nav_ranking">Ranking</string>
+    <string name="nav_upload">Upload</string>
+    <string name="nav_league">League</string>
+    <string name="tab_top">Top</string>
+    <string name="tab_nearby">Nearby</string>
+    <string name="cd_nearby_dishes">What to order here</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_notifications">Notifications</string>
+    <string name="explore_users">Find foodies</string>
+    <string name="loading_plates">Loading dishes from around the world…</string>
+    <string name="offline_short">Offline</string>
+    <string name="saved_just_now">just saved</string>
+    <string name="mission_title">Daily mission: shake up the ranking</string>
+    <string name="mission_progress">%1$d of %2$d votes done · +%3$d XP if you finish today</string>
+    <string name="mission_cta">Rate %1$d dishes today and climb the league</string>
+    <string name="league_ends_in">League ends in</string>
+    <string name="league_resets_monday">The weekly league restarts every Monday</string>
+    <string name="ranking_updates_live">The ranking updates with every vote</string>
+    <string name="empty_ranking">No dishes here yet.\nBe the first: post a real meal with a photo.</string>
+    <string name="empty_nearby_no_city">Set your city in your profile to see dishes from your area.</string>
+    <string name="empty_nearby_city">No dishes in %1$s yet.\nBe the first to add one!</string>
+    <string name="empty_following_hint">Follow other foodies to see their dishes here.</string>
+    <plurals name="streak_days">
+        <item quantity="one">🔥 %1$d day</item>
+        <item quantity="other">🔥 %1$d days</item>
+    </plurals>
+    <string name="ticker_city_record">Any record in your city today?</string>
+    <string name="ticker_new_nearby">New dishes added near you!</string>
+    <string name="gap_to_record">%1$s off the record</string>
+    <plurals name="votes_count">
+        <item quantity="one">%1$s vote</item>
+        <item quantity="other">%1$s votes</item>
+    </plurals>
 </resources>

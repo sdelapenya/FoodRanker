@@ -110,4 +110,39 @@
     <string name="auth_feature_share">Compartir</string>
     <string name="auth_terms">Términos</string>
     <string name="auth_privacy">Privacidad</string>
+
+    <!-- Ranking (Descubrir) -->
+    <string name="nav_ranking">Ranking</string>
+    <string name="nav_upload">Subir</string>
+    <string name="nav_league">Liga</string>
+    <string name="tab_top">Top</string>
+    <string name="tab_nearby">Cerca</string>
+    <string name="cd_nearby_dishes">Qué pido aquí</string>
+    <string name="cd_search">Buscar</string>
+    <string name="cd_notifications">Notificaciones</string>
+    <string name="explore_users">Descubrir foodies</string>
+    <string name="loading_plates">Cargando platos del mundo…</string>
+    <string name="offline_short">Sin conexión</string>
+    <string name="saved_just_now">acabas de guardar</string>
+    <string name="mission_title">Misión diaria: mueve el ranking</string>
+    <string name="mission_progress">%1$d de %2$d votos hechos · +%3$d XP si terminas hoy</string>
+    <string name="mission_cta">Vota %1$d platos hoy y sube en la liga</string>
+    <string name="league_ends_in">La liga acaba en</string>
+    <string name="league_resets_monday">La liga semanal reinicia cada lunes</string>
+    <string name="ranking_updates_live">El ranking se actualiza con cada voto</string>
+    <string name="empty_ranking">Aún no hay platos aquí.\nSé el primero: publica una comida real con foto.</string>
+    <string name="empty_nearby_no_city">Configura tu ciudad en tu perfil para ver los platos de tu zona.</string>
+    <string name="empty_nearby_city">No hay platos en %1$s todavía.\n¡Sé el primero en añadir uno!</string>
+    <string name="empty_following_hint">Sigue a otros foodies para ver sus platos aquí.</string>
+    <plurals name="streak_days">
+        <item quantity="one">🔥 %1$d día</item>
+        <item quantity="other">🔥 %1$d días</item>
+    </plurals>
+    <string name="ticker_city_record">¿Hay un récord en tu ciudad hoy?</string>
+    <string name="ticker_new_nearby">¡Nuevos platos añadidos cerca de ti!</string>
+    <string name="gap_to_record">a %1$s del récord</string>
+    <plurals name="votes_count">
+        <item quantity="one">%1$s voto</item>
+        <item quantity="other">%1$s votos</item>
+    </plurals>
 </resources>

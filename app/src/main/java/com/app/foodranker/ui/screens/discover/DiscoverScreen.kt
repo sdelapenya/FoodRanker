@@ -40,6 +40,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.PlateCategory
@@ -92,15 +95,16 @@ fun DiscoverScreen(
         "%02d:%02d:%02d".format(hours, minutes, seconds)
 
     // Rotating ticker
-    val tickerMessages = remember {
-        listOf(
-            "El ranking se actualiza con cada voto",
-            "Vota 3 platos hoy y sube en la liga",
-            // Prometía un badge que no existe (ver LeagueScreen). Se sustituye por algo cierto.
-            "La liga semanal reinicia cada lunes",
-            "¿Hay un récord en tu ciudad hoy?",
-            "¡Nuevos platos añadidos cerca de ti!"
-        )
+    // Los textos se leen FUERA del remember: su lambda no es componible y ahí no se puede
+    // resolver un recurso. Van como claves para que la lista se rehaga si cambia el idioma.
+    val tickerRanking = stringResource(R.string.ranking_updates_live)
+    val tickerVotar = stringResource(R.string.mission_cta, uiState.dailyMissionGoal)
+    // Prometía un badge que no existe (ver LeagueScreen). Se sustituye por algo cierto.
+    val tickerLiga = stringResource(R.string.league_resets_monday)
+    val tickerRecord = stringResource(R.string.ticker_city_record)
+    val tickerCerca = stringResource(R.string.ticker_new_nearby)
+    val tickerMessages = remember(tickerRanking, tickerVotar, tickerLiga, tickerRecord, tickerCerca) {
+        listOf(tickerRanking, tickerVotar, tickerLiga, tickerRecord, tickerCerca)
     }
     var tickerIdx by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
@@ -200,7 +204,7 @@ fun DiscoverScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text("🌍", fontSize = 52.sp)
-                        Text("Cargando platos del mundo...", fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(stringResource(R.string.loading_plates), fontWeight = FontWeight.Bold, color = TextPrimary)
                         LinearProgressIndicator(
                             progress = { if (seeding.second > 0) seeding.first.toFloat() / seeding.second else 0f },
                             modifier = Modifier.fillMaxWidth(0.7f),
@@ -318,7 +322,7 @@ private fun RankingTopBar(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Text("Sin conexión", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.offline_short), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -344,14 +348,14 @@ private fun RankingTopBar(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onNearby) {
-                    Icon(Icons.Default.LocationOn, contentDescription = "Qué pido aquí", tint = TextSecondary)
+                    Icon(Icons.Default.LocationOn, contentDescription = stringResource(R.string.cd_nearby_dishes), tint = TextSecondary)
                 }
                 IconButton(onClick = onSearch) {
-                    Icon(Icons.Default.Search, contentDescription = "Buscar", tint = TextSecondary)
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = TextSecondary)
                 }
                 Box {
                     IconButton(onClick = onNotifications) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notificaciones", tint = TextSecondary)
+                        Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.cd_notifications), tint = TextSecondary)
                     }
                     if (unreadCount > 0) {
                         Badge(
@@ -377,7 +381,7 @@ private fun RankingTopBar(
             ) {
                 // "Top semana" era mentira: la consulta ordena por nota sin filtrar fecha ninguna,
                 // así que es el ranking de siempre, no el de esta semana.
-                listOf("Top", "Cerca", "Siguiendo").forEachIndexed { index, label ->
+                listOf("Top", stringResource(R.string.tab_nearby), stringResource(R.string.feed_following)).forEachIndexed { index, label ->
                     Tab(
                         selected = selectedTab == index,
                         onClick  = { onTabSelected(index) },
@@ -415,7 +419,7 @@ private fun RankingNavBar(
             selected = true,
             onClick  = {},
             icon     = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
-            label    = { Text("Ranking", fontSize = 11.sp) },
+            label    = { Text(stringResource(R.string.nav_ranking), fontSize = 11.sp) },
             colors   = NavigationBarItemDefaults.colors(
                 selectedIconColor = OrangePrimary,
                 selectedTextColor = OrangePrimary,
@@ -435,7 +439,7 @@ private fun RankingNavBar(
                     Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
                 }
             },
-            label  = { Text("Subir", fontSize = 11.sp) },
+            label  = { Text(stringResource(R.string.nav_upload), fontSize = 11.sp) },
             colors = NavigationBarItemDefaults.colors(
                 unselectedTextColor = TextSecondary,
                 indicatorColor      = Color.Transparent
@@ -445,7 +449,7 @@ private fun RankingNavBar(
             selected = false,
             onClick  = onLeague,
             icon     = { Icon(Icons.Default.MilitaryTech, contentDescription = null) },
-            label    = { Text("Liga", fontSize = 11.sp) },
+            label    = { Text(stringResource(R.string.nav_league), fontSize = 11.sp) },
             colors   = NavigationBarItemDefaults.colors(
                 unselectedIconColor = TextSecondary,
                 unselectedTextColor = TextSecondary
@@ -455,7 +459,7 @@ private fun RankingNavBar(
             selected = false,
             onClick  = onProfile,
             icon     = { Icon(Icons.Default.Person, contentDescription = null) },
-            label    = { Text("Perfil", fontSize = 11.sp) },
+            label    = { Text(stringResource(R.string.nav_profile), fontSize = 11.sp) },
             colors   = NavigationBarItemDefaults.colors(
                 unselectedIconColor = TextSecondary,
                 unselectedTextColor = TextSecondary
@@ -490,7 +494,7 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "Misión diaria: mueve el ranking",
+                        stringResource(R.string.mission_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -501,7 +505,7 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
                             color = Color(0xFFFF6D00)
                         ) {
                             Text(
-                                "🔥 $streak días",
+                                pluralStringResource(R.plurals.streak_days, streak, streak),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
@@ -511,7 +515,7 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
                     }
                 }
                 Text(
-                    "$progress de $goal votos hechos · +${goal * 5} XP si terminas hoy",
+                    stringResource(R.string.mission_progress, progress, goal, goal * 5),
                     color = Color.White.copy(alpha = 0.70f),
                     fontSize = 12.sp
                 )
@@ -552,7 +556,7 @@ private fun CountdownTickerRow(countdownText: String, tickerMessage: String, vot
             ) {
                 // Decía "Reset semanal del ranking", pero el ranking no se reinicia nunca: lo
                 // que vuelve a empezar cada lunes es la liga, como dice la línea de abajo.
-                Text("La liga acaba en", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.league_ends_in), color = TextSecondary, fontSize = 12.sp)
                 Text(countdownText, color = OrangePrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 if (voteStreak >= 2) {
                     Spacer(Modifier.weight(1f))
@@ -561,7 +565,7 @@ private fun CountdownTickerRow(countdownText: String, tickerMessage: String, vot
                         color = Color(0xFFFF6D00)
                     ) {
                         Text(
-                            "🔥 $voteStreak días",
+                            pluralStringResource(R.plurals.streak_days, voteStreak, voteStreak),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp,
@@ -698,12 +702,14 @@ private fun RankedPlateCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                // El recurso se lee fuera: buildString no es componible.
+                val gapRecord = stringResource(R.string.gap_to_record, "%.1f")
                 val subtitle = buildString {
                     if (plate.restaurantName.isNotEmpty()) append("${plate.restaurantName} · ")
                     append(plate.totalRatings.votesLabel())
                     if (!plate.city.isNullOrEmpty()) append(" · ${plate.city}")
                     if (gapToTop != null && gapToTop < 1.5) {
-                        append(" · a ${"%.1f".format(gapToTop)} del récord")
+                        append(" · " + gapRecord.format(gapToTop))
                     }
                 }
                 Text(
@@ -736,11 +742,11 @@ private fun RankingEmptyState(tab: Int, onExplore: () -> Unit, onExploreUsers: (
         Text(
             when {
                 tab == 1 && userCity.isEmpty() ->
-                    "Configura tu ciudad en tu perfil para ver los platos de tu zona."
+                    stringResource(R.string.empty_nearby_no_city)
                 tab == 1 ->
-                    "No hay platos en $userCity todavía.\n¡Sé el primero en añadir uno!"
-                tab == 2 -> "Sigue a otros foodies para ver sus platos aquí."
-                else -> "Aún no hay platos aquí.\nSé el primero: publica una comida real con foto."
+                    stringResource(R.string.empty_nearby_city, userCity)
+                tab == 2 -> stringResource(R.string.empty_following_hint)
+                else -> stringResource(R.string.empty_ranking)
             },
             color = TextSecondary,
             fontSize = 15.sp,
@@ -754,7 +760,7 @@ private fun RankingEmptyState(tab: Int, onExplore: () -> Unit, onExploreUsers: (
             ) {
                 Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Descubrir foodies", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.explore_users), fontWeight = FontWeight.Bold)
             }
         }
     }
