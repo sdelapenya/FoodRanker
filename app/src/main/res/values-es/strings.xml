@@ -165,4 +165,45 @@
     <string name="cat_soup">Sopas y guisos</string>
     <string name="cat_sandwich">Bocadillos</string>
     <string name="cat_other">Otros</string>
+
+    <!-- Publicar plato -->
+    <string name="add_title">Publicar plato</string>
+    <string name="add_step">Paso %1$d de 2</string>
+    <string name="add_photo_required">Foto obligatoria *</string>
+    <string name="add_photo_hint">Toca aquí para añadir una foto del plato</string>
+    <string name="add_photo_change">📷 Cambiar foto</string>
+    <string name="add_section_dish">🍽️ El plato</string>
+    <string name="add_name_label">Nombre del plato *</string>
+    <string name="add_name_hint">Ej: Croquetas de jamón ibérico</string>
+    <string name="add_description">Descripción (opcional)</string>
+    <string name="add_category">Categoría</string>
+    <string name="add_section_where">📍 ¿Dónde lo probaste?</string>
+    <string name="add_section_score">⭐ Tu puntuación</string>
+    <string name="add_flavor">Sabor</string>
+    <string name="add_presentation">Presentación</string>
+    <string name="add_satisfaction">¿Te quedas satisfecho?</string>
+    <string name="add_order_again">¿Lo volverías a pedir?</string>
+    <string name="add_yes">Sí 👍</string>
+    <string name="add_no">No 👎</string>
+    <string name="add_price_q">¿Cuánto costó?</string>
+    <string name="add_price_hint">Lo que pagaste por este plato, no la cuenta entera</string>
+    <string name="add_price_range">Pon un precio entre 0,01 y 1.000 %1$s</string>
+    <string name="add_comment">Comentario (opcional)</string>
+    <string name="add_comment_hint">¿Lo recomendarías? ¿Qué lo hace especial?</string>
+    <string name="add_avg_score">Puntuación media</string>
+    <string name="add_next">Siguiente →</string>
+    <string name="add_publish">Publicar plato 🚀</string>
+    <string name="add_need_photo_name">Añade una foto y el nombre del plato para continuar</string>
+    <string name="add_need_place">Completa restaurante, ciudad y país para publicar</string>
+    <string name="add_uploading">Subiendo imagen… %1$d%%</string>
+    <string name="add_discard_title">¿Descartar plato?</string>
+    <string name="add_discard_body">Perderás los datos que has introducido.</string>
+    <string name="add_discard">Descartar</string>
+    <string name="add_keep_editing">Seguir editando</string>
+    <string name="add_exists_title">Ese plato ya está aquí</string>
+    <string name="add_exists_body">%1$s ya está registrado en este sitio. Puedes valorarlo y tu nota cuenta para su ranking.</string>
+    <string name="add_exists_rate">Valorarlo</string>
+    <string name="add_exists_rename">Cambiar el nombre</string>
+    <string name="action_back_cd">Volver</string>
+    <string name="add_comment_hint_short">¿Qué lo hace especial?</string>
 </resources>

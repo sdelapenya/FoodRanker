@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.addplate
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -99,16 +101,16 @@ fun AddPlateScreen(
     if (showDiscardDialog) {
         AlertDialog(
             onDismissRequest = { showDiscardDialog = false },
-            title = { Text("¿Descartar plato?", fontWeight = FontWeight.Bold) },
-            text  = { Text("Perderás los datos que has introducido.") },
+            title = { Text(stringResource(R.string.add_discard_title), fontWeight = FontWeight.Bold) },
+            text  = { Text(stringResource(R.string.add_discard_body)) },
             confirmButton = {
                 TextButton(onClick = { showDiscardDialog = false; onNavigateBack() }) {
-                    Text("Descartar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.add_discard), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDiscardDialog = false }) {
-                    Text("Seguir editando")
+                    Text(stringResource(R.string.add_keep_editing))
                 }
             }
         )
@@ -127,21 +129,18 @@ fun AddPlateScreen(
     (state as? AddPlateState.AlreadyExists)?.let { existing ->
         AlertDialog(
             onDismissRequest = { viewModel.resetState() },
-            title = { Text("Ese plato ya está aquí") },
+            title = { Text(stringResource(R.string.add_exists_title)) },
             text = {
-                Text(
-                    "\"${existing.plateName}\" ya está registrado en este sitio. " +
-                        "Puedes valorarlo y tu nota cuenta para su ranking."
-                )
+                Text(stringResource(R.string.add_exists_body, "\"${existing.plateName}\""))
             },
             confirmButton = {
                 Button(onClick = {
                     viewModel.resetState()
                     onNavigateToPlate(existing.plateId)
-                }) { Text("Valorarlo") }
+                }) { Text(stringResource(R.string.add_exists_rate)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.resetState() }) { Text("Cambiar el nombre") }
+                TextButton(onClick = { viewModel.resetState() }) { Text(stringResource(R.string.add_exists_rename)) }
             }
         )
     }
@@ -155,7 +154,7 @@ fun AddPlateScreen(
                 // cortado por la mitad. El paso se indica ahora junto a la barra de
                 // progreso, que es donde puede crecer sin romper nada.
                 title = {
-                    Text("Publicar plato", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+                    Text(stringResource(R.string.add_title), fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
                 },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -165,7 +164,7 @@ fun AddPlateScreen(
                             else            -> onNavigateBack()
                         }
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back_cd), tint = TextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
@@ -185,7 +184,7 @@ fun AddPlateScreen(
                 trackColor = DividerColor
             )
             Text(
-                "Paso $currentStep de 2",
+                stringResource(R.string.add_step, currentStep),
                 fontSize = 12.sp,
                 color = TextSecondary,
                 modifier = Modifier.padding(start = 16.dp, top = 6.dp)
@@ -224,27 +223,27 @@ fun AddPlateScreen(
 
                 // ── DATOS DEL PLATO ───────────────────────────────────
                 item {
-                    SectionCard(title = "🍽️ El plato") {
+                    SectionCard(title = stringResource(R.string.add_section_dish)) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             FoodTextField(
                                 value = plateName,
                                 onValueChange = { viewModel.formName = it },
-                                label = "Nombre del plato *",
-                                placeholder = "Ej: Croquetas de jamón ibérico",
+                                label = stringResource(R.string.add_name_label),
+                                placeholder = stringResource(R.string.add_name_hint),
                                 maxLength = InputLimits.PLATE_NAME
                             )
                             FoodTextField(
                                 value = description,
                                 onValueChange = { viewModel.formDescription = it },
-                                label = "Descripción (opcional)",
-                                placeholder = "¿Qué lo hace especial?",
+                                label = stringResource(R.string.add_description),
+                                placeholder = stringResource(R.string.add_comment_hint_short),
                                 singleLine = false,
                                 maxLines = 3,
                                 maxLength = InputLimits.PLATE_DESCRIPTION,
                                 showCounter = true
                             )
                             // Chips de categoría (más rápido que dropdown)
-                            Text("Categoría", fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.add_category), fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                             Row(
                                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -275,11 +274,11 @@ fun AddPlateScreen(
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
                     ) {
-                        Text("Siguiente →", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(stringResource(R.string.add_next), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     if (!step1Valid && imageUri == null && imageValidationError == null) {
                         Spacer(Modifier.height(4.dp))
-                        Text("Añade una foto y el nombre del plato para continuar",
+                        Text(stringResource(R.string.add_need_photo_name),
                             fontSize = 12.sp, color = TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.fillMaxWidth())
                     }
@@ -289,7 +288,7 @@ fun AddPlateScreen(
                 // ── PASO 2: UBICACIÓN + PUNTUACIÓN ────────────────────
                 if (step == 2) {
                 item {
-                    SectionCard(title = "📍 ¿Dónde lo probaste?") {
+                    SectionCard(title = stringResource(R.string.add_section_where)) {
                         VenuePicker(
                             venue = viewModel.formVenue,
                             suggestions = viewModel.venueSuggestions,
@@ -308,11 +307,11 @@ fun AddPlateScreen(
 
                 // ── PUNTUACIÓN ────────────────────────────────────────
                 item {
-                    SectionCard(title = "⭐ Tu puntuación") {
+                    SectionCard(title = stringResource(R.string.add_section_score)) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            ScoreSlider("Sabor", "😋", flavorScore) { viewModel.formFlavorScore = it }
-                            ScoreSlider("Presentación", "🎨", presentationScore) { viewModel.formPresentationScore = it }
-                            ScoreSlider("¿Te quedas satisfecho?", "🍽️", satisfactionScore) { viewModel.formSatisfactionScore = it }
+                            ScoreSlider(stringResource(R.string.add_flavor), "😋", flavorScore) { viewModel.formFlavorScore = it }
+                            ScoreSlider(stringResource(R.string.add_presentation), "🎨", presentationScore) { viewModel.formPresentationScore = it }
+                            ScoreSlider(stringResource(R.string.add_satisfaction), "🍽️", satisfactionScore) { viewModel.formSatisfactionScore = it }
 
                             // El precio es obligatorio SOLO aquí: quien publica acaba de comer y
                             // tiene el ticket delante. Ver docs/RATINGS.md §1.3.
@@ -321,27 +320,26 @@ fun AddPlateScreen(
                                 onValueChange = {
                                     viewModel.formPriceText = it.filter { c -> c.isDigit() || c == ',' || c == '.' }
                                 },
-                                label = "¿Cuánto costó?",
+                                label = stringResource(R.string.add_price_q),
                                 placeholder = "12,50",
                                 maxLength = 7,
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                                 supportingText = if (priceText.isNotBlank() && com.app.foodranker.data.model.Rating.parsePriceToCents(priceText) == null)
-                                    "Pon un precio entre 0,01 y 1.000 " +
+                                    stringResource(R.string.add_price_range,
                                         com.app.foodranker.data.model.Rating.currencySymbol(
-                                            viewModel.formVenue?.countryCode
-                                        )
-                                else "Lo que pagaste por este plato, no la cuenta entera"
+                                            viewModel.formVenue?.countryCode))
+                                else stringResource(R.string.add_price_hint)
                             )
 
                             Text(
-                                "¿Lo volverías a pedir?",
+                                stringResource(R.string.add_order_again),
                                 fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                listOf(true to "Sí 👍", false to "No 👎").forEach { (value, label) ->
+                                listOf(true to stringResource(R.string.add_yes), false to stringResource(R.string.add_no)).forEach { (value, label) ->
                                     val selected = wouldOrderAgain == value
                                     Button(
                                         onClick = { viewModel.formWouldOrderAgain = value },
@@ -370,7 +368,7 @@ fun AddPlateScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Puntuación media", fontWeight = FontWeight.Medium, color = TextPrimary)
+                                    Text(stringResource(R.string.add_avg_score), fontWeight = FontWeight.Medium, color = TextPrimary)
                                     Text(
                                         "★ ${"%.1f".format(avg)}/10",
                                         fontWeight = FontWeight.ExtraBold,
@@ -383,8 +381,8 @@ fun AddPlateScreen(
                             FoodTextField(
                                 value = comment,
                                 onValueChange = { viewModel.formComment = it },
-                                label = "Comentario (opcional)",
-                                placeholder = "¿Lo recomendarías? ¿Qué lo hace especial?",
+                                label = stringResource(R.string.add_comment),
+                                placeholder = stringResource(R.string.add_comment_hint),
                                 singleLine = false,
                                 maxLines = 4,
                                 maxLength = InputLimits.RATING_COMMENT,
@@ -447,13 +445,13 @@ fun AddPlateScreen(
                                             color = Color.White,
                                             strokeWidth = 2.5.dp
                                         )
-                                        Text("Subiendo imagen… $pct%", color = Color.White, fontSize = 14.sp)
+                                        Text(stringResource(R.string.add_uploading, pct), color = Color.White, fontSize = 14.sp)
                                     }
                                 } else {
                                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                                 }
                             } else {
-                                Text("Publicar plato 🚀", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.add_publish), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -465,7 +463,7 @@ fun AddPlateScreen(
                             )
                         } else if (!isValid) {
                             Text(
-                                text = "Completa restaurante, ciudad y país para publicar",
+                                text = stringResource(R.string.add_need_place),
                                 color = TextSecondary,
                                 fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -514,7 +512,7 @@ private fun PhotoPickerSection(
                     .clickable { onPickImage() }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text("📷 Cambiar foto", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.add_photo_change), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
         } else {
             Box(
@@ -528,9 +526,9 @@ private fun PhotoPickerSection(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("📷", fontSize = 48.sp)
-                    Text("Foto obligatoria *", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.add_photo_required), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "Toca aquí para añadir una foto del plato",
+                        stringResource(R.string.add_photo_hint),
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center

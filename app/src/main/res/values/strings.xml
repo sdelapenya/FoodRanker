@@ -166,4 +166,45 @@
     <string name="cat_soup">Soups and stews</string>
     <string name="cat_sandwich">Sandwiches</string>
     <string name="cat_other">Other</string>
+
+    <!-- Publicar plato -->
+    <string name="add_title">Post a dish</string>
+    <string name="add_step">Step %1$d of 2</string>
+    <string name="add_photo_required">Photo required *</string>
+    <string name="add_photo_hint">Tap here to add a photo of the dish</string>
+    <string name="add_photo_change">📷 Change photo</string>
+    <string name="add_section_dish">🍽️ The dish</string>
+    <string name="add_name_label">Dish name *</string>
+    <string name="add_name_hint">E.g. Iberian ham croquettes</string>
+    <string name="add_description">Description (optional)</string>
+    <string name="add_category">Category</string>
+    <string name="add_section_where">📍 Where did you try it?</string>
+    <string name="add_section_score">⭐ Your rating</string>
+    <string name="add_flavor">Taste</string>
+    <string name="add_presentation">Presentation</string>
+    <string name="add_satisfaction">Were you satisfied?</string>
+    <string name="add_order_again">Would you order it again?</string>
+    <string name="add_yes">Yes 👍</string>
+    <string name="add_no">No 👎</string>
+    <string name="add_price_q">How much was it?</string>
+    <string name="add_price_hint">What you paid for this dish, not the whole bill</string>
+    <string name="add_price_range">Enter a price between 0.01 and 1,000 %1$s</string>
+    <string name="add_comment">Comment (optional)</string>
+    <string name="add_comment_hint">Would you recommend it? What makes it special?</string>
+    <string name="add_avg_score">Average score</string>
+    <string name="add_next">Next →</string>
+    <string name="add_publish">Post dish 🚀</string>
+    <string name="add_need_photo_name">Add a photo and the dish name to continue</string>
+    <string name="add_need_place">Fill in restaurant, city and country to post</string>
+    <string name="add_uploading">Uploading image… %1$d%%</string>
+    <string name="add_discard_title">Discard dish?</string>
+    <string name="add_discard_body">You will lose what you have entered.</string>
+    <string name="add_discard">Discard</string>
+    <string name="add_keep_editing">Keep editing</string>
+    <string name="add_exists_title">That dish is already here</string>
+    <string name="add_exists_body">%1$s is already listed at this place. You can rate it and your score counts towards its ranking.</string>
+    <string name="add_exists_rate">Rate it</string>
+    <string name="add_exists_rename">Change the name</string>
+    <string name="action_back_cd">Back</string>
+    <string name="add_comment_hint_short">What makes it special?</string>
 </resources>
