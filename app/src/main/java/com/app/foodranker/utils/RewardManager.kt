@@ -1,5 +1,8 @@
 package com.app.foodranker.utils
 
+import androidx.annotation.StringRes
+import com.app.foodranker.R
+
 object RewardManager {
 
     // ── XP por acción ─────────────────────────────────────────────
@@ -17,21 +20,25 @@ object RewardManager {
     // El cliente siempre recalcula el nivel a partir de xp (no lee el campo
     // `level` que guarda la Cloud Function); si los umbrales divergen, ese
     // campo dejaría de ser coherente con lo que ve el usuario aquí.
+    /**
+     * El nombre va como referencia a recurso: la lista se construye al cargar la clase, antes
+     * de saber en que idioma esta el movil, asi que un String se quedaria fijo en castellano.
+     */
     data class Level(
         val number: Int,
         val emoji: String,
-        val name: String,
+        @StringRes val nameRes: Int,
         val minXP: Int,
         val maxXP: Int
     )
 
     val LEVELS = listOf(
-        Level(1, "🥄", "Novato Foodie",          0,     199),
-        Level(2, "🍴", "Explorador",              200,   599),
-        Level(3, "👨‍🍳", "Crítico Gastronómico",   600,  1499),
-        Level(4, "🌟", "Gourmand",               1500,  3999),
-        Level(5, "🏆", "Top Chef",               4000,  9999),
-        Level(6, "💎", "Leyenda Foodie",        10000, Int.MAX_VALUE)
+        Level(1, "🥄", R.string.lvl_1,          0,     199),
+        Level(2, "🍴", R.string.lvl_2,              200,   599),
+        Level(3, "👨‍🍳", R.string.lvl_3,   600,  1499),
+        Level(4, "🌟", R.string.lvl_4,               1500,  3999),
+        Level(5, "🏆", R.string.lvl_5,               4000,  9999),
+        Level(6, "💎", R.string.lvl_6,        10000, Int.MAX_VALUE)
     )
 
     fun getLevel(xp: Int): Level = LEVELS.lastOrNull { xp >= it.minXP } ?: LEVELS.first()
@@ -49,17 +56,22 @@ object RewardManager {
     }
 
     // ── Definición de badges ───────────────────────────────────────
-    data class Badge(val id: String, val emoji: String, val name: String, val description: String)
+    data class Badge(
+        val id: String,
+        val emoji: String,
+        @StringRes val nameRes: Int,
+        @StringRes val descriptionRes: Int,
+    )
 
     val ALL_BADGES = listOf(
-        Badge("first_plate",  "📸", "Primera foto",      "Subiste tu primer plato"),
-        Badge("globetrotter", "🌍", "Globetrotter",      "Platos en 3 países distintos"),
-        Badge("popular",      "❤️", "Popular",           "50 likes recibidos"),
-        Badge("critic",       "⭐", "Crítico",           "10 valoraciones dadas"),
-        Badge("top10",        "🏆", "Top 10",            "Un plato tuyo en el Top 10"),
+        Badge("first_plate",  "📸", R.string.bdg_first_plate, R.string.bdg_first_plate_d),
+        Badge("globetrotter", "🌍", R.string.bdg_globetrotter, R.string.bdg_globetrotter_d),
+        Badge("popular",      "❤️", R.string.bdg_popular, R.string.bdg_popular_d),
+        Badge("critic",       "⭐", R.string.bdg_critic, R.string.bdg_critic_d),
+        Badge("top10",        "🏆", R.string.bdg_top10, R.string.bdg_top10_d),
         // Lo concede closeWeeklyLeague al ganador de cada semana. Las versiones que no
         // conozcan este id simplemente no lo pintan (ProfileScreen descarta los nulos).
-        Badge("league_winner", "🥇", "Campeón semanal",  "Ganaste una liga semanal")
+        Badge("league_winner", "🥇", R.string.bdg_league_winner, R.string.bdg_league_winner_d)
     )
 
     fun getBadge(id: String): Badge? = ALL_BADGES.find { it.id == id }

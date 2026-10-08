@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.referral
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -128,7 +130,7 @@ fun ReferralScreen(
                 StatCard(
                     emoji = "👥",
                     value = uiState.referralCount.toString(),
-                    label = "Amigos invitados",
+                    label = stringResource(R.string.ref_friends),
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
@@ -183,7 +185,7 @@ fun ReferralScreen(
                                 },
                                 enabled = uiState.referralCode.isNotEmpty()
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = "Copiar código", tint = OrangePrimary)
+                                Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.ref_copy), tint = OrangePrimary)
                             }
                         }
                     }
@@ -191,6 +193,8 @@ fun ReferralScreen(
             }
 
             // Share button
+            // El titulo se lee aqui, en ambito componible: dentro del onClick no se puede.
+            val tituloCompartir = stringResource(R.string.ref_share_app)
             Button(
                 onClick = {
                     val shareText = uiState.shareText
@@ -199,7 +203,7 @@ fun ReferralScreen(
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, shareText)
                         }
-                        context.startActivity(Intent.createChooser(intent, "Compartir FoodRanker"))
+                        context.startActivity(Intent.createChooser(intent, tituloCompartir))
                     }
                 },
                 enabled = uiState.referralCode.isNotEmpty() && !uiState.isLoading,
@@ -211,7 +215,7 @@ fun ReferralScreen(
             ) {
                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Compartir mi código", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(stringResource(R.string.ref_share_mine), fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
             // How it works
@@ -252,12 +256,12 @@ private fun HowItWorksCard() {
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Cómo funciona", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+            Text(stringResource(R.string.ref_how), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
 
             listOf(
-                Triple("1️⃣", "Comparte tu código", "Envía tu código a amigos foodies"),
+                Triple("1️⃣", stringResource(R.string.ref_share_code), "Envía tu código a amigos foodies"),
                 Triple("2️⃣", "Ellos se registran", "Usan tu código al crear su cuenta"),
-                Triple("3️⃣", "Ambos ganáis XP", "Tú ganas 100 XP y tu amigo 50 XP de bienvenida")
+                Triple("3️⃣", stringResource(R.string.ref_both_xp), "Tú ganas 100 XP y tu amigo 50 XP de bienvenida")
             ).forEach { (emoji, title, desc) ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),

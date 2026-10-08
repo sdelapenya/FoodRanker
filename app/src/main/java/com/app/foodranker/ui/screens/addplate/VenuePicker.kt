@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.addplate
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -68,12 +70,12 @@ fun VenuePicker(
             isLoadingDishes -> Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = OrangePrimary)
                 Spacer(Modifier.width(8.dp))
-                Text("Buscando platos de este sitio…", fontSize = 12.sp, color = TextSecondary)
+                Text(stringResource(R.string.vp_searching_dishes), fontSize = 12.sp, color = TextSecondary)
             }
 
             dishes.isNotEmpty() -> {
                 Text(
-                    "Ya valorados aquí · toca uno si es el tuyo",
+                    stringResource(R.string.vp_already_rated),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextSecondary
@@ -86,14 +88,14 @@ fun VenuePicker(
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Si tu plato no está, sigue rellenando abajo y lo creas.",
+                    stringResource(R.string.vp_not_listed),
                     fontSize = 11.sp,
                     color = TextSecondary
                 )
             }
 
             else -> Text(
-                "Nadie ha valorado platos aquí todavía. Vas a ser el primero.",
+                stringResource(R.string.vp_nobody_rated),
                 fontSize = 12.sp,
                 color = TextSecondary
             )
@@ -118,20 +120,20 @@ fun VenuePicker(
         ) {
             Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Buscar sitios cerca de mí", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.vp_search_near), fontWeight = FontWeight.Bold)
         }
 
-        Text("o búscalo por nombre", fontSize = 11.sp, color = TextSecondary)
+        Text(stringResource(R.string.vp_or_by_name), fontSize = 11.sp, color = TextSecondary)
 
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            label = { Text("Nombre del restaurante") },
+            label = { Text(stringResource(R.string.vp_restaurant_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
                 IconButton(onClick = { onSearch(query) }, enabled = query.isNotBlank() && !isLoading) {
-                    Icon(Icons.Default.Search, contentDescription = "Buscar")
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.vp_search))
                 }
             }
         )
@@ -140,7 +142,7 @@ fun VenuePicker(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = OrangePrimary)
                 Spacer(Modifier.width(8.dp))
-                Text("Buscando…", fontSize = 12.sp, color = TextSecondary)
+                Text(stringResource(R.string.vp_searching), fontSize = 12.sp, color = TextSecondary)
             }
         }
 
@@ -195,7 +197,7 @@ private fun SelectedVenue(venue: Venue, onClear: () -> Unit) {
                 }
             }
             IconButton(onClick = onClear) {
-                Icon(Icons.Default.Close, contentDescription = "Cambiar de sitio", tint = TextSecondary)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.vp_change), tint = TextSecondary)
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.profile
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.os.Build
 import android.content.Intent
 import android.provider.Settings
@@ -138,7 +140,7 @@ fun ProfileScreen(
                 title = { },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Color.White)
                     }
                 },
                 actions = {
@@ -149,13 +151,13 @@ fun ProfileScreen(
                                 ShareManager.shareProfile(context, userId, name)
                             }
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = "Compartir perfil", tint = Color.White)
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.prof_share), tint = Color.White)
                         }
                         IconButton(onClick = { showEditSheet = true }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Editar perfil", tint = Color.White)
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.prof_edit), tint = Color.White)
                         }
                         IconButton(onClick = { authViewModel.signOut(); onSignOut() }) {
-                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión", tint = Color.White)
+                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.prof_sign_out), tint = Color.White)
                         }
                     }
                 },
@@ -199,7 +201,7 @@ fun ProfileScreen(
                 // Hero banner con foto
                 item {
                     ProfileHero(
-                        name = uiState.user?.name ?: currentUser?.displayName ?: "Usuario",
+                        name = uiState.user?.name ?: currentUser?.displayName ?: stringResource(R.string.det_user_fallback),
                         photoUrl = uiState.user?.photoUrl ?: currentUser?.photoUrl?.toString() ?: "",
                         isPremium = if (uiState.isOwnProfile) ownIsPremium else (uiState.user?.isPremium ?: false),
                         paddingTop = paddingValues.calculateTopPadding(),
@@ -238,7 +240,7 @@ fun ProfileScreen(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
-                                    if (uiState.isFollowing) "Siguiendo" else "Seguir",
+                                    if (uiState.isFollowing) stringResource(R.string.prof_following) else stringResource(R.string.prof_follow),
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -253,7 +255,7 @@ fun ProfileScreen(
                                         .padding(8.dp)
                                 ) {
                                     Text(uiState.followerCount.formatCompact(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = OrangePrimary)
-                                    Text("Seguidores", fontSize = 11.sp, color = TextSecondary)
+                                    Text(stringResource(R.string.prof_followers), fontSize = 11.sp, color = TextSecondary)
                                 }
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -262,7 +264,7 @@ fun ProfileScreen(
                                         .padding(8.dp)
                                 ) {
                                     Text(uiState.followingCount.formatCompact(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = OrangePrimary)
-                                    Text("Siguiendo", fontSize = 11.sp, color = TextSecondary)
+                                    Text(stringResource(R.string.prof_following), fontSize = 11.sp, color = TextSecondary)
                                 }
                             }
                         }
@@ -352,7 +354,7 @@ fun ProfileScreen(
                         }
                     } else {
                         ProfileSectionTitle(
-                            title = "Platos públicos",
+                            title = stringResource(R.string.prof_public_plates),
                             subtitle = "Publicaciones · ${uiState.plates.size.formatCompact()}",
                             icon = Icons.Outlined.Collections,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
@@ -386,8 +388,8 @@ fun ProfileScreen(
                 if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED && uiState.isOwnProfile && uiState.savedPlates.isEmpty()) {
                     item {
                         EmptyStateCentered(
-                            title = "Sin platos guardados",
-                            message = "Pulsa el icono guardar en cualquier plato del feed",
+                            title = stringResource(R.string.prof_empty_saved),
+                            message = stringResource(R.string.prof_empty_saved_hint),
                             icon = Icons.Default.Star,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 24.dp)
                         )
@@ -398,11 +400,11 @@ fun ProfileScreen(
                 if (displayedPlates.isEmpty() && !(uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED && uiState.isOwnProfile)) {
                     item {
                         EmptyStateCentered(
-                            title = if (uiState.isOwnProfile) "Tu galería está vacía" else "Sin publicaciones",
+                            title = if (uiState.isOwnProfile) stringResource(R.string.prof_empty_gallery) else stringResource(R.string.prof_empty_posts),
                             message = if (uiState.isOwnProfile) {
-                                "Publica desde Añadir en la barra inferior para mostrar tus platos."
+                                stringResource(R.string.prof_empty_posts_hint)
                             } else {
-                                "Cuando esta persona publique, verás aquí sus platos."
+                                stringResource(R.string.prof_empty_other)
                             },
                             icon = Icons.Default.Collections,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp)
@@ -501,7 +503,7 @@ fun ProfileScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("¿Eliminar cuenta?", fontWeight = FontWeight.Bold, color = ErrorRed) },
+            title = { Text(stringResource(R.string.prof_delete_q), fontWeight = FontWeight.Bold, color = ErrorRed) },
             text = {
                 Text(
                     "Esta acción es irreversible. Se borrarán permanentemente:\n\n• Tu perfil y foto\n• Todos tus platos publicados\n• Todas tus valoraciones\n• Tu historial de puntuación",
@@ -519,11 +521,11 @@ fun ProfileScreen(
                         onError = { error -> deleteError = error }
                     )
                 }) {
-                    Text("Eliminar definitivamente", color = ErrorRed, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.prof_delete_forever), color = ErrorRed, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -579,13 +581,13 @@ private fun ProfileSocialSummary(
             ) {
                 ProfileSocialChip(
                     value = followerCount.formatCompact(),
-                    label = "Seguidores",
+                    label = stringResource(R.string.prof_followers),
                     onClick = onFollowersClick
                 )
                 Box(modifier = Modifier.width(1.dp).height(36.dp).background(DividerColor))
                 ProfileSocialChip(
                     value = followingCount.formatCompact(),
-                    label = "Siguiendo",
+                    label = stringResource(R.string.prof_following),
                     onClick = onFollowingClick
                 )
             }
@@ -674,7 +676,7 @@ private fun ProfileAccountDangerZone(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                "Tu cuenta",
+                stringResource(R.string.prof_account),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = TextSecondary,
@@ -686,8 +688,8 @@ private fun ProfileAccountDangerZone(
             if (!isPremium) {
                 ProfileMenuRow(
                     icon = Icons.Default.Star,
-                    title = "Hazte Premium",
-                    subtitle = "Sin anuncios y funciones exclusivas",
+                    title = stringResource(R.string.prof_premium),
+                    subtitle = stringResource(R.string.prof_premium_sub),
                     iconTint = StarYellow,
                     arrowTint = StarYellow,
                     backgroundColor = Color(0xFFFFF8E1),
@@ -698,8 +700,8 @@ private fun ProfileAccountDangerZone(
 
             ProfileMenuRow(
                 icon = Icons.Default.CardGiftcard,
-                title = "Invita amigos",
-                subtitle = "Comparte tu código y gana XP",
+                title = stringResource(R.string.prof_invite),
+                subtitle = stringResource(R.string.prof_invite_sub),
                 iconTint = OrangePrimary,
                 arrowTint = OrangePrimary,
                 backgroundColor = Color(0xFFFFF3E0),
@@ -714,8 +716,8 @@ private fun ProfileAccountDangerZone(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 ProfileMenuRow(
                     icon = Icons.Outlined.Language,
-                    title = "Idioma",
-                    subtitle = "Elige en qué idioma ves la app",
+                    title = stringResource(R.string.prof_language),
+                    subtitle = stringResource(R.string.prof_language_sub),
                     iconTint = OrangePrimary.copy(alpha = 0.85f),
                     onClick = {
                         runCatching {
@@ -731,8 +733,8 @@ private fun ProfileAccountDangerZone(
 
             ProfileMenuRow(
                 icon = Icons.Outlined.Notifications,
-                title = "Notificaciones",
-                subtitle = "Elige qué avisos quieres recibir",
+                title = stringResource(R.string.prof_notifications),
+                subtitle = stringResource(R.string.prof_notifications_sub),
                 iconTint = OrangePrimary.copy(alpha = 0.85f),
                 onClick = {
                     // Se abren los ajustes del sistema en vez de montar interruptores
@@ -761,7 +763,7 @@ private fun ProfileAccountDangerZone(
 
             ProfileMenuRow(
                 icon = Icons.Outlined.Lock,
-                title = "Política de privacidad",
+                title = stringResource(R.string.prof_privacy),
                 iconTint = OrangePrimary.copy(alpha = 0.85f),
                 onClick = onPrivacy
             )
@@ -770,7 +772,7 @@ private fun ProfileAccountDangerZone(
 
             ProfileMenuRow(
                 icon = Icons.AutoMirrored.Outlined.Article,
-                title = "Términos de uso",
+                title = stringResource(R.string.prof_terms),
                 iconTint = OrangePrimary.copy(alpha = 0.85f),
                 onClick = onTerms
             )
@@ -792,13 +794,13 @@ private fun ProfileAccountDangerZone(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Eliminación de cuenta",
+                            stringResource(R.string.prof_delete_account),
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 15.sp,
                             color = TextPrimary
                         )
                         Text(
-                            "Acción permanente. Se borrarán tu perfil y los datos asociados.",
+                            stringResource(R.string.prof_delete_warn),
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -834,11 +836,11 @@ private fun ProfileAccountDangerZone(
                         } else {
                             Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Eliminar mi cuenta permanentemente")
+                            Text(stringResource(R.string.prof_delete_account_cta))
                         }
                     }
                     Text(
-                        "Tu perfil, platos y valoraciones se borrarán para siempre. No tiene vuelta atrás.",
+                        stringResource(R.string.prof_delete_detail),
                         fontSize = 11.sp,
                         color = TextSecondary,
                         textAlign = TextAlign.Center,
@@ -911,7 +913,7 @@ private fun ProfileHero(
                     if (photoUrl.isNotEmpty()) {
                         AsyncImage(
                             model = photoUrl,
-                            contentDescription = "Foto de perfil",
+                            contentDescription = stringResource(R.string.prof_photo),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
@@ -975,19 +977,19 @@ private fun ProfileStats2x2(
             Row(modifier = Modifier.fillMaxWidth()) {
                 StatItem(totalPlates.formatCompact(), "Platos\npublicados", modifier = Modifier.weight(1f))
                 VerticalDivider()
-                StatItem(likesReceived.formatCompact(), "Likes\nrecibidos", modifier = Modifier.weight(1f))
+                StatItem(likesReceived.formatCompact(), stringResource(R.string.prof_likes_received), modifier = Modifier.weight(1f))
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerColor)
             Row(modifier = Modifier.fillMaxWidth()) {
-                StatItem(likesGiven.formatCompact(), "Likes\ndados", modifier = Modifier.weight(1f))
+                StatItem(likesGiven.formatCompact(), stringResource(R.string.prof_likes_given), modifier = Modifier.weight(1f))
                 VerticalDivider()
-                StatItem(ratingsGiven.formatCompact(), "Valoraciones\ndadas", modifier = Modifier.weight(1f))
+                StatItem(ratingsGiven.formatCompact(), stringResource(R.string.prof_ratings_given), modifier = Modifier.weight(1f))
             }
             if (cityRank > 0 && city.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerColor)
                 StatItem(
-                    value = "#$cityRank en $city",
-                    label = "Ranking ciudad",
+                    value = stringResource(R.string.prof_city_rank_value, cityRank, city),
+                    label = stringResource(R.string.prof_city_rank),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -1043,14 +1045,14 @@ private fun EditProfileSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Icon(Icons.Default.Edit, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(26.dp))
-                Text("Editar perfil", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(stringResource(R.string.prof_edit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
             }
 
             OutlinedTextField(
                 value = bio,
                 onValueChange = { if (it.length <= com.app.foodranker.utils.InputLimits.BIO) bio = it },
                 label = { Text("Bio") },
-                placeholder = { Text("Cuéntanos algo sobre ti...") },
+                placeholder = { Text(stringResource(R.string.prof_bio_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = false,
                 maxLines = 3,
@@ -1065,8 +1067,8 @@ private fun EditProfileSheet(
             OutlinedTextField(
                 value = city,
                 onValueChange = { if (it.length <= com.app.foodranker.utils.InputLimits.CITY) city = it },
-                label = { Text("Ciudad") },
-                placeholder = { Text("¿Dónde eres foodie?") },
+                label = { Text(stringResource(R.string.prof_city)) },
+                placeholder = { Text(stringResource(R.string.prof_city_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
@@ -1082,13 +1084,13 @@ private fun EditProfileSheet(
             OutlinedTextField(
                 value = website,
                 onValueChange = { if (it.length <= com.app.foodranker.utils.InputLimits.WEBSITE) website = it },
-                label = { Text("Web o red social (opcional)") },
+                label = { Text(stringResource(R.string.prof_web)) },
                 placeholder = { Text("instagram.com/tu_usuario") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = !websiteValid,
                 supportingText = if (!websiteValid) {
-                    { Text("URL no válida", color = ErrorRed, fontSize = 11.sp) }
+                    { Text(stringResource(R.string.prof_web_invalid), color = ErrorRed, fontSize = 11.sp) }
                 } else null,
                 shape = MaterialTheme.shapes.small,
                 leadingIcon = {
@@ -1110,7 +1112,7 @@ private fun EditProfileSheet(
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White)
                 } else {
-                    Text("Guardar cambios", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.prof_save_changes), fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
@@ -1150,9 +1152,9 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(level.emoji, fontSize = 28.sp)
                     Column {
-                        Text("Nivel y XP", fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
-                        Text(level.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-                        Text("$xp XP", fontSize = 12.sp, color = TextSecondary)
+                        Text(stringResource(R.string.prof_level_xp), fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                        Text(stringResource(level.nameRes), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                        Text(stringResource(R.string.prof_xp, xp), fontSize = 12.sp, color = TextSecondary)
                     }
                 }
                 if (level.number < 6) {
@@ -1169,7 +1171,7 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
             )
 
             if (badges.isNotEmpty()) {
-                Text("Logros · toca para más info", fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.prof_badges_hint), fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
@@ -1188,8 +1190,9 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
                                     // los logros son un conjunto sin repetición: sin este
                                     // contador, ganar cinco ligas se vería igual que ganar una.
                                     if (badge.id == "league_winner" && leagueWins > 1)
-                                        "${badge.emoji} ${badge.name} ×$leagueWins"
-                                    else "${badge.emoji} ${badge.name}",
+                                        stringResource(R.string.prof_badge_times,
+                                            "${badge.emoji} " + stringResource(badge.nameRes), leagueWins)
+                                    else "${badge.emoji} " + stringResource(badge.nameRes),
                                     fontSize = 12.sp,
                                     color = OrangePrimary,
                                     fontWeight = FontWeight.Medium,
@@ -1206,11 +1209,11 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
     badgeDetail?.let { b ->
         AlertDialog(
             onDismissRequest = { badgeDetail = null },
-            title = { Text("${b.emoji} ${b.name}", fontWeight = FontWeight.Bold) },
-            text = { Text(b.description, fontSize = 14.sp) },
+            title = { Text("${b.emoji} " + stringResource(b.nameRes), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(b.descriptionRes), fontSize = 14.sp) },
             confirmButton = {
                 TextButton(onClick = { badgeDetail = null }) {
-                    Text("Entendido", color = OrangePrimary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.prof_understood), color = OrangePrimary, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -1244,14 +1247,14 @@ private fun CollectionsSection(
             verticalAlignment = Alignment.CenterVertically) {
             Text("Mis listas", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
             TextButton(onClick = { showCreate = true }) {
-                Text("+ Nueva lista", color = OrangePrimary, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.prof_new_list), color = OrangePrimary, fontWeight = FontWeight.Medium)
             }
         }
 
         if (collections.isEmpty()) {
             EmptyStateCentered(
-                title = "Sin listas todavia",
-                message = "Crea listas para organizar tus platos favoritos",
+                title = stringResource(R.string.prof_no_lists),
+                message = stringResource(R.string.prof_lists_hint),
                 icon = Icons.Default.Star,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
@@ -1274,7 +1277,7 @@ private fun CollectionsSection(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(col.name, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Text("${col.plateIds.size} platos", fontSize = 12.sp, color = TextSecondary)
+                            Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 12.sp, color = TextSecondary)
                         }
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -1283,7 +1286,7 @@ private fun CollectionsSection(
                             modifier = Modifier.size(20.dp)
                         )
                         IconButton(onClick = { collectionToDelete = col }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Eliminar",
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete),
                                 tint = TextSecondary, modifier = Modifier.size(20.dp))
                         }
                     }
@@ -1314,7 +1317,7 @@ private fun CollectionsSection(
                     Text(col.emoji, fontSize = 22.sp)
                     Text(col.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
                     Spacer(Modifier.weight(1f))
-                    Text("${col.plateIds.size} platos", fontSize = 13.sp, color = TextSecondary)
+                    Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 13.sp, color = TextSecondary)
                 }
 
                 if (isLoadingCollectionPlates) {
@@ -1324,7 +1327,7 @@ private fun CollectionsSection(
                 } else if (collectionPlates.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            if (col.plateIds.isEmpty()) "Esta lista está vacía" else "No se pudieron cargar los platos",
+                            if (col.plateIds.isEmpty()) stringResource(R.string.prof_list_empty) else "No se pudieron cargar los platos",
                             color = TextSecondary, textAlign = TextAlign.Center
                         )
                     }
@@ -1398,18 +1401,18 @@ private fun CollectionsSection(
     collectionToDelete?.let { col ->
         AlertDialog(
             onDismissRequest = { collectionToDelete = null },
-            title = { Text("¿Eliminar lista?", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.prof_delete_list_q), fontWeight = FontWeight.Bold) },
             text = { Text("Se eliminará la lista \"${col.name}\". Los platos no se borrarán, solo dejarán de estar en esta lista.") },
             confirmButton = {
                 TextButton(onClick = {
                     onDeleteCollection(col.id)
                     collectionToDelete = null
                 }) {
-                    Text("Eliminar", color = ErrorRed, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_delete), color = ErrorRed, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { collectionToDelete = null }) { Text("Cancelar") }
+                TextButton(onClick = { collectionToDelete = null }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -1429,7 +1432,7 @@ private fun CollectionsSection(
                     }
                 }
                 OutlinedTextField(value = newName, onValueChange = { newName = it },
-                    label = { Text("Nombre de la lista") }, placeholder = { Text("Ej: Mejor pizza en Madrid") },
+                    label = { Text("Nombre de la lista") }, placeholder = { Text(stringResource(R.string.prof_list_hint)) },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     shape = MaterialTheme.shapes.small,
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, focusedLabelColor = OrangePrimary))
@@ -1437,7 +1440,7 @@ private fun CollectionsSection(
                     enabled = newName.isNotBlank(), modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = MaterialTheme.shapes.small,
                     colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)) {
-                    Text("Crear lista", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.prof_create_list), fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
@@ -1459,7 +1462,7 @@ private fun EditPlateSheet(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("¿Eliminar este plato?", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.prof_delete_plate_q), fontWeight = FontWeight.Bold) },
             text = {
                 Text(
                     "Se borrará \"${plate.name}\" junto con su foto y las valoraciones " +
@@ -1468,12 +1471,12 @@ private fun EditPlateSheet(
             },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; onDelete() }) {
-                    Text("Eliminar", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_delete), color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) {
-                    Text("Cancelar", color = TextSecondary)
+                    Text(stringResource(R.string.action_cancel), color = TextSecondary)
                 }
             }
         )
@@ -1503,7 +1506,7 @@ private fun EditPlateSheet(
             OutlinedTextField(
                 value = description,
                 onValueChange = { if (it.length <= maxLen) description = it },
-                label = { Text("Descripción") },
+                label = { Text(stringResource(R.string.prof_bio)) },
                 placeholder = { Text("¿Qué lo hace especial?") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = false, maxLines = 4,
@@ -1516,7 +1519,7 @@ private fun EditPlateSheet(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-            ) { Text("Guardar", fontWeight = FontWeight.Bold, color = Color.White) }
+            ) { Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold, color = Color.White) }
 
             OutlinedButton(
                 onClick = { confirmDelete = true },
@@ -1531,7 +1534,7 @@ private fun EditPlateSheet(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Eliminar plato", fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+                Text(stringResource(R.string.prof_delete_plate), fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
             }
         }
     }
@@ -1548,7 +1551,7 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
         modifier = modifier.combinedClickable(
             onClick = onClick,
             onLongClick = if (showEditButton) onEdit else null,
-            onLongClickLabel = if (showEditButton) "Editar o eliminar plato" else null
+            onLongClickLabel = if (showEditButton) stringResource(R.string.prof_edit_or_delete) else null
         ),
         shape = MaterialTheme.shapes.small,
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
@@ -1597,7 +1600,7 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
                     ) {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Editar",
+                            contentDescription = stringResource(R.string.action_edit),
                             tint = Color.White,
                             modifier = Modifier.size(20.dp).padding(4.dp)
                         )
@@ -1636,7 +1639,7 @@ private fun RivalCard(rivalName: String, rivalXp: Int, gap: Int) {
             Text("⚔️", fontSize = 28.sp)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Rival cercano",
+                    stringResource(R.string.prof_rival),
                     fontSize = 11.sp,
                     color = Color(0xFFA0522D),
                     fontWeight = FontWeight.Medium
@@ -1656,7 +1659,7 @@ private fun RivalCard(rivalName: String, rivalXp: Int, gap: Int) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "$rivalXp XP",
+                    stringResource(R.string.prof_xp, rivalXp),
                     fontSize = 11.sp,
                     color = Color(0xFFA0522D)
                 )

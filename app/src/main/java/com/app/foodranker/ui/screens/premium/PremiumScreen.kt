@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.premium
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -52,7 +54,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Premium", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.prm_name), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -85,13 +87,13 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("⭐", fontSize = 48.sp)
                     Text(
-                        "FoodRanker Premium",
+                        stringResource(R.string.prm_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 22.sp
                     )
                     Text(
-                        "Apoya la app y quítate los anuncios",
+                        stringResource(R.string.prm_sub),
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 14.sp
                     )
@@ -103,9 +105,9 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
             // Solo se anuncian beneficios que la app entrega hoy: los anuncios se ocultan
             // (BannerAd) y el badge aparece en el perfil. No prometer funciones no implementadas.
             val benefits = listOf(
-                "Sin anuncios" to "Disfruta sin interrupciones",
-                "Badge Premium" to "Destaca en la comunidad",
-                "Más platos al día" to "Publica hasta el doble de platos"
+                "Sin anuncios" to stringResource(R.string.prm_no_interrupt),
+                stringResource(R.string.prm_badge) to stringResource(R.string.prm_stand_out),
+                stringResource(R.string.prm_more_plates) to "Publica hasta el doble de platos"
             )
 
             benefits.forEach { (title, subtitle) ->
@@ -173,21 +175,24 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Opción 2 — Suscripción real con Google Play Billing
+                // Los textos se leen fuera del onClick: ahi no se puede componer.
+                val msgError = stringResource(R.string.prm_error)
+                val msgNoDisponible = stringResource(R.string.prm_unavailable)
                 Button(
                     onClick = {
                         isPurchasing = true
                         val activity = context as? Activity
                         if (activity == null) {
-                            billingError = "No se pudo iniciar la compra. Inténtalo de nuevo."
+                            billingError = msgError
                             isPurchasing = false
                         } else if (isBillingAvailable) {
                             val ok = billingViewModel.launchPurchase(activity)
                             if (!ok) {
-                                billingError = "No se pudo iniciar la compra. Inténtalo de nuevo."
+                                billingError = msgError
                                 isPurchasing = false
                             }
                         } else {
-                            billingError = "Las compras no están disponibles en este momento."
+                            billingError = msgNoDisponible
                             isPurchasing = false
                         }
                     },
@@ -203,7 +208,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                             color = Color.White,
                             fontSize = 16.sp
                         )
-                        Text("Cancela cuando quieras", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                        Text(stringResource(R.string.prm_cancel_any), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                     }
                 }
             }

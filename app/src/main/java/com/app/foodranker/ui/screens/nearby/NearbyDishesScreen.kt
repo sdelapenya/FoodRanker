@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.nearby
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -80,21 +82,21 @@ fun NearbyDishesScreen(
 
                 uiState.noLocationPermission -> EmptyStateCentered(
                     icon = Icons.Default.LocationOn,
-                    title = "Necesitamos tu ubicación",
-                    message = "Para saber qué se ha puntuado cerca de ti, activa el permiso de ubicación.",
-                    actionLabel = "Activar ubicación",
+                    title = stringResource(R.string.nrb_need_loc),
+                    message = stringResource(R.string.nrb_need_loc_d),
+                    actionLabel = stringResource(R.string.nrb_enable),
                     onAction = { locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
                 )
 
                 uiState.results.isEmpty() -> Column {
                     EmptyStateCentered(
                         icon = Icons.Default.MyLocation,
-                        title = "Nada puntuado por aquí todavía",
+                        title = stringResource(R.string.nrb_empty),
                         message = if (uiState.searchedPlaces)
-                            "Tampoco hemos encontrado locales cerca. Sé el primero en publicar un plato."
+                            stringResource(R.string.nrb_empty_searched)
                         else
-                            "Puedes buscar qué locales hay cerca para publicar el primer plato.",
-                        actionLabel = if (uiState.searchedPlaces) null else "Buscar locales cercanos",
+                            stringResource(R.string.nrb_empty_hint),
+                        actionLabel = if (uiState.searchedPlaces) null else stringResource(R.string.nrb_search),
                         onAction = if (uiState.searchedPlaces) null else { { viewModel.searchNearbyViaPlaces() } }
                     )
                     if (uiState.isSearchingPlaces) {
@@ -104,7 +106,7 @@ fun NearbyDishesScreen(
                     }
                     if (uiState.placesSuggestions.isNotEmpty()) {
                         Text(
-                            "Locales cerca de ti",
+                            stringResource(R.string.nrb_venues),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = TextPrimary,
@@ -126,7 +128,7 @@ fun NearbyDishesScreen(
                                 // testers informaron de que no se podía "hacer nada" con ella.
                                 Icon(
                                     Icons.Default.AddCircleOutline,
-                                    contentDescription = "Publicar un plato de este local",
+                                    contentDescription = stringResource(R.string.nrb_post_here),
                                     tint = OrangePrimary
                                 )
                             }

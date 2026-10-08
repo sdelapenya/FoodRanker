@@ -5,6 +5,7 @@ import com.app.foodranker.utils.AdManager
 import com.app.foodranker.utils.AnalyticsManager
 import com.app.foodranker.utils.BillingManager
 import com.app.foodranker.utils.CloudinaryManager
+import com.app.foodranker.utils.ErrorMapper
 import com.app.foodranker.utils.FoodRankerMessagingService
 import com.app.foodranker.utils.NotificationHelper
 import com.app.foodranker.utils.RemoteConfigManager
@@ -27,6 +28,7 @@ class FoodRankerApp : Application() {
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
         // initialize() ya encadena las precargas cuando el SDK termina de arrancar,
         // en segundo plano. Llamarlas aquí las lanzaba antes de que estuviera listo.
+        ErrorMapper.initialize(this)
         AdManager.initialize(this)
         CloudinaryManager.initialize(this)
         AnalyticsManager.initialize(this)

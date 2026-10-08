@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.league
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -117,7 +119,7 @@ fun LeagueScreen(
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Volver",
+                                contentDescription = stringResource(R.string.action_back),
                                 tint = Color.White
                             )
                         }
@@ -130,7 +132,7 @@ fun LeagueScreen(
                         }
                         Text(
                             if (uiState.isGlobalLeague) "⚔️ Liga semanal  ·  $weekLabel"
-                            else "⚔️ Liga ${uiState.city.ifEmpty { "Local" }}  ·  $weekLabel",
+                            else "⚔️ Liga ${uiState.city.ifEmpty { stringResource(R.string.lg_local) }}  ·  $weekLabel",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
@@ -148,13 +150,13 @@ fun LeagueScreen(
                         Text(
                             buildAnnotatedString {
                                 withStyle(SpanStyle(color = Color.White.copy(alpha = 0.72f))) {
-                                    append("Termina en ")
+                                    append(stringResource(R.string.lg_ends_in))
                                 }
                                 withStyle(SpanStyle(color = OrangePrimary, fontWeight = FontWeight.Bold)) {
                                     append(countdownText)
                                 }
                                 withStyle(SpanStyle(color = Color.White.copy(alpha = 0.72f))) {
-                                    append("  ·  Reinicia cada lunes")
+                                    append(stringResource(R.string.lg_restart))
                                 }
                             },
                             fontSize = 12.sp,
@@ -193,7 +195,7 @@ fun LeagueScreen(
                         Text("⚠️", fontSize = 52.sp)
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "No se pudo cargar la liga. Comprueba tu conexión e inténtalo de nuevo.",
+                            stringResource(R.string.lg_load_error),
                             color = TextSecondary,
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center
@@ -204,7 +206,7 @@ fun LeagueScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Reintentar", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(stringResource(R.string.lg_retry), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -221,7 +223,7 @@ fun LeagueScreen(
                         Text("📍", fontSize = 52.sp)
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "Añade tu ciudad en el perfil para participar en la liga local.",
+                            stringResource(R.string.lg_add_city),
                             color = TextSecondary,
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center
@@ -232,7 +234,7 @@ fun LeagueScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Ir a mi perfil", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(stringResource(R.string.lg_go_profile), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -260,7 +262,7 @@ fun LeagueScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            Text("Votar ahora ⚡", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.lg_vote_now), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -286,13 +288,13 @@ fun LeagueScreen(
                             Text("📍", fontSize = 22.sp)
                             Column {
                                 Text(
-                                    "Estás fuera del Top 20",
+                                    stringResource(R.string.league_out_of_top),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color(0xFF5D3A00)
                                 )
                                 Text(
-                                    "Vota más platos esta semana para aparecer en el ranking.",
+                                    stringResource(R.string.league_out_hint),
                                     fontSize = 11.sp,
                                     color = Color(0xFF7A5020)
                                 )
@@ -328,7 +330,7 @@ fun LeagueScreen(
                             )
                             Spacer(Modifier.height(3.dp))
                             Text(
-                                "Vota platos para acumular XP y subir en la liga.",
+                                stringResource(R.string.lg_vote_hint),
                                 fontSize = 11.sp,
                                 color = Color(0xFF516D5E),
                                 fontWeight = FontWeight.Medium
@@ -376,10 +378,10 @@ fun LeagueScreen(
                 val votedToday = userEntry != null && isToday(userEntry.updatedAt)
 
                 val ctaText = when {
-                    userEntry == null -> "¡Empieza a votar! ⚡"
-                    votedToday && uiState.currentUserRank <= 3 -> "¡Sigue así, estás en el Top 3! 🏅"
-                    votedToday -> "Vota más para subir posiciones 🚀"
-                    else -> "Vota hoy para no perder tu posición ⚡"
+                    userEntry == null -> stringResource(R.string.league_start_voting)
+                    votedToday && uiState.currentUserRank <= 3 -> stringResource(R.string.lg_top3)
+                    votedToday -> stringResource(R.string.lg_vote_climb)
+                    else -> stringResource(R.string.lg_vote_keep)
                 }
                 val ctaColor = if (votedToday && uiState.currentUserRank <= 3)
                     Color(0xFF168963) else OrangePrimary
@@ -569,9 +571,9 @@ private fun LeagueRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 val subtitle = when {
-                    isCurrentUser -> "Tu posición"
-                    entry.updatedAt > 0L && isToday(entry.updatedAt) -> "Votó hoy"
-                    else -> "Activo esta semana"
+                    isCurrentUser -> stringResource(R.string.league_your_position)
+                    entry.updatedAt > 0L && isToday(entry.updatedAt) -> stringResource(R.string.league_voted_today)
+                    else -> stringResource(R.string.league_active_week)
                 }
                 Text(
                     subtitle,

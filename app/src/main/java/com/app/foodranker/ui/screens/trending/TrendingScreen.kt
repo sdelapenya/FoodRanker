@@ -1,5 +1,7 @@
 package com.app.foodranker.ui.screens.trending
 
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -74,7 +76,7 @@ fun TrendingScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = OrangePrimary)
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.trd_refresh), tint = OrangePrimary)
                         }
                     }
                 },
@@ -109,13 +111,13 @@ fun TrendingScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("🔥", fontSize = 32.sp)
                             Text(
-                                "Los platos del momento",
+                                stringResource(R.string.trd_now),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 17.sp
                             )
                             Text(
-                                "Ranking en vivo de la comunidad",
+                                stringResource(R.string.trd_live),
                                 color = Color.White.copy(alpha = 0.88f),
                                 fontSize = 12.sp
                             )
@@ -127,8 +129,8 @@ fun TrendingScreen(
                 item {
                     TrendingSectionTitle(
                         emoji = "❤️",
-                        title = "Más likeados",
-                        subtitle = "Los que más amor reciben"
+                        title = stringResource(R.string.trd_most_liked),
+                        subtitle = stringResource(R.string.trd_most_loved)
                     )
                 }
 
@@ -167,8 +169,8 @@ fun TrendingScreen(
                 item {
                     TrendingSectionTitle(
                         emoji = "⭐",
-                        title = "Mejor valorados",
-                        subtitle = "Los que la comunidad recomienda"
+                        title = stringResource(R.string.trd_best_rated),
+                        subtitle = stringResource(R.string.trd_recommended)
                     )
                 }
 
@@ -202,8 +204,8 @@ fun TrendingScreen(
                 item {
                     TrendingSectionTitle(
                         emoji = "📈",
-                        title = "Más activos",
-                        subtitle = "Mayor engagement de la comunidad"
+                        title = stringResource(R.string.trd_most_active),
+                        subtitle = stringResource(R.string.trd_engagement)
                     )
                 }
 
@@ -281,7 +283,7 @@ private fun TrendingEmpty() {
             Text("🌱", fontSize = 40.sp)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Aún no hay datos suficientes",
+                stringResource(R.string.trd_not_enough),
                 color = TextPrimary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp

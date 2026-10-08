@@ -1,5 +1,6 @@
 package com.app.foodranker.ui.screens.notifications
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.app.foodranker.R
 import com.app.foodranker.data.model.FoodNotification
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.utils.RewardManager
@@ -45,10 +47,10 @@ fun NotificationsScreen(
         containerColor = BackgroundLight,
         topBar = {
             TopAppBar(
-                title = { Text("Notificaciones", fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = { Text(stringResource(R.string.ntf_title), fontWeight = FontWeight.Bold, color = TextPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = TextPrimary)
                     }
                 },
                 actions = {
@@ -56,7 +58,7 @@ fun NotificationsScreen(
                         IconButton(onClick = { viewModel.clearAll() }) {
                             Icon(
                                 Icons.Default.DeleteSweep,
-                                contentDescription = "Limpiar notificaciones",
+                                contentDescription = stringResource(R.string.ntf_clear),
                                 tint = TextSecondary
                             )
                         }
@@ -75,9 +77,9 @@ fun NotificationsScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🔔", fontSize = 56.sp)
                     Spacer(Modifier.height(12.dp))
-                    Text("Sin notificaciones", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                    Text(stringResource(R.string.ntf_empty), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
                     Spacer(Modifier.height(6.dp))
-                    Text("Cuando alguien interactúe con tus platos\naparecerá aquí", fontSize = 14.sp, color = TextSecondary,
+                    Text(stringResource(R.string.ntf_empty_hint), fontSize = 14.sp, color = TextSecondary,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
@@ -87,6 +89,8 @@ fun NotificationsScreen(
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 itemsIndexed(uiState.notifications, key = { _, notif -> notif.id }) { index, notif ->
+                    // Se lee aqui, en ambito componible: dentro del onClick no se puede.
+                    val avisoRechazado = stringResource(R.string.ntf_rejected_toast)
                     var visible by remember { mutableStateOf(false) }
                     LaunchedEffect(notif.id) {
                         kotlinx.coroutines.delay(index * 40L)
@@ -103,7 +107,7 @@ fun NotificationsScreen(
                                     // El plato fue eliminado — mostrar aviso en lugar de navegar
                                     android.widget.Toast.makeText(
                                         context,
-                                        "Este plato fue rechazado y eliminado. Puedes publicar uno nuevo.",
+                                        avisoRechazado,
                                         android.widget.Toast.LENGTH_LONG
                                     ).show()
                                 } else if (notif.type == "new_plate" && notif.plateCount > 1) {
@@ -159,7 +163,9 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            val bodyText = remember(notification.id) { buildAnnotatedText(notification) }
+            // Sin remember: buildAnnotatedText es componible y su lambda no lo admite.
+            // Compose ya evita rehacer el texto si la notificacion no cambia.
+            val bodyText = buildAnnotatedText(notification)
             Text(
                 bodyText,
                 fontSize = 14.sp,
@@ -184,70 +190,83 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
     HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
 }
 
-// Construye el texto de la notificación según el tipo. Reutilizable y
-// fácil de extender si añadimos más tipos en el futuro.
-private fun buildAnnotatedText(n: FoodNotification): String = when (n.type) {
-    "like" -> "${n.fromUserName} le ha dado like a \"${n.plateName}\""
-    "rating" -> buildString {
-        append(n.fromUserName)
-        append(" ha valorado \"${n.plateName}\"")
-        if (n.score > 0) append(" con ${"%.1f".format(n.score)}")
-    }
-    "comment" -> if (n.commentText.isNotBlank())
-        "${n.fromUserName} ha comentado \"${n.plateName}\": ${n.commentText}"
-    else
-        "${n.fromUserName} ha comentado \"${n.plateName}\""
-    "follow" -> "${n.fromUserName} ha empezado a seguirte"
-    // El contador se acumula durante el día aunque solo suene el primero.
-    "new_plate" -> if (n.plateCount > 1)
-        "${n.fromUserName} ha publicado ${n.plateCount} platos nuevos"
-    else
-        "${n.fromUserName} ha publicado \"${n.plateName}\""
-    // El nombre del nivel y del logro los resuelve RewardManager, no el texto que mandó el
-    // servidor: así la app enseña siempre su propia lista y no dos nombres distintos.
-    "level_up" -> "Has subido a ${RewardManager.LEVELS.find { it.number == n.level }
-        ?.let { "${it.emoji} ${it.name}" } ?: "nivel ${n.level}"}"
-    "badge" -> "Logro desbloqueado: ${RewardManager.getBadge(n.badgeId)
-        ?.let { "${it.emoji} ${it.name}" } ?: n.plateName}"
-    "league_result" -> if (n.position == 1)
-        "Ganaste la liga semanal 🥇"
-    else
-        "Terminaste ${n.position}º en la liga semanal"
-    "moderation_approved" -> "Tu plato \"${n.plateName}\" ya está publicado en el ranking"
-    "moderation_rejected" -> {
-        val reasonText = when {
-            n.reasons.contains("not_food")  -> "no parece comida"
-            n.reasons.contains("adult")     -> "contenido inapropiado"
-            n.reasons.contains("violence")  -> "contenido violento"
-            n.reasons.contains("racy")      -> "contenido sugerente"
-            n.reasons.contains("no_image")  -> "no tenía imagen"
-            else -> "no superó la moderación"
+// Construye el texto de la notificación según el tipo.
+//
+// Es componible porque los textos salen de los recursos. Al añadir un tipo hay que tocarlo
+// aquí, en el switch de onNotificationCreated (servidor), en el escuchador de
+// NotificationRepository y en el mapeo de NotificationsViewModel.
+@Composable
+private fun buildAnnotatedText(n: FoodNotification): String {
+    val plato = "\"${n.plateName}\""
+    return when (n.type) {
+        "like" -> stringResource(R.string.ntf_like, n.fromUserName, plato)
+        "rating" -> if (n.score > 0)
+            stringResource(R.string.ntf_rating_score, n.fromUserName, plato, "%.1f".format(n.score))
+        else
+            stringResource(R.string.ntf_rating, n.fromUserName, plato)
+        "comment" -> if (n.commentText.isNotBlank())
+            stringResource(R.string.ntf_comment_text, n.fromUserName, plato, n.commentText)
+        else
+            stringResource(R.string.ntf_comment, n.fromUserName, plato)
+        "follow" -> stringResource(R.string.ntf_follow, n.fromUserName)
+        // El contador se acumula durante el día aunque solo suene el primero.
+        "new_plate" -> if (n.plateCount > 1)
+            stringResource(R.string.ntf_new_plates, n.fromUserName, n.plateCount)
+        else
+            stringResource(R.string.ntf_new_plate, n.fromUserName, plato)
+        // El nombre del nivel y del logro los resuelve RewardManager, no el texto que mandó
+        // el servidor: así la app enseña siempre su propia lista y no dos nombres distintos.
+        "level_up" -> {
+            val nivel = RewardManager.LEVELS.find { it.number == n.level }
+            val etiqueta = if (nivel != null) "${nivel.emoji} " + stringResource(nivel.nameRes)
+                           else n.level.toString()
+            stringResource(R.string.ntf_level_up, etiqueta)
         }
-        "Tu plato \"${n.plateName}\" fue rechazado: $reasonText"
+        "badge" -> {
+            val logro = RewardManager.getBadge(n.badgeId)
+            val etiqueta = if (logro != null) "${logro.emoji} " + stringResource(logro.nameRes)
+                           else n.plateName
+            stringResource(R.string.ntf_badge, etiqueta)
+        }
+        "league_result" -> if (n.position == 1) stringResource(R.string.ntf_league_win)
+                           else stringResource(R.string.ntf_league_pos, n.position)
+        "moderation_approved" -> stringResource(R.string.ntf_approved, plato)
+        "moderation_rejected" -> {
+            val motivo = when {
+                n.reasons.contains("not_food")  -> stringResource(R.string.ntf_reason_not_food)
+                n.reasons.contains("adult")     -> stringResource(R.string.ntf_reason_adult)
+                n.reasons.contains("violence")  -> stringResource(R.string.ntf_reason_violence)
+                n.reasons.contains("racy")      -> stringResource(R.string.ntf_reason_racy)
+                n.reasons.contains("no_image")  -> stringResource(R.string.ntf_reason_no_image)
+                else -> stringResource(R.string.ntf_reason_other)
+            }
+            stringResource(R.string.ntf_rejected, plato, motivo)
+        }
+        // Respaldo para tipos que esta versión aún no conoce. Se comprueba el nombre porque
+        // no todos los avisos van sobre un plato — el de seguidor no lo lleva, y sin esto se
+        // leería: Nueva notificación sobre "".
+        else -> if (n.plateName.isNotBlank()) stringResource(R.string.ntf_generic_about, plato)
+                else stringResource(R.string.ntf_generic)
     }
-    // Respaldo para tipos que esta versión aún no conoce. Se comprueba el nombre
-    // porque no todos los avisos van sobre un plato — el de seguidor no lo lleva, y
-    // sin esto se leería: Nueva notificación sobre "".
-    else -> if (n.plateName.isNotBlank()) "Nueva notificación sobre \"${n.plateName}\""
-            else "Tienes una notificación nueva"
 }
 
+@Composable
 private fun timeAgo(timestamp: Long): String {
     val diff = System.currentTimeMillis() - timestamp
     return when {
-        diff < TimeUnit.MINUTES.toMillis(1)  -> "Ahora mismo"
+        diff < TimeUnit.MINUTES.toMillis(1)  -> stringResource(R.string.ntf_now)
         diff < TimeUnit.HOURS.toMillis(1) -> {
             val m = TimeUnit.MILLISECONDS.toMinutes(diff)
-            if (m == 1L) "Hace 1 minuto" else "Hace $m min"
+            if (m == 1L) stringResource(R.string.ntf_min_ago) else stringResource(R.string.ntf_mins_ago, m.toInt())
         }
         diff < TimeUnit.DAYS.toMillis(1) -> {
             val h = TimeUnit.MILLISECONDS.toHours(diff)
-            if (h == 1L) "Hace 1 hora" else "Hace $h h"
+            if (h == 1L) stringResource(R.string.ntf_hour_ago) else stringResource(R.string.ntf_hours_ago, h.toInt())
         }
         diff < TimeUnit.DAYS.toMillis(7) -> {
             val d = TimeUnit.MILLISECONDS.toDays(diff)
-            if (d == 1L) "Hace 1 día" else "Hace $d días"
+            if (d == 1L) stringResource(R.string.ntf_day_ago) else stringResource(R.string.ntf_days_ago, d.toInt())
         }
-        else -> SimpleDateFormat("dd MMM", Locale.forLanguageTag("es")).format(Date(timestamp))
+        else -> SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(timestamp))
     }
 }
