@@ -428,7 +428,9 @@ fun PlateDetailScreen(
                                     // la nota dice cuánto de bueno es, el % cuánta gente lo
                                     // repetiría. Ver docs/RATINGS.md §1.4.
                                     val repeatLabel = repeatSummary(plate.wouldOrderAgainCount, plate.wouldOrderAgainResponses)
-                                    val priceLabel = priceSummary(plate.priceMedianCents, plate.priceReportCount)
+                                    val priceLabel = priceSummary(
+                                        plate.priceMedianCents, plate.priceReportCount, plate.countryCode
+                                    )
                                     if (repeatLabel != null || priceLabel != null) {
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Row(
@@ -828,6 +830,7 @@ fun PlateDetailScreen(
             isLoading = uiState.isSubmittingRating,
             currentScore = uiState.plate?.averageScore ?: 0.0,
             plateName = uiState.plate?.name ?: "",
+            countryCode = uiState.plate?.countryCode ?: "",
             knownPriceCents = uiState.plate?.priceMedianCents
         )
     }
@@ -843,6 +846,7 @@ fun PlateDetailScreen(
             isLoading = uiState.isSubmittingRating,
             currentScore = uiState.plate?.averageScore ?: 0.0,
             plateName = uiState.plate?.name ?: "",
+            countryCode = uiState.plate?.countryCode ?: "",
             knownPriceCents = uiState.plate?.priceMedianCents,
             initialFlavor = ur.flavorScore,
             initialPresentation = ur.presentationScore,
@@ -1202,10 +1206,13 @@ internal fun repeatSummary(count: Int, responses: Int): String? = when {
  * El precio no promete más de lo que se sabe: con un solo reporte se dice quién lo pagó, no
  * cuánto "cuesta". Ver docs/RATINGS.md §1.3.
  */
-internal fun priceSummary(medianCents: Int?, reports: Int): String? {
+internal fun priceSummary(medianCents: Int?, reports: Int, countryCode: String = ""): String? {
     if (medianCents == null || medianCents <= 0 || reports <= 0) return null
     val price = "%.2f".format(medianCents / 100.0)
-    return if (reports == 1) "💰 1 persona pagó $price €" else "💰 suele costar $price €"
+    // La moneda sale del país del local, no del móvil de quien mira: el precio es del sitio.
+    val moneda = Rating.currencySymbol(countryCode)
+    return if (reports == 1) "💰 1 persona pagó $price $moneda"
+    else "💰 suele costar $price $moneda"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1216,6 +1223,8 @@ fun RatingBottomSheet(
     isLoading: Boolean,
     currentScore: Double = 0.0,
     plateName: String = "",
+    /** ISO del país del local: decide en qué moneda se pide el precio. */
+    countryCode: String = "",
     /** Precio que ya conoce el plato: se preselecciona para confirmarlo de un toque. */
     knownPriceCents: Int? = null,
     initialFlavor: Float = 5f,
@@ -1345,7 +1354,8 @@ fun RatingBottomSheet(
                 maxLength = 7,
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                 supportingText = when {
-                    priceIsInvalid -> "Pon un precio entre 0,01 € y 1.000 €"
+                    priceIsInvalid -> "Pon un precio entre 0,01 y 1.000 " +
+                        Rating.currencySymbol(countryCode)
                     knownPriceCents != null && initialPriceCents == null ->
                         "Precio que han puesto otros — confírmalo o corrígelo"
                     else -> "Lo que pagaste por este plato, no la cuenta entera"

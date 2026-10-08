@@ -17,6 +17,8 @@ data class Plate(
     val restaurantAddress: String = "",
     val city: String = "",
     val country: String = "",
+    /** ISO del país del local (ES, GB...). Neutro: de aquí sale la moneda del precio. */
+    val countryCode: String = "",
     val latitude: Double? = null,
     val longitude: Double? = null,
     val imageUrl: String = "",

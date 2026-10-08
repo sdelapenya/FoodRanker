@@ -325,7 +325,10 @@ fun AddPlateScreen(
                                 maxLength = 7,
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                                 supportingText = if (priceText.isNotBlank() && com.app.foodranker.data.model.Rating.parsePriceToCents(priceText) == null)
-                                    "Pon un precio entre 0,01 € y 1.000 €"
+                                    "Pon un precio entre 0,01 y 1.000 " +
+                                        com.app.foodranker.data.model.Rating.currencySymbol(
+                                            viewModel.formVenue?.countryCode
+                                        )
                                 else "Lo que pagaste por este plato, no la cuenta entera"
                             )
 

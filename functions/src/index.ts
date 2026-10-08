@@ -19,8 +19,15 @@ const CLOUDINARY_CLOUD_NAME = defineSecret("CLOUDINARY_CLOUD_NAME");
 const CLOUDINARY_API_KEY = defineSecret("CLOUDINARY_API_KEY");
 const CLOUDINARY_API_SECRET = defineSecret("CLOUDINARY_API_SECRET");
 
-// Idioma en el que se guarda la identidad canónica de los locales. Ver resolveVenue.
-const PLACES_LANGUAGE = "es";
+// Los datos del local se piden SIN idioma a propósito: así Places devuelve cada sitio en el
+// suyo — "Toledo, España" y "Edinburgh, United Kingdom" —, que es lo natural cuando la app
+// deja de ser solo española. Antes se forzaba "es" y un bar de Edimburgo habría quedado
+// guardado como "Edimburgo, Reino Unido" PARA TODO EL MUNDO, porque el documento del local
+// es único y compartido. Ver resolveVenue.
+//
+// El precio de dejar que el país venga en varios idiomas es que deja de servir para
+// comparar, y por eso se guarda además `countryCode` (ISO: ES, GB), que es neutro: es lo
+// que usa la lógica, y de él sale también la moneda en la que se muestra el precio.
 
 admin.initializeApp();
 
@@ -516,7 +523,15 @@ async function checkAndAwardBadges(userId: string): Promise<void> {
 
     if (platesSnap) {
       if (!earned.has("globetrotter")) {
-        const countries = new Set(platesSnap.docs.map((d) => d.get("country") as string).filter(Boolean));
+        // Se cuenta por código ISO, no por el nombre: el nombre del país viene en el idioma
+        // en que se dio de alta el local, así que "España" y "Spain" habrían contado como
+        // dos países distintos en cuanto entrara el primer local extranjero. El respaldo al
+        // nombre es para documentos antiguos, aunque ya se rellenaron todos.
+        const countries = new Set(
+          platesSnap.docs
+            .map((d) => ((d.get("countryCode") as string) || (d.get("country") as string) || "").toUpperCase())
+            .filter(Boolean)
+        );
         if (countries.size >= 3) earned.add("globetrotter");
       }
       if (!earned.has("popular")) {
@@ -1996,6 +2011,20 @@ export const resolveVenue = onCall(
       throw new HttpsError("invalid-argument", "placeId is required");
     }
 
+    // Idioma en el que se dará de alta el local. Lo manda la app (el de su móvil) porque
+    // quien publica un sitio casi siempre es de allí, y así cada local acaba en su idioma:
+    // un bar de Toledo en castellano y uno de Edimburgo en inglés. No se puede deducir del
+    // propio sitio sin consultarlo antes, y Places sin idioma responde siempre en inglés.
+    //
+    // Por defecto "es" para los clientes que todavía no lo mandan: los usuarios de hoy son
+    // españoles, así que seguir dándoles de alta en castellano es lo correcto.
+    const idiomaPedido = typeof request.data?.languageCode === "string"
+      ? request.data.languageCode.slice(0, 8)
+      : "";
+    const languageCode = /^[a-zA-Z]{2}(-[a-zA-Z0-9]{2,8})?$/.test(idiomaPedido)
+      ? idiomaPedido
+      : "es";
+
     const venueRef = db.collection("venues").doc(placeId);
     const existing = await venueRef.get();
     if (existing.exists) {
@@ -2004,14 +2033,11 @@ export const resolveVenue = onCall(
 
     let place: PlaceDetails;
     try {
-      // languageCode es obligatorio aquí: sin él Places responde en inglés y el venue
-      // queda guardado como "Toledo, Spain" para TODO el mundo, porque este documento
-      // es único y compartido. No se puede localizar por usuario sin duplicar venues,
-      // así que se fija al idioma de la app. Si algún día deja de ser solo castellano,
-      // habrá que decidir en qué idioma vive la identidad canónica, no traducirla aquí.
+      // El documento del local es único y compartido: lo que se guarde aquí lo ve todo el
+      // mundo. Por eso el idioma se decide al darlo de alta y no se traduce después.
       const res = await fetch(
         `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}` +
-          `?languageCode=${PLACES_LANGUAGE}`,
+          `?languageCode=${encodeURIComponent(languageCode)}`,
         {
           headers: {
             "X-Goog-Api-Key": PLACES_SERVER_KEY.value(),
@@ -2035,6 +2061,11 @@ export const resolveVenue = onCall(
     const city = pickAddressComponent(place, ["locality", "postal_town"]) ||
       pickAddressComponent(place, ["administrative_area_level_2"]) || "";
     const country = pickAddressComponent(place, ["country"]) || "";
+    // Código ISO del país (ES, GB...). Es el campo NEUTRO: el nombre del país viene en el
+    // idioma de alta, así que "España" y "Spain" serían dos países distintos para cualquier
+    // lógica que compare cadenas — el logro Globetrotter cuenta países así. Y de este código
+    // sale además la moneda en la que se enseña el precio.
+    const countryCode = (pickAddressComponentShort(place, ["country"]) || "").toUpperCase();
 
     const venue = {
       id: placeId,
@@ -2042,6 +2073,7 @@ export const resolveVenue = onCall(
       address: place.formattedAddress ?? "",
       city,
       cityNormalized: normalizeCity(city),
+      countryCode,
       country,
       lat: place.location?.latitude ?? 0,
       lng: place.location?.longitude ?? 0,
@@ -2073,6 +2105,14 @@ function pickAddressComponent(place: PlaceDetails, types: string[]): string {
     (c.types ?? []).some((t) => types.includes(t))
   );
   return comp?.longText ?? "";
+}
+
+/** Igual que el anterior pero con la forma corta: para el país es el código ISO (ES, GB). */
+function pickAddressComponentShort(place: PlaceDetails, types: string[]): string {
+  const comp = (place.addressComponents ?? []).find((c) =>
+    (c.types ?? []).some((t) => types.includes(t))
+  );
+  return comp?.shortText ?? "";
 }
 
 /**

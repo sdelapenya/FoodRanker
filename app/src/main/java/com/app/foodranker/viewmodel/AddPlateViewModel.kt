@@ -326,6 +326,7 @@ class AddPlateViewModel @Inject constructor(
                     restaurantAddress = venue.address,
                     city = venue.city,
                     country = venue.country,
+                    countryCode = venue.countryCode,
                     latitude = venue.lat,
                     longitude = venue.lng,
                     imageUrl = imageUrl,

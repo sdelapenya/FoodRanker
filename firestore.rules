@@ -129,7 +129,7 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly([
                          'id', 'name', 'description', 'category',
                          'restaurantName', 'restaurantAddress',
-                         'city', 'country', 'latitude', 'longitude',
+                         'city', 'country', 'countryCode', 'latitude', 'longitude',
                          'imageUrl', 'addedByUserId', 'addedByUserName',
                          'averageScore', 'totalRatings', 'createdAt',
                          'likes', 'likedByUsers', 'reportCount', 'status',

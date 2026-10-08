@@ -143,7 +143,13 @@ class VenueRepository @Inject constructor(
     suspend fun resolveVenue(placeId: String): Result<Venue> = runCatching {
         val result = functions
             .getHttpsCallable("resolveVenue")
-            .call(mapOf("placeId" to placeId))
+            // Se manda el idioma del móvil: el local se da de alta en él y queda así para
+            // todo el mundo, porque el documento es único y compartido. Quien publica un
+            // sitio casi siempre es de allí, así que cada local acaba en su propio idioma.
+            .call(mapOf(
+                "placeId" to placeId,
+                "languageCode" to java.util.Locale.getDefault().language,
+            ))
             .await()
 
         @Suppress("UNCHECKED_CAST")

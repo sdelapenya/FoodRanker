@@ -16,6 +16,11 @@ data class Venue(
     /** minúsculas y sin acentos — es la que se usa para liga y ranking por ciudad */
     val cityNormalized: String = "",
     val country: String = "",
+    /**
+     * Código ISO del país (ES, GB...). Es el campo neutro: `country` viene en el idioma en
+     * que se dio de alta el local, así que no sirve para comparar ni para deducir la moneda.
+     */
+    val countryCode: String = "",
     val lat: Double = 0.0,
     val lng: Double = 0.0,
     val plateCount: Int = 0,

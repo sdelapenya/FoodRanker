@@ -52,6 +52,30 @@ data class Rating(
             if (cents == null || cents <= 0) "" else "%.2f".format(cents / 100.0)
 
         /**
+         * Símbolo de la moneda del país donde está el local, no del móvil de quien mira.
+         *
+         * El precio de un plato lo fija el sitio: una ración en Edimburgo cuesta libras la
+         * pague quien la pague. Hacerlo depender del lector haría que el mismo plato valiera
+         * "12,50 €" para uno y "12,50 £" para otro, que es el mismo número mintiendo dos veces.
+         *
+         * Se parte del código ISO porque el nombre del país viene en el idioma de alta.
+         * Vacío o desconocido cae en euros: todos los locales dados de alta hasta ahora son
+         * españoles, así que es el supuesto correcto para lo que ya existe.
+         */
+        fun currencySymbol(countryCode: String?): String = when (countryCode?.uppercase()) {
+            "GB", "GG", "IM", "JE" -> "£"
+            "US", "EC", "SV", "PA" -> "$"
+            "CH", "LI" -> "CHF"
+            "MA" -> "MAD"
+            "JP" -> "¥"
+            "MX" -> "MX$"
+            "AR" -> "AR$"
+            "CO" -> "COL$"
+            "BR" -> "R$"
+            else -> "€"
+        }
+
+        /**
          * Nota ponderada de una valoración. El servidor la recalcula con esta misma fórmula en
          * `onRatingCreated`/`onRatingUpdated` y nunca se fía de la que manda el cliente.
          *
