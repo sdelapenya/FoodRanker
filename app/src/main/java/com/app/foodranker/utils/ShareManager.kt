@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.content.FileProvider
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.data.model.categoryType
 import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -108,7 +109,7 @@ object ShareManager {
                 "(${plate.totalRatings} valoraciones)\n\n" +
                 "Descúbrelo y valóralo en FoodRanker 👇\n" +
                 "https://foodranker.app/plate/${plate.id}\n\n" +
-                "#FoodRanker #${plate.category.name.lowercase()} #${plate.city.replace(" ", "")}"
+                "#FoodRanker #${plate.categoryType.name.lowercase()} #${plate.city.replace(" ", "")}"
     }
 
     private fun saveBitmapToCache(context: Context, bitmap: Bitmap, fileName: String): Uri {

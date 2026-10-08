@@ -16,6 +16,12 @@ fun PlateCategory.categoryGradient(): List<Color> = when (this) {
     PlateCategory.DESSERT   -> listOf(Color(0xFFD46898), Color(0xFF3A0828))
     PlateCategory.BREAKFAST -> listOf(Color(0xFFD4A828), Color(0xFF3A2800))
     PlateCategory.SALAD     -> listOf(Color(0xFF4A9848), Color(0xFF081A05))
+    PlateCategory.RICE      -> listOf(Color(0xFFD9A441), Color(0xFF3A2400))
+    PlateCategory.FISH      -> listOf(Color(0xFF3E8FA8), Color(0xFF04202C))
+    PlateCategory.VEGGIE    -> listOf(Color(0xFF5A9A4A), Color(0xFF0C1E06))
+    PlateCategory.EGGS      -> listOf(Color(0xFFE0B13A), Color(0xFF3A2A00))
+    PlateCategory.SOUP      -> listOf(Color(0xFFC06838), Color(0xFF301000))
+    PlateCategory.SANDWICH  -> listOf(Color(0xFFC89050), Color(0xFF342000))
     PlateCategory.OTHER     -> listOf(Color(0xFF787888), Color(0xFF101018))
 }
 
@@ -32,5 +38,11 @@ fun PlateCategory.cardGradient(): List<Color> = when (this) {
     PlateCategory.DESSERT   -> listOf(Color(0xFFD46898), Color(0xFFA83868))
     PlateCategory.BREAKFAST -> listOf(Color(0xFFD4A828), Color(0xFFA07818))
     PlateCategory.SALAD     -> listOf(Color(0xFF4A9848), Color(0xFF2A6828))
+    PlateCategory.RICE      -> listOf(Color(0xFFD9A441), Color(0xFFA87420))
+    PlateCategory.FISH      -> listOf(Color(0xFF3E8FA8), Color(0xFF1E6076))
+    PlateCategory.VEGGIE    -> listOf(Color(0xFF5A9A4A), Color(0xFF356A28))
+    PlateCategory.EGGS      -> listOf(Color(0xFFE0B13A), Color(0xFFB08418))
+    PlateCategory.SOUP      -> listOf(Color(0xFFC06838), Color(0xFF8E4420))
+    PlateCategory.SANDWICH  -> listOf(Color(0xFFC89050), Color(0xFF996A30))
     PlateCategory.OTHER     -> listOf(Color(0xFF787888), Color(0xFF505060))
 }

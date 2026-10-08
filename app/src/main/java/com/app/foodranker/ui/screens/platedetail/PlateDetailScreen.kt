@@ -48,6 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import androidx.compose.ui.graphics.Brush
 import com.app.foodranker.data.model.PlateCategory
+import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.Comment
 import com.app.foodranker.data.model.Rating
 import com.app.foodranker.data.model.User
@@ -292,11 +293,11 @@ fun PlateDetailScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(Brush.verticalGradient(plate.category.categoryGradient())),
+                                                .background(Brush.verticalGradient(plate.categoryType.categoryGradient())),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(plate.category.emoji, fontSize = 72.sp)
+                                                Text(plate.categoryType.emoji, fontSize = 72.sp)
                                                 Spacer(Modifier.height(8.dp))
                                                 Text(plate.name, color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp, fontWeight = FontWeight.Medium)
                                             }
@@ -308,7 +309,7 @@ fun PlateDetailScreen(
                                         color = OrangePrimary
                                     ) {
                                         Text(
-                                            "${plate.category.emoji} ${plate.category.displayName}",
+                                            "${plate.categoryType.emoji} ${plate.categoryType.displayName}",
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp,

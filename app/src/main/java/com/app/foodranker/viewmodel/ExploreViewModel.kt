@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.PlateCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -174,7 +175,7 @@ class ExploreViewModel @Inject constructor(
     private fun applyLocalFilters() {
         val state = _uiState.value
         var plates = allPlatesCache
-        if (state.selectedCategory != null) plates = plates.filter { it.category == state.selectedCategory }
+        if (state.selectedCategory != null) plates = plates.filter { it.categoryType == state.selectedCategory }
         if (state.selectedCity.isNotBlank()) plates = plates.filter { it.city.contains(state.selectedCity, ignoreCase = true) }
         if (state.query.isNotBlank()) plates = plates.filter {
             it.name.contains(state.query, ignoreCase = true) ||

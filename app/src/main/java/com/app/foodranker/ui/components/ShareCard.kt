@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.ui.theme.*
 
 @Composable
@@ -47,7 +48,7 @@ fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(plate.category.emoji, fontSize = 80.sp)
+                Text(plate.categoryType.emoji, fontSize = 80.sp)
             }
         }
 

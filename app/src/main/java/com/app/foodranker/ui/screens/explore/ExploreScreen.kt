@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.data.model.PlateCategory
+import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.ui.components.EmptyStateCentered
 import com.app.foodranker.ui.components.PlateCardHorizontal
 import com.app.foodranker.ui.theme.AppSpacing
@@ -355,14 +356,14 @@ private fun ExploreGridCard(plate: com.app.foodranker.data.model.Plate, onClick:
                         .background(
                             androidx.compose.ui.graphics.Brush.verticalGradient(
                                 listOf(
-                                    plate.category.gridColor(),
-                                    plate.category.gridColor().copy(alpha = 0.6f)
+                                    plate.categoryType.gridColor(),
+                                    plate.categoryType.gridColor().copy(alpha = 0.6f)
                                 )
                             )
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    androidx.compose.material3.Text(plate.category.emoji, fontSize = 40.sp)
+                    androidx.compose.material3.Text(plate.categoryType.emoji, fontSize = 40.sp)
                 }
             }
             // Gradiente + info
@@ -462,5 +463,11 @@ private fun com.app.foodranker.data.model.PlateCategory.gridColor() = when (this
     com.app.foodranker.data.model.PlateCategory.DESSERT   -> androidx.compose.ui.graphics.Color(0xFFD46898)
     com.app.foodranker.data.model.PlateCategory.BREAKFAST -> androidx.compose.ui.graphics.Color(0xFFD4A828)
     com.app.foodranker.data.model.PlateCategory.SALAD     -> androidx.compose.ui.graphics.Color(0xFF4A9848)
+    com.app.foodranker.data.model.PlateCategory.RICE      -> androidx.compose.ui.graphics.Color(0xFFD9A441)
+    com.app.foodranker.data.model.PlateCategory.FISH      -> androidx.compose.ui.graphics.Color(0xFF3E8FA8)
+    com.app.foodranker.data.model.PlateCategory.VEGGIE    -> androidx.compose.ui.graphics.Color(0xFF5A9A4A)
+    com.app.foodranker.data.model.PlateCategory.EGGS      -> androidx.compose.ui.graphics.Color(0xFFE0B13A)
+    com.app.foodranker.data.model.PlateCategory.SOUP      -> androidx.compose.ui.graphics.Color(0xFFC06838)
+    com.app.foodranker.data.model.PlateCategory.SANDWICH  -> androidx.compose.ui.graphics.Color(0xFFC89050)
     com.app.foodranker.data.model.PlateCategory.OTHER     -> androidx.compose.ui.graphics.Color(0xFF787888)
 }

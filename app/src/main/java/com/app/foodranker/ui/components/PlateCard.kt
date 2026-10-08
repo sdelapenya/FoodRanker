@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.ui.theme.AppElevation
 import com.app.foodranker.ui.theme.OrangePrimary
@@ -110,7 +111,7 @@ fun PlateCard(
                     )
                 } else {
                     PlateImagePlaceholder(
-                        category = plate.category,
+                        category = plate.categoryType,
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
@@ -239,7 +240,7 @@ fun PlateCardHorizontal(
                     )
                 } else {
                     PlateImagePlaceholder(
-                        category = plate.category,
+                        category = plate.categoryType,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

@@ -152,9 +152,9 @@ class PlateDetailViewModel @Inject constructor(
                                     id = plateDoc.id,
                                     name = data["name"] as? String ?: "",
                                     description = data["description"] as? String ?: "",
-                                    category = try {
-                                        PlateCategory.valueOf(data["category"] as? String ?: "OTHER")
-                                    } catch (e: Exception) { PlateCategory.OTHER },
+                                    // Se guarda el id tal cual: quien lo lea resuelve con
+                                    // PlateCategory.fromId, que tolera los desconocidos.
+                                    category = data["category"] as? String ?: PlateCategory.OTHER.name,
                                     restaurantName = data["restaurantName"] as? String ?: "",
                                     restaurantAddress = data["restaurantAddress"] as? String ?: "",
                                     city = data["city"] as? String ?: "",

@@ -64,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.app.foodranker.ui.components.EmptyStateCentered
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.ui.theme.cardGradient
@@ -1341,7 +1342,7 @@ private fun CollectionsSection(
                                             ),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(plate.category.emoji, fontSize = 40.sp)
+                                            Text(plate.categoryType.emoji, fontSize = 40.sp)
                                         }
                                     }
                                     Box(
@@ -1547,10 +1548,10 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                            .background(Brush.verticalGradient(plate.category.cardGradient())),
+                            .background(Brush.verticalGradient(plate.categoryType.cardGradient())),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(plate.category.emoji, fontSize = 32.sp)
+                        Text(plate.categoryType.emoji, fontSize = 32.sp)
                     }
                 }
                 Surface(

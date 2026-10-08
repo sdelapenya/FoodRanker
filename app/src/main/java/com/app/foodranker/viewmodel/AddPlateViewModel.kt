@@ -318,7 +318,7 @@ class AddPlateViewModel @Inject constructor(
                     id = plateId,
                     name = cleanName,
                     description = cleanDescription,
-                    category = category,
+                    category = category.name,
                     venueId = venue.id,
                     dishSlug = cleanName.toDishSlug(),
                     // Datos del local: canónicos, vienen de Places via resolveVenue

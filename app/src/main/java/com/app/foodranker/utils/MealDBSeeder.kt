@@ -172,7 +172,7 @@ object MealDBSeeder {
                 id               = "mdb_$id",
                 name             = meal.optString("strMeal"),
                 description      = description,
-                category         = category,
+                category         = category.name,
                 restaurantName   = areaToRestaurant(area),
                 restaurantAddress = "",
                 city             = place.first,

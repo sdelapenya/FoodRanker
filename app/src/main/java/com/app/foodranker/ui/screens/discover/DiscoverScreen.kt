@@ -41,6 +41,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.ui.components.BannerAdView
 import com.app.foodranker.ui.theme.*
@@ -374,7 +375,9 @@ private fun RankingTopBar(
                     )
                 }
             ) {
-                listOf("Top semana", "Cerca", "Siguiendo").forEachIndexed { index, label ->
+                // "Top semana" era mentira: la consulta ordena por nota sin filtrar fecha ninguna,
+                // así que es el ranking de siempre, no el de esta semana.
+                listOf("Top", "Cerca", "Siguiendo").forEachIndexed { index, label ->
                     Tab(
                         selected = selectedTab == index,
                         onClick  = { onTabSelected(index) },
@@ -547,7 +550,9 @@ private fun CountdownTickerRow(countdownText: String, tickerMessage: String, vot
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text("Reset semanal del ranking", color = TextSecondary, fontSize = 12.sp)
+                // Decía "Reset semanal del ranking", pero el ranking no se reinicia nunca: lo
+                // que vuelve a empezar cada lunes es la liga, como dice la línea de abajo.
+                Text("La liga acaba en", color = TextSecondary, fontSize = 12.sp)
                 Text(countdownText, color = OrangePrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 if (voteStreak >= 2) {
                     Spacer(Modifier.weight(1f))
@@ -625,10 +630,10 @@ private fun RankedPlateCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Brush.verticalGradient(plate.category.categoryGradient())),
+                        .background(Brush.verticalGradient(plate.categoryType.categoryGradient())),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(plate.category.emoji, fontSize = 52.sp)
+                    Text(plate.categoryType.emoji, fontSize = 52.sp)
                 }
             }
 

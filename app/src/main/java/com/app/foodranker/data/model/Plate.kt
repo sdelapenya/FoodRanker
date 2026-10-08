@@ -4,7 +4,20 @@ data class Plate(
     val id: String = "",
     val name: String = "",
     val description: String = "",
-    val category: PlateCategory = PlateCategory.OTHER,
+    /**
+     * Id de la categoría tal cual viene de Firestore ("PASTA", "RICE"...). Es texto, NO el
+     * enum, a propósito.
+     *
+     * El SDK de Firestore convierte los enums con valueOf y **lanza una excepción** si el
+     * valor no está en la lista que conoce esa versión de la app (CustomClassMapper:
+     * "Could not find enum value of ... for value ..." → athrow). Como las pantallas
+     * convierten los platos en bloque, un solo plato con una categoría añadida después
+     * dejaría el ranking ENTERO en blanco para quien no se hubiera actualizado.
+     *
+     * Con texto, una categoría desconocida cae en "Otros" y no pasa nada. Para usarla,
+     * [categoryType].
+     */
+    val category: String = PlateCategory.OTHER.name,
     /**
      * place_id del local (doc id en `venues`). Junto con [dishSlug] forma el id de
      * este documento: `{venueId}__{dishSlug}`, de modo que el mismo plato en el mismo
@@ -71,5 +84,32 @@ enum class PlateCategory(val displayName: String, val emoji: String) {
     DESSERT("Postres", "🍰"),
     BREAKFAST("Desayuno", "🥐"),
     SALAD("Ensaladas", "🥗"),
-    OTHER("Otros", "🍽️")
+    // Añadidas tras ver que 28 de 50 platos reales caían en "Otros": 7 eran arroces y
+    // paellas, 6 pescados, y el resto verduras, huevos y platos de cuchara. "Mariscos"
+    // existía desde el principio, pero pescado no, que en una app española es raro.
+    RICE("Arroces", "🍚"),
+    FISH("Pescado", "🐟"),
+    VEGGIE("Verduras", "🥦"),
+    EGGS("Huevos", "🍳"),
+    SOUP("Sopas y guisos", "🍲"),
+    SANDWICH("Bocadillos", "🥪"),
+    OTHER("Otros", "🍽️");
+
+    companion object {
+        /**
+         * Convierte el id guardado en una categoría, cayendo en [OTHER] si no se reconoce.
+         *
+         * Esta es la única forma de leer la categoría: nunca `valueOf`, que revienta con los
+         * ids añadidos en versiones posteriores. Ver el comentario de `Plate.category`.
+         */
+        fun fromId(id: String?): PlateCategory =
+            entries.firstOrNull { it.name.equals(id?.trim(), ignoreCase = true) } ?: OTHER
+    }
 }
+
+/**
+ * Categoría del plato, ya resuelta. Va como extensión y no como propiedad del data class
+ * porque Firestore serializa también los getters públicos: dentro de Plate acabaría como un
+ * campo más del documento, y la lista blanca de `firestore.rules` rechazaría la publicación.
+ */
+val Plate.categoryType: PlateCategory get() = PlateCategory.fromId(category)
