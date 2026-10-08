@@ -809,6 +809,56 @@ async function approveplate(
     } catch (err) {
       logger.warn(`Plate ${plateId}: error sending approval notification:`, err);
     }
+
+    await avisarASeguidores(authorId, plateId, plateName);
+  }
+}
+
+/**
+ * Avisa a quienes siguen al autor de que ha publicado algo.
+ *
+ * Va AGRUPADO por autor y día, no un aviso por plato: una sola persona lleva publicados 31
+ * platos, y quien la siguiera se habría comido 31 avisos seguidos.
+ *
+ * El id del documento es `newplate_<autor>_<día>`, así que el primer plato del día lo CREA
+ * —y eso dispara el push— y los siguientes solo incrementan el contador, que es una
+ * actualización y no vuelve a sonar. Resultado: como mucho un aviso por persona seguida y
+ * día, y la campana enseña "ha publicado 3 platos" cuando se mira.
+ */
+async function avisarASeguidores(authorId: string, plateId: string, plateName: string) {
+  try {
+    const autor = await db.collection("users").doc(authorId).get();
+    const nombre = (autor.get("name") as string) || "Alguien";
+    const dia = new Date().toISOString().slice(0, 10);
+
+    // Tope defensivo: hoy no hay nadie con tantos seguidores, pero esto escribe un
+    // documento por seguidor y no debe convertirse en una tormenta si algún día los hay.
+    const seguidores = await db.collection("follows")
+      .where("followingId", "==", authorId)
+      .limit(500)
+      .get();
+    if (seguidores.empty) return;
+
+    await Promise.all(seguidores.docs.map(async (f) => {
+      const followerId = f.get("followerId") as string | undefined;
+      if (!followerId || followerId === authorId) return;
+      const ref = db.collection("notifications").doc(followerId)
+        .collection("items").doc(`newplate_${authorId}_${dia}`);
+      await ref.set({
+        id: `newplate_${authorId}_${dia}`,
+        type: "new_plate",
+        fromUserId: authorId,
+        fromUserName: nombre,
+        plateId,
+        plateName,
+        plateCount: admin.firestore.FieldValue.increment(1),
+        isRead: false,
+        createdAt: Date.now(),
+      }, { merge: true });
+    }));
+    logger.info(`Plato ${plateId}: avisados ${seguidores.size} seguidores de ${authorId}`);
+  } catch (err) {
+    logger.warn(`Plato ${plateId}: no se pudo avisar a los seguidores:`, err);
   }
 }
 
@@ -1096,6 +1146,13 @@ export const onNotificationCreated = onDocumentCreated(
         title = "✨ Nuevo seguidor";
         body = `${fromUserName} ha empezado a seguirte`;
         break;
+      case "new_plate": {
+        // Solo suena el primero del día de cada autor (los siguientes son updates, y
+        // onDocumentCreated no salta), así que aquí el contador siempre vale 1.
+        title = "🍽️ Plato nuevo";
+        body = `${fromUserName} ha publicado "${plateName}"`;
+        break;
+      }
       case "level_up": {
         const nivel: number = (notif.level as number) ?? 0;
         title = "🎉 Has subido de nivel";

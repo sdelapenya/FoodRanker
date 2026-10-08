@@ -67,6 +67,8 @@ class NotificationRepository @Inject constructor(
                                             else "$fromUser ha comentado \"$plateName\""
                                 }
                                 "follow" -> "✨ Nuevo seguidor" to "$fromUser ha empezado a seguirte"
+                                "new_plate" -> "🍽️ Plato nuevo" to
+                                        "$fromUser ha publicado \"$plateName\""
                                 "moderation_approved" -> "✅ Tu plato ya está publicado" to
                                         "\"$plateName\" ya aparece en el ranking."
                                 "moderation_rejected" -> "Plato no aprobado" to

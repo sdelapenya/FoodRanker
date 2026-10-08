@@ -106,6 +106,10 @@ fun NotificationsScreen(
                                         "Este plato fue rechazado y eliminado. Puedes publicar uno nuevo.",
                                         android.widget.Toast.LENGTH_LONG
                                     ).show()
+                                } else if (notif.type == "new_plate" && notif.plateCount > 1) {
+                                    // Si anuncia varios platos, llevar a uno solo despista:
+                                    // se va al perfil del autor, que es donde están todos.
+                                    if (notif.fromUserId.isNotEmpty()) onNavigateToProfile(notif.fromUserId)
                                 } else if (notif.type == "follow") {
                                     // No tiene plato: lleva al perfil de quien te sigue.
                                     if (notif.fromUserId.isNotEmpty()) onNavigateToProfile(notif.fromUserId)
@@ -139,6 +143,7 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
             "follow"              -> "✨" to Color(0xFFF3E8FD)
             "league_result"       -> (if (notification.position == 1) "🥇" else "🏅") to Color(0xFFFFF4E0)
             "level_up"            -> "🎉" to Color(0xFFE8F5E9)
+            "new_plate"           -> "🍽️" to Color(0xFFFFF1E6)
             "badge"               -> "🏅" to Color(0xFFFFF4E0)
             "moderation_approved" -> "✅" to Color(0xFFE8F5E9)
             "moderation_rejected" -> "⚠️" to Color(0xFFFDECEA)
@@ -193,6 +198,11 @@ private fun buildAnnotatedText(n: FoodNotification): String = when (n.type) {
     else
         "${n.fromUserName} ha comentado \"${n.plateName}\""
     "follow" -> "${n.fromUserName} ha empezado a seguirte"
+    // El contador se acumula durante el día aunque solo suene el primero.
+    "new_plate" -> if (n.plateCount > 1)
+        "${n.fromUserName} ha publicado ${n.plateCount} platos nuevos"
+    else
+        "${n.fromUserName} ha publicado \"${n.plateName}\""
     // El nombre del nivel y del logro los resuelve RewardManager, no el texto que mandó el
     // servidor: así la app enseña siempre su propia lista y no dos nombres distintos.
     "level_up" -> "Has subido a ${RewardManager.LEVELS.find { it.number == n.level }

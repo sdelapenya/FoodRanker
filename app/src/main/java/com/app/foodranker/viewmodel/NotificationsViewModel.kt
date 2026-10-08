@@ -75,6 +75,7 @@ class NotificationsViewModel @Inject constructor(
                         position = (doc.getLong("position") ?: 0L).toInt(),
                         level = (doc.getLong("level") ?: 0L).toInt(),
                         badgeId = doc.getString("badgeId") ?: "",
+                        plateCount = (doc.getLong("plateCount") ?: 0L).toInt(),
                         reasons = reasonsList,
                         isRead = doc.get("isRead") == true,
                         createdAt = doc.getLong("createdAt") ?: 0L
