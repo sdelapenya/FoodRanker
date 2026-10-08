@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Idiomas que habla la app. Declararlos hace que Android 13+ añada por su cuenta un selector
+  de idioma por aplicación (Ajustes → Aplicaciones → FoodRanker → Idioma), que recuerda la
+  elección y sobrescribe al idioma del móvil.
+
+  El primero es el de respaldo: lo que se ve si el móvil está en un idioma que no tenemos.
+  Al añadir una carpeta values-xx hay que añadir el idioma AQUÍ también, o no aparecerá en
+  la lista del sistema.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android"
+    android:defaultLocale="en">
+    <locale android:name="en" />
+    <locale android:name="es" />
+</locale-config>

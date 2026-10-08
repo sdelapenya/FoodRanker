@@ -1,5 +1,6 @@
 package com.app.foodranker.ui.screens.profile
 
+import android.os.Build
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.*
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.Collections
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.LocationOn
@@ -705,6 +707,27 @@ private fun ProfileAccountDangerZone(
             )
 
             Spacer(Modifier.height(6.dp))
+
+            // Solo desde Android 13: antes no existe el selector de idioma por aplicación, y
+            // una fila que no lleva a ninguna parte es peor que no tenerla. En versiones
+            // anteriores la app sigue el idioma del móvil, que es el comportamiento de siempre.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ProfileMenuRow(
+                    icon = Icons.Outlined.Language,
+                    title = "Idioma",
+                    subtitle = "Elige en qué idioma ves la app",
+                    iconTint = OrangePrimary.copy(alpha = 0.85f),
+                    onClick = {
+                        runCatching {
+                            ctxAjustes.startActivity(
+                                Intent(Settings.ACTION_APP_LOCALE_SETTINGS)
+                                    .setData(android.net.Uri.fromParts("package", ctxAjustes.packageName, null))
+                            )
+                        }
+                    }
+                )
+                Spacer(Modifier.height(6.dp))
+            }
 
             ProfileMenuRow(
                 icon = Icons.Outlined.Notifications,
