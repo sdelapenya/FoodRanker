@@ -667,4 +667,7 @@
     <string name="ex_all">Todos</string>
     <string name="action_refresh">Actualizar</string>
     <string name="prof_web_hint">instagram.com/tu_usuario</string>
+
+    <!-- Perfil: estadisticas -->
+    <string name="prof_plates_published">Platos\npublicados</string>
 </resources>

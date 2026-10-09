@@ -15,10 +15,24 @@ LETRAS = re.compile(r'[a-zA-Z]{3,}')
 PATRONES = [
     re.compile(r'\bText\(\s*' + LIT),
     re.compile(r'\b(?:title|subtitle|message|label|placeholder|contentDescription|'
-               r'text|supportingText|headline|body|hint|descripcion|titulo)\s*=\s*' + LIT),
+               r'text|subtitulo|supportingText|headline|body|hint|descripcion|titulo)\s*=\s*' + LIT),
     re.compile(r'\bToast\.makeText\([^,]+,\s*' + LIT),
     re.compile(r'\bState\.Error\(\s*' + LIT),
 ]
+
+# Argumento POSICIONAL de un composable propio, p.ej.
+# StatItem(valor, "Platos\npublicados", ...). Por aqui se colo una etiqueta del
+# perfil que en ingles seguia diciendo "Platos publicados": no iba en un Text()
+# ni en un label=, asi que ningun patron de arriba la veia.
+#
+# Aqui caben tambien rutas, @Suppress y nombres de animacion, asi que se exige
+# que el texto tenga un espacio o un salto de linea escapado: eso lo tiene una
+# etiqueta y no lo tiene un identificador.
+# El argumento de delante puede llevar parentesis (totalPlates.formatCompact()),
+# asi que no se pueden excluir: se admite cualquier cosa menos comillas, sin
+# avaricia para no saltar hasta un literal de mas adelante.
+POSICIONAL = re.compile(r'\b[A-Z][A-Za-z0-9_]*\(\s*(?:[^"\n]{0,100}?,\s*)?' + LIT)
+ES_ETIQUETA = re.compile(r'\s|' + BS + BS + 'n')
 
 # Marca, dominios, patrones de fecha y claves tecnicas: no son texto traducible.
 BLANCA = {
@@ -38,9 +52,12 @@ for root, _, fs in os.walk("app/src/main/java/com/app/foodranker"):
             if s.startswith("//") or s.startswith("*") or s.startswith("/*"):
                 continue
             l2 = re.sub(r'//.*$', '', linea)
-            for pat in PATRONES:
-                for m in pat.finditer(l2):
+            candidatos = [(m, False) for pat in PATRONES for m in pat.finditer(l2)]
+            candidatos += [(m, True) for m in POSICIONAL.finditer(l2)]
+            for m, posicional in candidatos:
                     t = m.group(1)
+                    if posicional and not ES_ETIQUETA.search(t):
+                        continue
                     if t in BLANCA or not LETRAS.search(t):
                         continue
                     # Solo interpolacion o formato: no hay texto que traducir.

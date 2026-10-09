@@ -662,4 +662,7 @@
     <string name="ex_all">All</string>
     <string name="action_refresh">Refresh</string>
     <string name="prof_web_hint">instagram.com/your_handle</string>
+
+    <!-- Perfil: estadisticas -->
+    <string name="prof_plates_published">Dishes\nposted</string>
 </resources>

@@ -978,7 +978,11 @@ private fun ProfileStats2x2(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                StatItem(totalPlates.formatCompact(), "Platos\npublicados", modifier = Modifier.weight(1f))
+                StatItem(
+                    totalPlates.formatCompact(),
+                    stringResource(R.string.prof_plates_published),
+                    modifier = Modifier.weight(1f)
+                )
                 VerticalDivider()
                 StatItem(likesReceived.formatCompact(), stringResource(R.string.prof_likes_received), modifier = Modifier.weight(1f))
             }

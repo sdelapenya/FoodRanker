@@ -165,23 +165,21 @@ Comment notifications are fixed too: they showed in the bell but never notified 
 
 ---
 
-## ⚠️ Las capturas siguen en castellano
+## Capturas
 
-`docs/play-store-screenshots/` tiene tres capturas (ranking, ficha de plato, perfil) con la
-interfaz en castellano, y son las que Play enseña **en los dos idiomas**: la consola permite
-subir capturas distintas por idioma, pero si no las hay reutiliza las del idioma por
-defecto. Alguien en Reino Unido lee la descripción en inglés y luego ve las pantallas en
-castellano.
+`docs/play-store-screenshots/es/` y `docs/play-store-screenshots/en/`, tres de cada
+(ranking, ficha de plato, perfil), 1080x2400, hechas en el Redmi el 2026-10-09 sobre la
+v17 y con datos reales. En Play Console se suben con el selector de idioma en `es-ES` y en
+`en-GB`; si solo se suben las de un idioma, Play reutiliza esas para los dos.
 
-**Esto no se puede automatizar aquí**: las tres pantallas necesitan sesión iniciada con
-Google y contenido real (platos publicados, valoraciones, perfil con nivel), y el login de
-Google no se puede hacer desde la línea de comandos. Hay que repetirlas a mano:
+Las anteriores estaban **obsoletas**, no solo en castellano: enseñaban "Top semana" y
+"Reset semanal del ranking", dos textos que se corrigieron por no ser verdad, y platos de
+prueba que ya no existen (`Bar Casa Benito`, Toledo). Se han sustituido.
 
-1. Poner la app en inglés (Ajustes de Android → Aplicaciones → FoodRanker → Idioma, o
-   `adb shell cmd locale set-app-locales com.app.foodranker --locales en-GB`).
-2. Repetir las mismas tres pantallas, para que las dos fichas se parezcan.
-3. Guardarlas en `docs/play-store-screenshots/en/` y subirlas en Play Console con el
-   selector de idioma en `en-GB`.
+⚠️ **Sin anuncios.** La versión gratuita enseña un banner de AdMob, y en una captura de
+tienda sale la marca de un tercero. Para evitarlo se da Premium a la cuenta con
+`node scripts/manageUser.js grant-premium <uid>`, se hacen las capturas y se quita con
+`revoke-premium`.
 
-Mientras no estén, la ficha inglesa funciona igual: Play no obliga a tener capturas por
-idioma. Pero la primera impresión queda a medias.
+⚠️ **Esperar a que cargue.** La primera tanda cogió el esqueleto de carga de la ficha de
+plato (se nota en el peso: 85 KB contra 1,2 MB). Para esa pantalla hacen falta ~14 s.
