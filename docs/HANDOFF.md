@@ -15,9 +15,70 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🟢 v17 (1.4) AAB GENERADO Y FIRMADO — listo para subir (2026-10-09)
+
+`app/build/outputs/bundle/release/app-release.aab`, copiado también a `release/`.
+**versionCode 17, versionName 1.4**, 15,22 MB, firmado con `foodranker-keystore.jks`.
+
+⚠️ **Corrección de lo que decía este documento:** ponía que la v16 se había generado pero
+no subido. **La v16 (1.3) SÍ está subida**, confirmado por Sergio en Play Console, así que el
+versionCode 16 estaba quemado y de ahí el salto a 17. Play rechaza un AAB con un versionCode
+ya usado aunque esa versión esté archivada o no se publicara nunca: **antes de generar,
+mirar el versionCode más alto subido, no fiarse de este fichero.**
+
+**Lo que lleva respecto a la v16**: las fases 1 y 2 de idiomas (la app entera en inglés y
+castellano, avisos incluidos), la moneda y el enlace de reservas por país del local, el
+selector de idioma, y los dos textos legales en los dos idiomas.
+
+Texto de la ficha de Play y de las novedades, en los dos idiomas: `docs/play-store-listing.md`.
+Hay que pegarlo en Play Console (→ Crecimiento → Presencia en Play Store), que es trabajo de
+consola, no de código. **Las novedades también son por idioma**: si solo se rellena la del
+idioma por defecto, a quien tenga el móvil en inglés le llegan en castellano.
+
+#### ⚠️ Dos ajustes de empaquetado, los dos necesarios
+
+**1. `bundle { language { enableSplit = false } }`.** Play reparte el AAB en trozos e instala
+solo el idioma del móvil. Con un selector de idioma eso se rompe: quien tenga el móvil en
+castellano y ponga la app en inglés no tendría esos recursos instalados. Lo recomienda la
+documentación de "Per-app language preferences" de Android. Verificado decodificando
+`BundleConfig.pb` del AAB: la dimensión LANGUAGE sale con `negate=true` (ABI sigue partido,
+que eso sí interesa).
+
+**2. `isShrinkResources = false`.** ⚠️ **Esto era un fallo real a punto de publicarse.** El
+reductor de recursos estaba **borrando cinco cadenas que el código sí pide**: `cd_like`,
+`cd_unlike`, `vm_saved`, `vm_unsaved` y `vm_save_fail`. Aparecían en su lista de "Unused
+resources" de `app/build/outputs/mapping/release/resources.txt` **aunque las clases
+compiladas de release leen esos campos de `R`** (comprobado con `javap`), y desaparecían de
+`resources.arsc`. `cd_like` lo pinta **cada tarjeta de plato**, así que era un
+`Resources.NotFoundException` en la pantalla principal, **solo en release y nunca en debug**.
+No se encontró la causa de por qué su análisis no las ve. Coste de apagarlo: 8,12 → 8,49 MB,
+**370 KB**, a cambio de no tener que adivinar cuál se llevará la próxima vez.
+
+❗ **Las versiones anteriores se compilaron con el reductor encendido.** Esas cinco cadenas
+no existían entonces (el texto iba clavado en el código), pero **no se ha comprobado si se
+llevó por delante algún otro recurso en la v15 o la v16**. Merece una mirada a Crashlytics
+buscando `Resources$NotFoundException`.
+
+#### Cómo se verificó el artefacto
+
+Sobre el APK de release ya minificado, no sobre el fuente:
+- Las **211 claves** de la fase 2, presentes en los dos idiomas (211 de 211).
+- **899 recursos de texto** con las dos variantes, ninguno nuestro suelto.
+- versionCode 17 / versionName 1.4 en el manifest final; AAB firmado (`KEY0.RSA`).
+- `./gradlew assembleDebug testDebugUnitTest` en verde.
+
+⚠️ Sigue en pie el error de lint preexistente de `BannerAd.kt:22`
+(`ContextCastToActivity`, de `b03790a`), que hace fallar `lintDebug`. No afecta al AAB.
+
+**Retomar aquí:** subir el AAB al canal de prueba cerrada, pegar la ficha en inglés y las
+novedades de los dos idiomas, y rehacer las tres capturas con la app en inglés (necesitan
+sesión de Google y contenido real, ver `docs/play-store-listing.md`).
+
+---
+
 ### 🔵 IDIOMAS: FASE 2 COMPLETA — nada visible queda clavado (2026-10-09)
 
-Commit `e234005`. **No desplegado**: va en la v17 junto con la fase 1.
+Commit `e234005`. Va en el AAB de la **v17 (1.4)**, ya generado (más arriba).
 
 La fase 1 dejó las pantallas, pero no el texto que no vive en ellas. Un barrido del código
 encontró **170 cadenas visibles todavía en castellano**. Con los 212 recursos nuevos de esta
@@ -176,7 +237,10 @@ anteriores no existe esa pantalla: la fila se oculta y la app sigue el idioma de
 
 ---
 
-### 🔶 v16 (1.3) LISTA PARA SUBIR (2026-10-07) — AAB generado, sin subir
+### ✅ v16 (1.3) SUBIDA (generada el 2026-10-07) — confirmado por Sergio el 2026-10-09
+
+⚠️ Este apartado decía "sin subir" y era **falso**: la v16 está en Play. Por eso la
+siguiente es la v17.
 
 `app/build/outputs/bundle/release/app-release.aab`. Verificada en el emulador: arranca sin
 crashes, sesión intacta, notificaciones y perfil correctos.

@@ -33,10 +33,29 @@ android {
         }
     }
 
+    // Play reparte el AAB en trozos y, por defecto, instala SOLO el idioma del móvil.
+    // Con el selector de idioma eso se rompe: quien tenga el móvil en castellano y ponga
+    // la app en inglés no tendría esos recursos instalados y seguiría viéndola en
+    // castellano. Son dos idiomas y unos pocos KB de texto, así que van los dos siempre.
+    // Lo recomienda la propia documentación de "Per-app language preferences".
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = true
+            // Apagado a propósito. Estaba BORRANDO cinco cadenas que el código sí pide
+            // (cd_like, cd_unlike, vm_saved, vm_unsaved, vm_save_fail): salían en su lista
+            // de "Unused resources" aunque las clases compiladas leen esos campos de R, y
+            // desaparecían de resources.arsc. Una de ellas la pinta cada tarjeta de plato,
+            // así que era un Resources.NotFoundException en la pantalla principal, en
+            // release y nunca en debug. Encendido 8,12 MB, apagado 8,49: 370 KB por no
+            // tener que adivinar cuál se va a llevar la próxima vez.
+            // Antes de volver a encenderlo: comprobar el APK con tools/i18n/check_apk.py.
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -53,8 +72,8 @@ android {
         applicationId = "com.app.foodranker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.3"
+        versionCode = 17
+        versionName = "1.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProp("CLOUDINARY_CLOUD_NAME")}\"")
