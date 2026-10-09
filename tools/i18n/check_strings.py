@@ -74,6 +74,22 @@ for ruta, d in ((EN, en_s), (ES, es_s)):
         if SUELTO.search(v):
             problemas.append("apostrofe sin escapar en %s (%s)" % (k, ruta.split("/")[-2]))
 
+
+# Android RECORTA los espacios del principio y el final de un <string>, salvo que
+# el valor vaya entre comillas dobles. Confiar en ellos deja textos pegados:
+# "Termina en2d 10:23" en vez de "Termina en 2d 10:23" (visto en el Redmi).
+CRUDO = re.compile(r'<string name="([^"]+)">(.*?)</string>', re.S)
+for ruta in (EN, ES):
+    bruto = io.open(ruta, encoding="utf-8").read()
+    for m in CRUDO.finditer(bruto):
+        nombre, val = m.group(1), m.group(2)
+        if val.startswith('"') and val.endswith('"'):
+            continue
+        if val != val.strip():
+            problemas.append(
+                "espacios que aapt se come en %s (%s): %r"
+                % (nombre, ruta.split("/")[-2], val))
+
 print("claves: en=%d es=%d | plurales: en=%d es=%d"
       % (len(en_s), len(es_s), len(en_p), len(es_p)))
 if problemas:

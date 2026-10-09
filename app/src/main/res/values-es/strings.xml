@@ -350,8 +350,8 @@
     <string name="ntf_days_ago">Hace %1$d días</string>
 
     <!-- Liga, premium, invitar, tendencias, cerca y locales -->
-    <string name="lg_ends_in">Termina en </string>
-    <string name="lg_restart">  ·  Reinicia cada lunes</string>
+    <string name="lg_ends_in">"Termina en "</string>
+    <string name="lg_restart">"  ·  Reinicia cada lunes"</string>
     <string name="lg_add_city">Añade tu ciudad en el perfil para participar en la liga local.</string>
     <string name="lg_go_profile">Ir a mi perfil</string>
     <string name="lg_local">Local</string>

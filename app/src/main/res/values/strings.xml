@@ -348,8 +348,8 @@
     <string name="ntf_days_ago">%1$d days ago</string>
 
     <!-- Liga, premium, invitar, tendencias, cerca y locales -->
-    <string name="lg_ends_in">Ends in </string>
-    <string name="lg_restart">  ·  Restarts every Monday</string>
+    <string name="lg_ends_in">"Ends in "</string>
+    <string name="lg_restart">"  ·  Restarts every Monday"</string>
     <string name="lg_add_city">Add your city in your profile to join the local league.</string>
     <string name="lg_go_profile">Go to my profile</string>
     <string name="lg_local">Local</string>
