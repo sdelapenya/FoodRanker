@@ -15,6 +15,61 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ PROBADO EN EL REDMI REAL, CON SESIÓN Y EN LOS DOS IDIOMAS (2026-10-09)
+
+Lo que quedaba sin probar ya está probado. Redmi Note 10S (Android 13), APK de release
+v17 instalado por USB, sesión de Google real (`sergiodelapenya1991@`, 2 seguidores, 8
+platos, 410 XP), sobre los datos de producción (50 platos, 12 usuarios, 58 valoraciones).
+
+⚠️ **MIUI bloquea `adb install`** con `INSTALL_FAILED_USER_RESTRICTED` hasta activar
+**Instalar vía USB** y **Depuración USB (ajustes de seguridad)** en opciones de
+desarrollador. Alternativa si se resiste: `adb push` del APK a `/sdcard/Download` e
+instalarlo tocando el fichero. Y hay que **desinstalar la de Play primero**: la firma
+local no coincide con la de Play.
+
+#### Lo que se confirmó
+
+- **La liga abre sin reventar**, en los dos idiomas. Era el crash que habría llevado el
+  primer AAB de la v17: con el código anterior, tocar "Liga" petaba.
+- **Un aviso llega UNA sola vez**, con la app en primer plano, que es cuando dibujan los
+  dos caminos. Comprobado con un aviso de prueba creado con el Admin SDK sobre la propia
+  cuenta y contando en `dumpsys notification`: en inglés `❤️ New like / Prueba FoodRanker
+  liked "Tortilla de prueba"` y en castellano `❤️ Nuevo me gusta / ... le ha dado like a
+  "Tortilla de prueba"`. Con comillas rectas, idénticas a las del servidor. Documento de
+  prueba borrado después.
+- **`saveCurrentLanguage()` funciona en producción**, verificado por primera vez: el campo
+  `language` pasó a `"es"` al entrar y a `"en"` al cambiar el idioma de la app. ⚠️ Hasta
+  que se publique la v17, **nadie tiene ese campo**, así que todos los push salen en
+  castellano por el respaldo.
+- **El formato numérico sigue al idioma**: `★ 9,9` y `25,00 €` en castellano, `★ 9.9` y
+  `25.00 €` en inglés. Y el **€ se mantiene en inglés** porque sale del país del local, no
+  del idioma: era el objetivo de la fase 0.
+- **Premium en inglés dice "⭐ Subscribe", sin precio**, que es el arreglo: antes habría
+  puesto "2,99 €/mes" a alguien en Reino Unido.
+- La hoja de editar plato pide **"Descripción" / "Description"**, no "Bio".
+- Plurales, estados vacíos con la consulta interpolada, pestañas con contador
+  ("Mis platos (8)"), la fila **Idioma** presente (Android 13), y ninguna de las cinco
+  cadenas que borraba el reductor provocó un `NotFoundException`.
+
+#### ⚠️ El fallo que solo se ve mirando la pantalla
+
+La cabecera de la liga salía **"Termina en2d 10:23:59· Reinicia cada lunes"**, pegada.
+**Android RECORTA los espacios del principio y el final de un `<string>`**, y
+`lg_ends_in` / `lg_restart` confiaban en ellos. Se arregla **entrecomillando el valor**
+(`"Termina en "`), que es como se le dice a aapt que los respete. Venía de la fase 1.
+Ninguna comprobación lo cazaba porque los recursos existen y encajan; ahora
+`check_strings.py` lo detecta.
+
+#### Lo que sigue sin probarse
+
+Publicar un plato de verdad: la cuenta tiene **2 seguidores reales** y publicar les
+mandaría un aviso. Se recorrió la pantalla sin enviar. Con una cuenta sin seguidores
+(`sdelapenya1991@`, 0 seguidores) se podría cerrar ese hueco.
+Tampoco se puede probar aquí el **precio real de Play** (el sideload no tiene billing) ni
+el **reparto por idioma del AAB**, que solo se ve instalando desde Play.
+
+---
+
 ### ✅ CERRADO LO QUE QUEDABA DE CÓDIGO (2026-10-09)
 
 **85 claves muertas fuera.** Eran de la nomenclatura anterior (`error_*`, `empty_*`,
@@ -52,10 +107,7 @@ idiomas**. Más paridad de marcadores, argumentos suficientes, los 22 avisos id�
 del servidor, la ficha de Play dentro de los límites, cero claves sin usar, cero literales
 sin extraer, `lintDebug` sin errores y los tests en verde.
 
-❗ **Lo que sigue sin probarse de verdad**: las pantallas de dentro (liga, explorar, perfil,
-guardar, publicar) necesitan sesión de Google y no se pueden automatizar desde aquí. El
-crash de la liga salió de releer el código, no de ejecutarlo. **Ahí está el riesgo que
-queda.**
+Las pantallas de dentro ya **se probaron en el Redmi real** (ver más arriba).
 
 ---
 
