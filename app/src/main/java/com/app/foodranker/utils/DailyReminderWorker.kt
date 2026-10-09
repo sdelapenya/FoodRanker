@@ -5,6 +5,7 @@ import androidx.work.*
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import com.app.foodranker.R
 
 class DailyReminderWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 
@@ -15,13 +16,15 @@ class DailyReminderWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, 
         if (FirebaseAuth.getInstance().currentUser == null) return Result.success()
 
         val messages = listOf(
-            "¿Qué has comido hoy? 🍽️" to "Comparte tu mejor plato y suma XP",
-            "¡Hora del almuerzo! 🌟" to "Descubre los mejores platos del mundo en FoodRanker",
-            "¿Has probado algo nuevo? 🌍" to "Valora y comparte tu experiencia gastronómica",
-            "El plato del día te espera 🏆" to "¿Cuál es el mejor plato que has comido esta semana?",
-            "¡Sube de nivel! ⭐" to "Publica un plato hoy y gana XP en FoodRanker"
+            R.string.rem_1_t to R.string.rem_1_b,
+            R.string.rem_2_t to R.string.rem_2_b,
+            R.string.rem_3_t to R.string.rem_3_b,
+            R.string.rem_4_t to R.string.rem_4_b,
+            R.string.rem_5_t to R.string.rem_5_b
         )
-        val (title, body) = messages.random()
+        val (tituloRes, cuerpoRes) = messages.random()
+        val title = applicationContext.getString(tituloRes)
+        val body = applicationContext.getString(cuerpoRes)
         // Canal propio, no el social. Compartiendo canal con los likes, silenciar el
         // recordatorio diario desde los ajustes de Android silenciaba también los avisos
         // de likes y valoraciones, y al revés — no había forma de separarlos.

@@ -37,6 +37,7 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import com.app.foodranker.R
 
 sealed class AddPlateState {
     object Idle    : AddPlateState()
@@ -122,7 +123,7 @@ class AddPlateViewModel @Inject constructor(
         viewModelScope.launch {
             venueRepository.nearbyVenues()
                 .onSuccess { venueSuggestions = it }
-                .onFailure { venueError = "No se pudieron buscar locales cerca. Prueba a buscarlo por nombre." }
+                .onFailure { venueError = appContext.getString(R.string.vm_venues_nearby_fail) }
             isLoadingVenues = false
         }
     }
@@ -133,7 +134,7 @@ class AddPlateViewModel @Inject constructor(
         viewModelScope.launch {
             venueRepository.searchVenues(query)
                 .onSuccess { venueSuggestions = it }
-                .onFailure { venueError = "No se pudo buscar el local. Revisa tu conexión." }
+                .onFailure { venueError = appContext.getString(R.string.vm_venue_search_fail) }
             isLoadingVenues = false
         }
     }
@@ -149,7 +150,7 @@ class AddPlateViewModel @Inject constructor(
                     venueSuggestions = emptyList()
                     loadVenueDishes(venue.id)
                 }
-                .onFailure { venueError = "No se pudo seleccionar ese local. Inténtalo de nuevo." }
+                .onFailure { venueError = appContext.getString(R.string.vm_venue_pick_fail) }
             isLoadingVenues = false
         }
     }
@@ -224,14 +225,14 @@ class AddPlateViewModel @Inject constructor(
         imageUri: Uri?
     ) {
         val user = auth.currentUser ?: run {
-            _state.value = AddPlateState.Error("Debes iniciar sesión")
+            _state.value = AddPlateState.Error(appContext.getString(R.string.vm_need_login))
             return
         }
 
         // El local ya viene resuelto por la CF: sus datos son los canónicos, no los
         // que escriba el usuario. De ahí salen restaurante, ciudad, país y coordenadas.
         val venue = formVenue ?: run {
-            _state.value = AddPlateState.Error("Elige primero el restaurante")
+            _state.value = AddPlateState.Error(appContext.getString(R.string.vm_pick_restaurant))
             return
         }
 
@@ -240,13 +241,13 @@ class AddPlateViewModel @Inject constructor(
         val cleanComment = comment.sanitized(InputLimits.RATING_COMMENT)
 
         if (cleanName.isBlank()) {
-            _state.value = AddPlateState.Error("El nombre del plato es obligatorio")
+            _state.value = AddPlateState.Error(appContext.getString(R.string.vm_name_required))
             return
         }
 
         val plateId = plateDocId(venue.id, cleanName)
         if (plateId.isEmpty()) {
-            _state.value = AddPlateState.Error("Ese nombre de plato no es válido")
+            _state.value = AddPlateState.Error(appContext.getString(R.string.vm_name_invalid))
             return
         }
 
@@ -281,13 +282,15 @@ class AddPlateViewModel @Inject constructor(
                         else throw e
                     }
                     if (todayCount >= maxDaily) {
-                        _state.value = AddPlateState.Error("Has alcanzado el límite de $maxDaily platos por día")
+                        _state.value = AddPlateState.Error(
+                            appContext.getString(R.string.vm_daily_limit, maxDaily)
+                        )
                         return@launch
                     }
                 }
 
                 if (imageUri == null) {
-                    _state.value = AddPlateState.Error("La foto es obligatoria")
+                    _state.value = AddPlateState.Error(appContext.getString(R.string.vm_photo_required))
                     return@launch
                 }
 

@@ -708,7 +708,12 @@ fun PlateDetailScreen(
                         uiState.engagement.likedByUsers.forEach { EngagementUserRow(it) }
                     }
                     if (uiState.engagement.savedByUsers.isNotEmpty()) {
-                        Text("🔖 Guardado por (${uiState.engagement.savedByUsers.size})", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
+                        Text(
+                            stringResource(
+                                R.string.det_saved_by,
+                                uiState.engagement.savedByUsers.size
+                            ),
+                            fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
                         uiState.engagement.savedByUsers.forEach { EngagementUserRow(it) }
                     }
                 }
@@ -1302,7 +1307,7 @@ fun RatingBottomSheet(
                 // después es el marcador, que tiene su pestaña en el perfil. Un tester se
                 // quedó buscando una lista de likes que no existe (2026-09-21).
                 Text(
-                    "Las notas de FoodRanker son de quien se lo ha comido de verdad. " +
+                    stringResource(R.string.det_tasted_intro) + " " +
                     stringResource(R.string.det_tasted_hint),
                     color = TextSecondary, fontSize = 13.sp
                 )
@@ -1373,8 +1378,10 @@ fun RatingBottomSheet(
                 maxLength = 7,
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                 supportingText = when {
-                    priceIsInvalid -> "Pon un precio entre 0,01 y 1.000 " +
+                    priceIsInvalid -> stringResource(
+                        R.string.det_price_range,
                         Rating.currencySymbol(countryCode)
+                    )
                     knownPriceCents != null && initialPriceCents == null ->
                         stringResource(R.string.det_price_others)
                     else -> stringResource(R.string.det_price_hint)

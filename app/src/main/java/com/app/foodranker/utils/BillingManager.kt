@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.app.foodranker.R
 
 @Singleton
 class BillingManager @Inject constructor(
@@ -26,7 +27,7 @@ class BillingManager @Inject constructor(
 
     private val _isPremium   = MutableStateFlow(false)
     private val _isAvailable = MutableStateFlow(false)
-    private val _price       = MutableStateFlow("2,99 €/mes")
+    private val _price       = MutableStateFlow("")
     private val _isLoading   = MutableStateFlow(false)
 
     val isPremium:   StateFlow<Boolean> = _isPremium
@@ -137,7 +138,7 @@ class BillingManager @Inject constructor(
                 productDetails = details[0]
                 details[0].subscriptionOfferDetails?.firstOrNull()?.pricingPhases
                     ?.pricingPhaseList?.firstOrNull()?.formattedPrice?.let {
-                        _price.value = "$it/mes"
+                        _price.value = context.getString(R.string.prm_per_month, it)
                     }
             }
         }

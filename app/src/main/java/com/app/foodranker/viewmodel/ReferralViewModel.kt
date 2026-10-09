@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.R
 
 data class ReferralUiState(
     val referralCode: String = "",
@@ -24,7 +27,8 @@ data class ReferralUiState(
 class ReferralViewModel @Inject constructor(
     private val referralManager: ReferralManager,
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReferralUiState())
@@ -38,7 +42,7 @@ class ReferralViewModel @Inject constructor(
             try {
                 val code = referralManager.getOrCreateReferralCode()
                 val userId = auth.currentUser?.uid ?: ""
-                val userName = auth.currentUser?.displayName ?: "Un amigo"
+                val userName = auth.currentUser?.displayName ?: appContext.getString(R.string.vm_a_friend)
                 val count = if (userId.isNotEmpty()) {
                     firestore.collection("users").document(userId).get().await()
                         .getLong("referralCount")?.toInt() ?: 0
@@ -46,7 +50,7 @@ class ReferralViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     referralCode = code,
                     referralCount = count,
-                    shareText = referralManager.buildReferralShareText(code, userName),
+                    shareText = referralManager.buildReferralShareText(appContext, code, userName),
                     isLoading = false
                 )
             } catch (e: Exception) {
@@ -56,7 +60,7 @@ class ReferralViewModel @Inject constructor(
     }
 
     fun onCodeCopied() {
-        _uiState.value = _uiState.value.copy(copiedFeedback = "Código copiado al portapapeles")
+        _uiState.value = _uiState.value.copy(copiedFeedback = appContext.getString(R.string.vm_code_copied))
     }
 
     fun clearCopiedFeedback() {

@@ -36,6 +36,9 @@ import com.app.foodranker.viewmodel.ExploreViewModel
 import com.app.foodranker.viewmodel.SortOption
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.app.foodranker.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,13 +67,13 @@ fun ExploreScreen(
             ) {
                 TopAppBar(
                     title = {
-                        Text("Explorar", fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(stringResource(R.string.ex_title), fontWeight = FontWeight.Bold, color = TextPrimary)
                     },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Volver",
+                                contentDescription = stringResource(R.string.action_back),
                                 tint = TextPrimary
                             )
                         }
@@ -79,7 +82,7 @@ fun ExploreScreen(
                         IconButton(onClick = { isGridView = !isGridView }) {
                             Icon(
                                 if (isGridView) Icons.Default.ViewList else Icons.Default.GridView,
-                                contentDescription = "Cambiar vista",
+                                contentDescription = stringResource(R.string.ex_toggle_view),
                                 tint = TextPrimary
                             )
                         }
@@ -87,7 +90,7 @@ fun ExploreScreen(
                             IconButton(onClick = { showSortMenu = true }) {
                                 Icon(
                                     Icons.Default.Sort,
-                                    contentDescription = "Ordenar",
+                                    contentDescription = stringResource(R.string.ex_sort),
                                     tint = TextPrimary
                                 )
                             }
@@ -99,7 +102,7 @@ fun ExploreScreen(
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                option.label,
+                                                stringResource(option.label),
                                                 color = if (uiState.sortBy == option) OrangePrimary else TextPrimary,
                                                 fontWeight = if (uiState.sortBy == option) FontWeight.Bold else FontWeight.Normal
                                             )
@@ -119,7 +122,7 @@ fun ExploreScreen(
                 OutlinedTextField(
                     value = uiState.query,
                     onValueChange = { viewModel.onQueryChange(it) },
-                    placeholder = { Text("Buscar plato, restaurante o ciudad...") },
+                    placeholder = { Text(stringResource(R.string.ex_search_hint)) },
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary)
                     },
@@ -128,7 +131,7 @@ fun ExploreScreen(
                             IconButton(onClick = { viewModel.onQueryChange("") }) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Limpiar",
+                                    contentDescription = stringResource(R.string.ex_clear),
                                     tint = TextSecondary
                                 )
                             }
@@ -153,13 +156,13 @@ fun ExploreScreen(
                     FilterChip(
                         selected = uiState.searchMode == com.app.foodranker.viewmodel.SearchMode.PLATES,
                         onClick = { viewModel.setSearchMode(com.app.foodranker.viewmodel.SearchMode.PLATES) },
-                        label = { Text("🍽️ Platos") },
+                        label = { Text(stringResource(R.string.ex_tab_plates)) },
                         colors = FilterChipDefaults.filterChipColors(selectedContainerColor = OrangePrimary, selectedLabelColor = SurfaceWhite)
                     )
                     FilterChip(
                         selected = uiState.searchMode == com.app.foodranker.viewmodel.SearchMode.USERS,
                         onClick = { viewModel.setSearchMode(com.app.foodranker.viewmodel.SearchMode.USERS) },
-                        label = { Text("👤 Personas") },
+                        label = { Text(stringResource(R.string.ex_tab_people)) },
                         colors = FilterChipDefaults.filterChipColors(selectedContainerColor = OrangePrimary, selectedLabelColor = SurfaceWhite)
                     )
                 }
@@ -174,7 +177,7 @@ fun ExploreScreen(
                     FilterChip(
                         selected = uiState.selectedCategory == null,
                         onClick = { viewModel.onCategoryChange(null) },
-                        label = { Text("Todos") },
+                        label = { Text(stringResource(R.string.ex_all)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OrangePrimary,
                             selectedLabelColor = SurfaceWhite
@@ -211,7 +214,9 @@ fun ExploreScreen(
                     ) {
                         if (uiState.userResults.isEmpty()) {
                             item {
-                                EmptyStateCentered(title = "Sin resultados", message = "Prueba a buscar por nombre de usuario.",
+                                EmptyStateCentered(
+                                    title = stringResource(R.string.ex_no_results),
+                                    message = stringResource(R.string.ex_try_username),
                                     modifier = Modifier.padding(vertical = 24.dp), icon = Icons.Outlined.SearchOff)
                             }
                         }
@@ -230,12 +235,16 @@ fun ExploreScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (uiState.isLoading) "Buscando..."
-                    else "${uiState.results.size.formatCompact()} platos encontrados",
+                    text = if (uiState.isLoading) stringResource(R.string.ex_searching)
+                    else pluralStringResource(
+                        R.plurals.ex_found,
+                        uiState.results.size,
+                        uiState.results.size.formatCompact()
+                    ),
                     fontSize = 14.sp, color = TextSecondary
                 )
                 Text(
-                    text = uiState.sortBy.label,
+                    text = stringResource(uiState.sortBy.label),
                     fontSize = 12.sp, color = OrangePrimary, fontWeight = FontWeight.Medium
                 )
             }
@@ -254,10 +263,13 @@ fun ExploreScreen(
                 // Vista cuadrícula
                 if (uiState.results.isEmpty()) {
                     EmptyStateCentered(
-                        title = if (uiState.query.isNotEmpty()) "Sin resultados" else "Nada que mostrar aquí",
+                        title = stringResource(
+                            if (uiState.query.isNotEmpty()) R.string.ex_no_results
+                            else R.string.ex_nothing_here
+                        ),
                         message = if (uiState.query.isNotEmpty())
-                            "Prueba con otro término o revisa la ortografía de «${uiState.query}»."
-                        else "Cambia de categoría o usa la búsqueda para descubrir platos.",
+                            stringResource(R.string.ex_check_spelling, uiState.query)
+                        else stringResource(R.string.ex_change_category),
                         modifier = Modifier.fillMaxSize().padding(vertical = 24.dp),
                         icon = if (uiState.query.isNotEmpty()) Icons.Outlined.SearchOff else Icons.Outlined.Search
                     )
@@ -318,10 +330,13 @@ fun ExploreScreen(
                     if (uiState.results.isEmpty()) {
                         item {
                             EmptyStateCentered(
-                                title = if (uiState.query.isNotEmpty()) "Sin resultados" else "Nada que mostrar aquí",
+                                title = stringResource(
+                                    if (uiState.query.isNotEmpty()) R.string.ex_no_results
+                                    else R.string.ex_nothing_here
+                                ),
                                 message = if (uiState.query.isNotEmpty())
-                                    "Prueba con otro término o revisa la ortografía de «${uiState.query}»."
-                                else "Cambia de categoría o usa la búsqueda para descubrir platos.",
+                                    stringResource(R.string.ex_check_spelling, uiState.query)
+                                else stringResource(R.string.ex_change_category),
                                 modifier = Modifier.padding(vertical = 24.dp),
                                 icon = if (uiState.query.isNotEmpty()) Icons.Outlined.SearchOff else Icons.Outlined.Search
                             )

@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.R
 
 /** Un local cercano ya en la app, con sus platos mejor puntuados. */
 data class NearbyVenueDishes(
@@ -46,7 +49,8 @@ data class NearbyDishesUiState(
 class NearbyDishesViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val venueRepository: VenueRepository,
-    private val billingManager: BillingManager
+    private val billingManager: BillingManager,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     companion object {
@@ -137,7 +141,7 @@ class NearbyDishesViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         isSearchingPlaces = false,
                         searchedPlaces = true,
-                        error = "No se pudieron buscar locales cerca."
+                        error = appContext.getString(R.string.vm_venues_nearby_fail)
                     )
                 }
         }

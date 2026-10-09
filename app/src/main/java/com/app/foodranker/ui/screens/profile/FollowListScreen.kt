@@ -26,6 +26,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.viewmodel.FollowListViewModel
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,12 +47,12 @@ fun FollowListScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = TextPrimary)
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.load() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = OrangePrimary)
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = OrangePrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
@@ -73,7 +75,7 @@ fun FollowListScreen(
                     Text(uiState.error ?: "", color = TextSecondary, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)) {
-                        Text("Reintentar")
+                        Text(stringResource(R.string.action_retry))
                     }
                 }
             }
@@ -86,15 +88,17 @@ fun FollowListScreen(
                     Text("👥", fontSize = 48.sp)
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        if (uiState.listType != "following") "Aún nadie sigue este perfil"
-                        else "No sigue a nadie por ahora",
+                        stringResource(
+                            if (uiState.listType != "following") R.string.fl_no_followers
+                            else R.string.fl_no_following
+                        ),
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Cuando cambie la actividad, verás aquí la lista.",
+                        stringResource(R.string.fl_will_appear),
                         fontSize = 13.sp,
                         color = TextSecondary,
                         textAlign = TextAlign.Center
@@ -158,7 +162,7 @@ private fun FollowRowItem(
                 color = TextPrimary,
                 modifier = Modifier.weight(1f)
             )
-            Text("Ver perfil", fontSize = 12.sp, color = OrangePrimary, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.fl_view_profile), fontSize = 12.sp, color = OrangePrimary, fontWeight = FontWeight.Medium)
         }
     }
 }

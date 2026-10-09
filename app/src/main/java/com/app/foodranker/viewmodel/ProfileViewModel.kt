@@ -19,6 +19,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.app.foodranker.utils.ErrorMapper
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.R
 
 enum class ProfileTab { MY_PLATES, SAVED, COLLECTIONS }
 
@@ -51,7 +54,8 @@ data class ProfileUiState(
 class ProfileViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    private val functions: FirebaseFunctions
+    private val functions: FirebaseFunctions,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -65,7 +69,7 @@ class ProfileViewModel @Inject constructor(
 
     fun loadProfile(userId: String) {
         if (userId.isBlank()) {
-            _uiState.value = _uiState.value.copy(isLoading = false, error = "Usuario no válido")
+            _uiState.value = _uiState.value.copy(isLoading = false, error = appContext.getString(R.string.vm_user_invalid))
             return
         }
         lastLoadTime = System.currentTimeMillis()
@@ -340,7 +344,7 @@ class ProfileViewModel @Inject constructor(
                     // No debería pasar nunca desde la UI (el botón solo aparece en tus
                     // propios platos), pero si "plates" está desincronizado de Firestore
                     // por lo que sea, salir en silencio dejaría creer que sí se borró.
-                    _uiState.value = _uiState.value.copy(error = "No tienes permiso para eliminar este plato")
+                    _uiState.value = _uiState.value.copy(error = appContext.getString(R.string.vm_no_permission_delete))
                     return@launch
                 }
 
@@ -485,7 +489,7 @@ class ProfileViewModel @Inject constructor(
                 onSuccess()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isDeletingAccount = false)
-                onError(e.message ?: "Error al eliminar la cuenta")
+                onError(e.message ?: appContext.getString(R.string.vm_delete_account_fail))
             }
         }
     }

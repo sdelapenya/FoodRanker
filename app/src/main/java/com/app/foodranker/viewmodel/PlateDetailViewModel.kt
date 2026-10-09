@@ -24,6 +24,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.R
 
 data class PlateDetailUiState(
     val plate: Plate? = null,
@@ -59,7 +62,8 @@ class PlateDetailViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val plateRepository: PlateRepository,
     private val functions: FirebaseFunctions,
-    private val venueRepository: com.app.foodranker.data.repository.VenueRepository
+    private val venueRepository: com.app.foodranker.data.repository.VenueRepository,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     val currentUserId: String get() = auth.currentUser?.uid ?: ""
@@ -96,7 +100,7 @@ class PlateDetailViewModel @Inject constructor(
 
     fun loadPlate(plateId: String) {
         if (plateId.isBlank()) {
-            _uiState.value = _uiState.value.copy(isLoading = false, error = "Plato no válido")
+            _uiState.value = _uiState.value.copy(isLoading = false, error = appContext.getString(R.string.vm_plate_invalid))
             return
         }
         if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("PlateDetail", "Cargando plato con ID: $plateId")
@@ -390,9 +394,9 @@ class PlateDetailViewModel @Inject constructor(
                 }.await()
                 _uiState.value = _uiState.value.copy(
                     successMessage = if (alreadyReported)
-                        "Ya has reportado este plato anteriormente"
+                        appContext.getString(R.string.vm_already_reported_plate)
                     else
-                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
+                        appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
@@ -436,9 +440,9 @@ class PlateDetailViewModel @Inject constructor(
                 }
                 _uiState.value = _uiState.value.copy(
                     successMessage = if (alreadyReported)
-                        "Ya has reportado esta valoración anteriormente"
+                        appContext.getString(R.string.vm_already_reported_rating)
                     else
-                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
+                        appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
@@ -481,9 +485,9 @@ class PlateDetailViewModel @Inject constructor(
                 }
                 _uiState.value = _uiState.value.copy(
                     successMessage = if (alreadyReported)
-                        "Ya has reportado este comentario anteriormente"
+                        appContext.getString(R.string.vm_already_reported_comment)
                     else
-                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
+                        appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
@@ -549,7 +553,7 @@ class PlateDetailViewModel @Inject constructor(
                 if (existingSnap.exists()) {
                     _uiState.value = _uiState.value.copy(
                         isSubmittingRating = false,
-                        error = "Ya valoraste este plato"
+                        error = appContext.getString(R.string.vm_already_rated)
                     )
                     return@launch
                 }
@@ -644,7 +648,7 @@ class PlateDetailViewModel @Inject constructor(
                     isSubmittingRating = false,
                     // userRating se deriva automáticamente de ratings (no campo separado)
                     ratings = _uiState.value.ratings.map { if (it.id == ratingId) updatedRating ?: it else it },
-                    successMessage = "¡Valoración actualizada!"
+                    successMessage = appContext.getString(R.string.vm_rating_updated)
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -673,9 +677,9 @@ class PlateDetailViewModel @Inject constructor(
                 val granted = data?.get("granted") as? Boolean ?: false
                 _uiState.value = _uiState.value.copy(
                     successMessage = if (granted) {
-                        "¡+50 XP ganados por ver el anuncio! ⭐"
+                        appContext.getString(R.string.vm_ad_xp_ok)
                     } else {
-                        "Ya has ganado XP por un anuncio hoy. Vuelve a intentarlo más tarde."
+                        appContext.getString(R.string.vm_ad_xp_done)
                     }
                 )
             } catch (e: Exception) {

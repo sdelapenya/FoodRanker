@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import com.app.foodranker.R
 
 object FoodImageValidator {
 
@@ -38,7 +39,7 @@ object FoodImageValidator {
             if (!RemoteConfigManager.visionApiEnabled) return@withContext Pair(true, "")
             try {
                 val base64 = encodeImageToBase64(context, imageUri)
-                    ?: return@withContext Pair(false, "No se pudo leer la imagen 📸")
+                    ?: return@withContext Pair(false, context.getString(R.string.img_read_fail))
 
                 val result = functions
                     .getHttpsCallable("validateFoodImage")
@@ -56,11 +57,11 @@ object FoodImageValidator {
                 when (data["reason"] as? String) {
                     "inappropriate" -> Pair(
                         false,
-                        "Contenido inapropiado detectado ⚠️\nEsta foto no cumple nuestras normas de comunidad"
+                        context.getString(R.string.img_inappropriate)
                     )
                     "not_food" -> Pair(
                         false,
-                        "No hemos detectado comida en esta foto 🍽️\nPor favor sube una foto de un plato real"
+                        context.getString(R.string.img_not_food)
                     )
                     else -> Pair(true, "")
                 }

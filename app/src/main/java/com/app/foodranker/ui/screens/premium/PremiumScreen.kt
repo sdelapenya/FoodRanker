@@ -57,7 +57,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 title = { Text(stringResource(R.string.prm_name), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
@@ -105,9 +105,9 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
             // Solo se anuncian beneficios que la app entrega hoy: los anuncios se ocultan
             // (BannerAd) y el badge aparece en el perfil. No prometer funciones no implementadas.
             val benefits = listOf(
-                "Sin anuncios" to stringResource(R.string.prm_no_interrupt),
+                stringResource(R.string.prm_no_ads) to stringResource(R.string.prm_no_interrupt),
                 stringResource(R.string.prm_badge) to stringResource(R.string.prm_stand_out),
-                stringResource(R.string.prm_more_plates) to "Publica hasta el doble de platos"
+                stringResource(R.string.prm_more_plates) to stringResource(R.string.prm_double_plates)
             )
 
             benefits.forEach { (title, subtitle) ->
@@ -140,7 +140,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                     color = SuccessGreen.copy(alpha = 0.1f)
                 ) {
                     Text(
-                        "🎉 ¡Eres Premium! Gracias por apoyar FoodRanker",
+                        stringResource(R.string.prm_thanks),
                         color = SuccessGreen,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -169,7 +169,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                     enabled = !watchingAd,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangePrimary)
                 ) {
-                    Text("📺 Ver anuncio — 24h sin anuncios", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.prm_watch_ad), fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -203,7 +203,8 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "⭐ Suscribirse — $price",
+                            if (price.isBlank()) stringResource(R.string.prm_subscribe_plain)
+                            else stringResource(R.string.prm_subscribe, price),
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             fontSize = 16.sp

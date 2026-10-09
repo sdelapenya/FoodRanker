@@ -125,14 +125,22 @@ fun LeagueScreen(
                         }
                         Spacer(Modifier.height(4.dp))
 
-                        val weekLabel = remember(uiState.weekKey) {
+                        val numeroSemana = remember(uiState.weekKey) {
                             uiState.weekKey.split("-W").let { parts ->
-                                if (parts.size == 2) "Semana ${parts[1]}" else uiState.weekKey
+                                parts[1].takeIf { parts.size == 2 }
                             }
                         }
+                        val weekLabel = numeroSemana
+                            ?.let { stringResource(R.string.lg_week_n, it) }
+                            ?: uiState.weekKey
                         Text(
-                            if (uiState.isGlobalLeague) "⚔️ Liga semanal  ·  $weekLabel"
-                            else "⚔️ Liga ${uiState.city.ifEmpty { stringResource(R.string.lg_local) }}  ·  $weekLabel",
+                            if (uiState.isGlobalLeague)
+                                stringResource(R.string.lg_title_global, weekLabel)
+                            else stringResource(
+                                R.string.lg_title_city,
+                                uiState.city.ifEmpty { stringResource(R.string.lg_local) },
+                                weekLabel
+                            ),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
@@ -251,7 +259,7 @@ fun LeagueScreen(
                         Text("⚔️", fontSize = 52.sp)
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "Nadie ha votado aún esta semana en ${uiState.city}.\n¡Sé el primero!",
+                            stringResource(R.string.lg_nobody_voted, uiState.city),
                             color = TextSecondary,
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center
@@ -323,7 +331,7 @@ fun LeagueScreen(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
-                                "Te faltan $gap XP para el Top 3",
+                                stringResource(R.string.lg_gap_top3, gap),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = Color(0xFF153B2A)

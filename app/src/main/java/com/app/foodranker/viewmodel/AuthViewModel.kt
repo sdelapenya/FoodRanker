@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.R
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -20,7 +23,8 @@ sealed class AuthState {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
@@ -63,7 +67,7 @@ class AuthViewModel @Inject constructor(
         }
         _authState.value = AuthState.Error(
             (error as? Exception)?.let { com.app.foodranker.utils.ErrorMapper.toUserMessage(it) }
-                ?: "Error desconocido"
+                ?: appContext.getString(R.string.err_generic2)
         )
     }
 

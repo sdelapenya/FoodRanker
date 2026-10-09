@@ -500,7 +500,7 @@ private fun PhotoPickerSection(
         if (imageUri != null) {
             AsyncImage(
                 model = imageUri,
-                contentDescription = "Foto del plato",
+                contentDescription = stringResource(R.string.cd_plate_photo),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )

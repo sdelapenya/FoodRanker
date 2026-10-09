@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.R
 
 data class FollowListRow(
     val userId: String,
@@ -31,7 +34,8 @@ data class FollowListUiState(
 @HiltViewModel
 class FollowListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val profileUserId: String =
@@ -50,7 +54,7 @@ class FollowListViewModel @Inject constructor(
 
     fun load() {
         if (profileUserId.isBlank()) {
-            _uiState.value = FollowListUiState(isLoading = false, error = "Usuario no válido")
+            _uiState.value = FollowListUiState(isLoading = false, error = appContext.getString(R.string.vm_user_invalid))
             return
         }
         viewModelScope.launch {

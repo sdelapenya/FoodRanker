@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.app.foodranker.R
 
 @Singleton
 class NotificationRepository @Inject constructor(
@@ -44,45 +45,54 @@ class NotificationRepository @Inject constructor(
                         .forEach { change ->
                             val data = change.document.data
                             val type = data["type"] as? String ?: return@forEach
-                            val fromUser = data["fromUserName"] as? String ?: "Alguien"
-                            val plateName = data["plateName"] as? String ?: "tu plato"
+                            val fromUser = data["fromUserName"] as? String
+                                ?: context.getString(R.string.notif_from_somebody)
+                            val plateName = data["plateName"] as? String
+                                ?: context.getString(R.string.notif_your_plate)
                             val plateId = data["plateId"] as? String
                             // Esta lista tiene que cubrir TODOS los tipos que crea el
                             // servidor. Es un camino paralelo al push de FCM, y lo que no
                             // esté aquí se descarta sin dejar rastro: así los comentarios
                             // aparecían en la campana pero no avisaban de nada (reportado
                             // por un tester). Al añadir un tipo nuevo, añadirlo también aquí.
+                            fun txt(id: Int, vararg args: Any) =
+                                context.getString(id, *args)
                             val (title, body) = when (type) {
-                                "like" -> "❤️ Nuevo me gusta" to
-                                        "$fromUser le ha dado like a \"$plateName\""
+                                "like" -> txt(R.string.notif_like_t) to
+                                        txt(R.string.notif_like_b, fromUser, plateName)
                                 "rating" -> {
                                     val score = data["score"] as? Double ?: 0.0
-                                    "⭐ Nueva valoración" to
-                                            "$fromUser ha valorado \"$plateName\" con ${"%.1f".format(score)}"
+                                    txt(R.string.notif_rating_t) to txt(
+                                        R.string.notif_rating_b, fromUser, plateName,
+                                        "%.1f".format(score)
+                                    )
                                 }
                                 "comment" -> {
                                     val texto = data["commentText"] as? String ?: ""
-                                    "💬 Nuevo comentario" to
-                                            if (texto.isNotBlank()) "$fromUser en \"$plateName\": $texto"
-                                            else "$fromUser ha comentado \"$plateName\""
+                                    txt(R.string.notif_comment_t) to
+                                            if (texto.isNotBlank())
+                                                txt(R.string.notif_comment_b, fromUser, plateName, texto)
+                                            else
+                                                txt(R.string.notif_comment_b_plain, fromUser, plateName)
                                 }
-                                "follow" -> "✨ Nuevo seguidor" to "$fromUser ha empezado a seguirte"
-                                "new_plate" -> "🍽️ Plato nuevo" to
-                                        "$fromUser ha publicado \"$plateName\""
-                                "moderation_approved" -> "✅ Tu plato ya está publicado" to
-                                        "\"$plateName\" ya aparece en el ranking."
-                                "moderation_rejected" -> "Plato no aprobado" to
-                                        "\"$plateName\" no cumple las normas de la comunidad."
-                                "level_up" -> "🎉 Has subido de nivel" to
-                                        "Ya eres $plateName"
-                                "badge" -> "🏅 Logro desbloqueado" to
-                                        "Has conseguido $plateName"
+                                "follow" -> txt(R.string.notif_follow_t) to
+                                        txt(R.string.notif_follow_b, fromUser)
+                                "new_plate" -> txt(R.string.notif_newplate_t) to
+                                        txt(R.string.notif_newplate_b, fromUser, plateName)
+                                "moderation_approved" -> txt(R.string.notif_approved_t) to
+                                        txt(R.string.notif_approved_b, plateName)
+                                "moderation_rejected" -> txt(R.string.notif_rejected_t) to
+                                        txt(R.string.notif_rejected_b, plateName)
+                                "level_up" -> txt(R.string.notif_level_t) to
+                                        txt(R.string.notif_level_b, plateName)
+                                "badge" -> txt(R.string.notif_badge_t) to
+                                        txt(R.string.notif_badge_b, plateName)
                                 "league_result" -> {
                                     val puesto = (data["position"] as? Long)?.toInt() ?: 0
                                     val medalla = if (puesto == 1) "🥇" else "🏅"
-                                    "$medalla Has quedado ${puesto}º en la liga" to
-                                            if (puesto == 1) "Ganaste la liga semanal."
-                                            else "La liga vuelve a empezar hoy."
+                                    txt(R.string.notif_league_t, medalla, puesto) to
+                                            if (puesto == 1) txt(R.string.notif_league_b_win)
+                                            else txt(R.string.notif_league_b_other)
                                 }
                                 else -> return@forEach
                             }

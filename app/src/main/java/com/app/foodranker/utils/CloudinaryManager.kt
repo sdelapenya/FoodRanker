@@ -7,6 +7,7 @@ import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
 import com.app.foodranker.BuildConfig
+import com.app.foodranker.R
 
 object CloudinaryManager {
 
@@ -59,7 +60,7 @@ object CloudinaryManager {
                 override fun onSuccess(requestId: String, resultData: Map<*, *>) {
                     compressed?.delete()
                     val url = resultData["secure_url"] as? String ?: ""
-                    if (url.isBlank()) { onError("No se pudo obtener la URL de la imagen"); return }
+                    if (url.isBlank()) { onError(context.getString(R.string.img_url_fail)); return }
                     onSuccess(url)
                 }
                 override fun onError(requestId: String, error: ErrorInfo) {

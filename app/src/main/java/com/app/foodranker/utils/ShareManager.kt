@@ -11,6 +11,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.app.foodranker.R
 
 object ShareManager {
 
@@ -18,36 +19,40 @@ object ShareManager {
     /** Compartir enlace público del perfil (mismo dominio que los platos). */
     fun shareProfile(context: Context, userId: String, displayName: String) {
         val url = "https://foodranker.app/user/$userId"
-        val text =
-            "🍽️ Sigue el perfil de $displayName en FoodRanker\n$url\n\n#FoodRanker"
+        val text = context.getString(R.string.share_profile_text, displayName, url)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, text)
-            putExtra(Intent.EXTRA_SUBJECT, "$displayName en FoodRanker")
+            putExtra(
+                Intent.EXTRA_SUBJECT,
+                context.getString(R.string.share_profile_subject, displayName)
+            )
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir perfil"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_profile_chooser)))
     }
 
     fun sharePlateText(context: Context, plate: Plate) {
-        val text = buildShareText(plate)
+        val text = buildShareText(context, plate)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, text)
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir en..."))
+        context.startActivity(
+            Intent.createChooser(intent, context.getString(R.string.share_chooser))
+        )
     }
 
     // Compartir imagen + texto
     fun sharePlateWithImage(context: Context, plate: Plate, bitmap: Bitmap) {
         val uri = saveBitmapToCache(context, bitmap, "plate_${plate.id}.png")
-        val text = buildShareText(plate)
+        val text = buildShareText(context, plate)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "image/png"
             putExtra(Intent.EXTRA_TEXT, text)
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir plato"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_plate_chooser)))
     }
 
     // Compartir en Instagram Stories
@@ -102,14 +107,22 @@ object ShareManager {
         }
     }
 
-    fun buildShareText(plate: Plate): String {
-        return "🍽️ ¡Descubrí \"${plate.name}\" en ${plate.restaurantName}!\n" +
-                "📍 ${plate.city}, ${plate.country}\n" +
-                "★ Puntuación: ${"%.1f".format(plate.averageScore)}/10 " +
-                "(${plate.totalRatings} valoraciones)\n\n" +
-                "Descúbrelo y valóralo en FoodRanker 👇\n" +
-                "https://foodranker.app/plate/${plate.id}\n\n" +
-                "#FoodRanker #${plate.categoryType.name.lowercase()} #${plate.city.replace(" ", "")}"
+    fun buildShareText(context: Context, plate: Plate): String {
+        val valoraciones = context.resources.getQuantityString(
+            R.plurals.share_ratings, plate.totalRatings, plate.totalRatings
+        )
+        return context.getString(
+            R.string.share_plate_text,
+            plate.name,
+            plate.restaurantName,
+            plate.city,
+            plate.country,
+            "%.1f".format(plate.averageScore),
+            valoraciones,
+            "https://foodranker.app/plate/${plate.id}",
+            plate.categoryType.name.lowercase(),
+            plate.city.replace(" ", "")
+        )
     }
 
     private fun saveBitmapToCache(context: Context, bitmap: Bitmap, fileName: String): Uri {

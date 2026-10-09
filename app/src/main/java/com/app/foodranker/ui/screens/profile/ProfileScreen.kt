@@ -336,26 +336,29 @@ fun ProfileScreen(
                             Tab(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) },
-                                text = { Text("Mis platos (" + uiState.plates.size + ")", fontWeight = FontWeight.Medium,
+                                text = { Text(stringResource(R.string.prof_tab_my_plates, uiState.plates.size), fontWeight = FontWeight.Medium,
                                     color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) OrangePrimary else TextSecondary) }
                             )
                             Tab(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.SAVED) },
-                                text = { Text("Guardados (" + uiState.savedPlates.size + ")", fontWeight = FontWeight.Medium,
+                                text = { Text(stringResource(R.string.prof_tab_saved, uiState.savedPlates.size), fontWeight = FontWeight.Medium,
                                     color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED) OrangePrimary else TextSecondary) }
                             )
                             Tab(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) },
-                                text = { Text("Listas (" + uiState.collections.size + ")", fontWeight = FontWeight.Medium,
+                                text = { Text(stringResource(R.string.prof_tab_lists, uiState.collections.size), fontWeight = FontWeight.Medium,
                                     color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) OrangePrimary else TextSecondary) }
                             )
                         }
                     } else {
                         ProfileSectionTitle(
                             title = stringResource(R.string.prof_public_plates),
-                            subtitle = "Publicaciones · ${uiState.plates.size.formatCompact()}",
+                            subtitle = stringResource(
+                                R.string.prof_posts_count,
+                                uiState.plates.size.formatCompact()
+                            ),
                             icon = Icons.Outlined.Collections,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
                         )
@@ -506,7 +509,7 @@ fun ProfileScreen(
             title = { Text(stringResource(R.string.prof_delete_q), fontWeight = FontWeight.Bold, color = ErrorRed) },
             text = {
                 Text(
-                    "Esta acción es irreversible. Se borrarán permanentemente:\n\n• Tu perfil y foto\n• Todos tus platos publicados\n• Todas tus valoraciones\n• Tu historial de puntuación",
+                    stringResource(R.string.prof_delete_bullets),
                     fontSize = 14.sp
                 )
             },
@@ -1051,7 +1054,7 @@ private fun EditProfileSheet(
             OutlinedTextField(
                 value = bio,
                 onValueChange = { if (it.length <= com.app.foodranker.utils.InputLimits.BIO) bio = it },
-                label = { Text("Bio") },
+                label = { Text(stringResource(R.string.prof_bio_label)) },
                 placeholder = { Text(stringResource(R.string.prof_bio_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = false,
@@ -1085,7 +1088,7 @@ private fun EditProfileSheet(
                 value = website,
                 onValueChange = { if (it.length <= com.app.foodranker.utils.InputLimits.WEBSITE) website = it },
                 label = { Text(stringResource(R.string.prof_web)) },
-                placeholder = { Text("instagram.com/tu_usuario") },
+                placeholder = { Text(stringResource(R.string.prof_web_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = !websiteValid,
@@ -1245,7 +1248,7 @@ private fun CollectionsSection(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
-            Text("Mis listas", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text(stringResource(R.string.prof_my_lists), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
             TextButton(onClick = { showCreate = true }) {
                 Text(stringResource(R.string.prof_new_list), color = OrangePrimary, fontWeight = FontWeight.Medium)
             }
@@ -1327,7 +1330,7 @@ private fun CollectionsSection(
                 } else if (collectionPlates.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            if (col.plateIds.isEmpty()) stringResource(R.string.prof_list_empty) else "No se pudieron cargar los platos",
+                            if (col.plateIds.isEmpty()) stringResource(R.string.prof_list_empty) else stringResource(R.string.prof_plates_load_fail),
                             color = TextSecondary, textAlign = TextAlign.Center
                         )
                     }
@@ -1402,7 +1405,7 @@ private fun CollectionsSection(
         AlertDialog(
             onDismissRequest = { collectionToDelete = null },
             title = { Text(stringResource(R.string.prof_delete_list_q), fontWeight = FontWeight.Bold) },
-            text = { Text("Se eliminará la lista \"${col.name}\". Los platos no se borrarán, solo dejarán de estar en esta lista.") },
+            text = { Text(stringResource(R.string.prof_delete_list_detail, col.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDeleteCollection(col.id)
@@ -1421,7 +1424,7 @@ private fun CollectionsSection(
         ModalBottomSheet(onDismissRequest = { showCreate = false; newName = "" }) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Nueva lista", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text(stringResource(R.string.prof_new_list_title), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     emojiOptions.forEach { emoji ->
                         Surface(modifier = Modifier.size(36.dp).clickable { newEmoji = emoji },
@@ -1432,7 +1435,7 @@ private fun CollectionsSection(
                     }
                 }
                 OutlinedTextField(value = newName, onValueChange = { newName = it },
-                    label = { Text("Nombre de la lista") }, placeholder = { Text(stringResource(R.string.prof_list_hint)) },
+                    label = { Text(stringResource(R.string.prof_list_name)) }, placeholder = { Text(stringResource(R.string.prof_list_hint)) },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     shape = MaterialTheme.shapes.small,
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, focusedLabelColor = OrangePrimary))
@@ -1465,8 +1468,7 @@ private fun EditPlateSheet(
             title = { Text(stringResource(R.string.prof_delete_plate_q), fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "Se borrará \"${plate.name}\" junto con su foto y las valoraciones " +
-                    "que haya recibido. Esta acción no se puede deshacer."
+                    stringResource(R.string.prof_delete_plate_detail, plate.name)
                 )
             },
             confirmButton = {
@@ -1506,8 +1508,8 @@ private fun EditPlateSheet(
             OutlinedTextField(
                 value = description,
                 onValueChange = { if (it.length <= maxLen) description = it },
-                label = { Text(stringResource(R.string.prof_bio)) },
-                placeholder = { Text("¿Qué lo hace especial?") },
+                label = { Text(stringResource(R.string.prof_plate_desc)) },
+                placeholder = { Text(stringResource(R.string.prof_plate_desc_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = false, maxLines = 4,
                 shape = MaterialTheme.shapes.small,
@@ -1653,7 +1655,7 @@ private fun RivalCard(rivalName: String, rivalXp: Int, gap: Int) {
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "solo $gap XP más",
+                    stringResource(R.string.prof_xp_to_go, gap),
                     fontSize = 12.sp,
                     color = Color(0xFFA0522D),
                     fontWeight = FontWeight.Bold

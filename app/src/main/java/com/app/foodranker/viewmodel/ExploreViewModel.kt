@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import androidx.annotation.StringRes
+import com.app.foodranker.R
 
 data class UserResult(
     val id: String = "",
@@ -38,11 +40,11 @@ data class ExploreUiState(
 
 enum class SearchMode { PLATES, USERS }
 
-enum class SortOption(val label: String) {
-    SCORE("Mejor puntuación"),
-    RECENT("Más recientes"),
-    RATINGS("Más valorados"),
-    LIKES("Más likes")
+enum class SortOption(@StringRes val label: Int) {
+    SCORE(R.string.sort_score),
+    RECENT(R.string.sort_recent),
+    RATINGS(R.string.sort_ratings),
+    LIKES(R.string.sort_likes)
 }
 
 @HiltViewModel

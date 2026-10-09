@@ -30,6 +30,9 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.R
 
 data class DiscoverUiState(
     val plates: List<Plate> = emptyList(),
@@ -59,7 +62,8 @@ class DiscoverViewModel @Inject constructor(
     private val plateRepository: PlateRepository,
     private val referralManager: ReferralManager,
     private val dailyMissionManager: DailyMissionManager,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverUiState())
@@ -305,8 +309,8 @@ class DiscoverViewModel @Inject constructor(
                 _uiState.value.savedPlateIds - plateId
             else
                 _uiState.value.savedPlateIds + plateId,
-            saveFeedback = if (isSaved) "Eliminado de guardados"
-                           else "🔖 Guardado en tu colección"
+            saveFeedback = appContext.getString(R.string.vm_unsaved)
+                               .takeIf { isSaved } ?: appContext.getString(R.string.vm_saved)
         )
         viewModelScope.launch {
             try {
@@ -324,7 +328,7 @@ class DiscoverViewModel @Inject constructor(
                         _uiState.value.savedPlateIds - plateId
                     else
                         _uiState.value.savedPlateIds + plateId,
-                    saveFeedback = "No se pudo actualizar tus guardados"
+                    saveFeedback = appContext.getString(R.string.vm_save_fail)
                 )
             }
         }
@@ -421,9 +425,9 @@ class DiscoverViewModel @Inject constructor(
                 }.await()
                 _uiState.value = _uiState.value.copy(
                     reportFeedback = if (alreadyReported)
-                        "Ya has reportado este plato anteriormente"
+                        appContext.getString(R.string.vm_already_reported_plate)
                     else
-                        "Reporte enviado. Gracias por ayudarnos a mantener la comunidad."
+                        appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
                 android.util.Log.e("DiscoverVM", "Error al reportar: ${e.message}")

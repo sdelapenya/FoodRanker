@@ -57,10 +57,10 @@ fun ReferralScreen(
         },
         topBar = {
             TopAppBar(
-                title = { Text("Invita amigos", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.ref_title), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
@@ -102,7 +102,7 @@ fun ReferralScreen(
                     ) {
                         Text("🍽️", fontSize = 48.sp)
                         Text(
-                            "Invita amigos a FoodRanker",
+                            stringResource(R.string.ref_headline),
                             color = Color.White,
                             fontWeight = FontWeight.Black,
                             fontSize = 20.sp,
@@ -113,7 +113,7 @@ fun ReferralScreen(
                         // mueve la clasificación — y tampoco debería: sería subir en la liga
                         // sin comer ni valorar nada.
                         Text(
-                            "Gana XP por cada amigo que se une\ny sube de nivel más rápido",
+                            stringResource(R.string.ref_sub),
                             color = Color.White.copy(alpha = 0.88f),
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center
@@ -136,7 +136,7 @@ fun ReferralScreen(
                 StatCard(
                     emoji = "⭐",
                     value = "${uiState.referralCount * 100} XP",
-                    label = "XP ganados",
+                    label = stringResource(R.string.ref_xp_earned),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -153,7 +153,7 @@ fun ReferralScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Tu código de invitación",
+                        stringResource(R.string.ref_your_code),
                         fontSize = 13.sp,
                         color = TextSecondary,
                         fontWeight = FontWeight.Medium
@@ -259,9 +259,21 @@ private fun HowItWorksCard() {
             Text(stringResource(R.string.ref_how), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
 
             listOf(
-                Triple("1️⃣", stringResource(R.string.ref_share_code), "Envía tu código a amigos foodies"),
-                Triple("2️⃣", "Ellos se registran", "Usan tu código al crear su cuenta"),
-                Triple("3️⃣", stringResource(R.string.ref_both_xp), "Tú ganas 100 XP y tu amigo 50 XP de bienvenida")
+                Triple(
+                    "1️⃣",
+                    stringResource(R.string.ref_share_code),
+                    stringResource(R.string.ref_step1_d)
+                ),
+                Triple(
+                    "2️⃣",
+                    stringResource(R.string.ref_step2_t),
+                    stringResource(R.string.ref_step2_d)
+                ),
+                Triple(
+                    "3️⃣",
+                    stringResource(R.string.ref_both_xp),
+                    stringResource(R.string.ref_step3_d)
+                )
             ).forEach { (emoji, title, desc) ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),

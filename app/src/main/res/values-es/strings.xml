@@ -137,6 +137,7 @@
     <plurals name="streak_days">
         <item quantity="one">🔥 %1$d día</item>
         <item quantity="other">🔥 %1$d días</item>
+        <item quantity="many">🔥 %1$d días</item>
     </plurals>
     <string name="ticker_city_record">¿Hay un récord en tu ciudad hoy?</string>
     <string name="ticker_new_nearby">¡Nuevos platos añadidos cerca de ti!</string>
@@ -144,6 +145,7 @@
     <plurals name="votes_count">
         <item quantity="one">%1$s voto</item>
         <item quantity="other">%1$s votos</item>
+        <item quantity="many">%1$s votos</item>
     </plurals>
 
     <!-- Categorias de plato -->
@@ -286,6 +288,7 @@
     <plurals name="det_repeat_count">
         <item quantity="one">👍 %1$d de %2$d lo repetiría</item>
         <item quantity="other">👍 %1$d de %2$d lo repetirían</item>
+        <item quantity="many">👍 %1$d de %2$d lo repetirían</item>
     </plurals>
 
     <!-- Errores -->
@@ -504,4 +507,263 @@
     <string name="vp_already_rated">Ya valorados aquí · toca uno si es el tuyo</string>
     <string name="vp_or_by_name">o búscalo por nombre</string>
     <string name="vp_use_location">usar mi ubicación</string>
+
+    <!-- Privacidad -->
+    <string name="pp_title">Política de Privacidad</string>
+    <string name="pp_updated">Última actualización: octubre 2026</string>
+    <string name="pp_0_t">0. Quién es responsable de tus datos</string>
+    <string name="pp_0_b">FoodRanker es una aplicación desarrollada y mantenida por un particular, no por una empresa.\n\nPara cualquier asunto relacionado con tus datos personales, incluido el ejercicio de los derechos descritos más abajo, el punto de contacto es foodranker.app@gmail.com.</string>
+    <string name="pp_1_t">1. Información que recopilamos</string>
+    <string name="pp_1_b">Al usar FoodRanker recopilamos:\n\n• Datos de tu cuenta de Google (nombre, dirección de correo y foto de perfil) al iniciar sesión.\n• Fotos que subes voluntariamente de platos de comida.\n• Valoraciones, comentarios y el nombre y dirección del local que indicas al publicar un plato.\n• Tu ubicación aproximada o precisa, solo si nos das permiso y solo mientras buscas locales cercanos (ver el punto 2).\n• Un identificador del dispositivo para enviarte notificaciones (token de Firebase Cloud Messaging).\n• El idioma de tu dispositivo, para escribirte las notificaciones en él.\n• Datos de uso y de diagnóstico: pantallas visitadas, eventos básicos e informes de fallos.</string>
+    <string name="pp_2_t">2. Ubicación</string>
+    <string name="pp_2_b">FoodRanker pide permiso de ubicación con un único fin: encontrar los locales que tienes cerca cuando publicas un plato, para que no tengas que escribir la dirección a mano.\n\n• El permiso es opcional. Si lo rechazas, puedes seguir usando la app y buscar el local escribiendo su nombre.\n• La ubicación se usa en el momento de la búsqueda y se envía a Google Places para obtener la lista de locales cercanos.\n• No guardamos tu ubicación ni construimos un historial de dónde has estado.\n• Lo que sí queda guardado es el local que tú eliges y la ciudad de ese local, porque son parte del plato que publicas y se muestran públicamente.</string>
+    <string name="pp_3_t">3. Cómo usamos tu información</string>
+    <string name="pp_3_b">Usamos tus datos para:\n\n• Mostrar tu perfil y tus platos publicados en la app.\n• Permitir que otros usuarios vean tus valoraciones y fotos.\n• Calcular el ranking de platos de tu ciudad y la liga semanal.\n• Enviarte notificaciones sobre likes y valoraciones en tus platos.\n• Detectar fallos y entender qué partes de la app se usan, para mejorarla.</string>
+    <string name="pp_4_t">4. Qué NO hacemos</string>
+    <string name="pp_4_b">• No vendemos tus datos personales ni los cedemos a terceros con fines comerciales.\n• No publicamos tu dirección de correo. El correo se queda en el sistema de autenticación de Google y no se guarda en la base de datos que consultan otros usuarios, así que nadie puede verlo desde la app.\n• No guardamos tu ubicación ni te seguimos en segundo plano.</string>
+    <string name="pp_5_t">5. Fotos que subes y revisión automática</string>
+    <string name="pp_5_b">Al subir una foto confirmas que:\n\n• Eres el propietario de la imagen o tienes permiso para publicarla.\n• Autorizas a FoodRanker a mostrarla dentro de la app.\n\nAntes de publicarse, cada foto se analiza automáticamente con Google Cloud Vision para comprobar que es comida y que no tiene contenido inapropiado. Si no lo es, se rechaza y no se publica. Este análisis es automático y ninguna persona revisa la imagen en ese paso.\n\nLas fotos publicadas se almacenan en Cloudinary y son visibles públicamente dentro de la app.</string>
+    <string name="pp_6_t">6. Servicios de terceros</string>
+    <string name="pp_6_b">FoodRanker utiliza los siguientes servicios, cada uno con su propia política de privacidad:\n\n• Firebase (Google) — inicio de sesión, base de datos, funciones de servidor, notificaciones push, estadísticas de uso (Analytics), informes de fallos (Crashlytics) y configuración remota.\n• Google Places y servicios de ubicación (Google) — búsqueda de locales cercanos y ficha del local.\n• Google Cloud Vision (Google) — revisión automática de las fotos.\n• Cloudinary — almacenamiento de las imágenes publicadas.\n• Google AdMob (Google) — publicidad. Puede recopilar identificadores del dispositivo para mostrar anuncios, según su propia política.\n• Google Play Facturación (Google) — gestión de la suscripción Premium. El pago lo procesa Google Play; FoodRanker no recibe ni almacena datos de tu tarjeta.\n\nTe recomendamos revisar las políticas de privacidad de cada servicio.</string>
+    <string name="pp_7_t">7. Publicidad</string>
+    <string name="pp_7_b">La app muestra anuncios a través de Google AdMob. Si te suscribes a Premium, los anuncios dejan de mostrarse. AdMob puede usar identificadores de tu dispositivo para personalizar los anuncios; puedes limitarlo desde los ajustes de privacidad de Android de tu teléfono.</string>
+    <string name="pp_8_t">8. Seguridad</string>
+    <string name="pp_8_b">Tomamos medidas razonables para proteger tu información. El acceso a tu cuenta está protegido por Google Sign-In, y los datos que solo debe escribir el servidor (puntuaciones, XP, estado Premium) no se pueden modificar desde la app. Aun así, ningún sistema es infalible.</string>
+    <string name="pp_9_t">9. Conservación y eliminación de datos</string>
+    <string name="pp_9_b">Conservamos tus datos mientras tengas la cuenta activa.\n\n• Puedes borrar cualquier plato o valoración que hayas publicado en cualquier momento.\n• Puedes eliminar tu cuenta desde tu perfil. Al hacerlo se borran tu perfil, tus platos, tus valoraciones, tus comentarios y tus guardados.\n• Los informes de fallos y las estadísticas de uso son anónimos o agregados y pueden conservarse según los plazos de Firebase.</string>
+    <string name="pp_10_t">10. Tus derechos</string>
+    <string name="pp_10_b">Puedes en cualquier momento:\n\n• Acceder a tus datos y corregir tu perfil desde la app.\n• Retirar el permiso de ubicación o de notificaciones desde los ajustes de Android.\n• Eliminar los platos y valoraciones que hayas publicado.\n• Eliminar tu cuenta y todos tus datos desde tu perfil, o escribiendo a: foodranker.app@gmail.com\n\nSi resides en el Espacio Económico Europeo o en el Reino Unido, tienes además derecho a solicitar una copia de tus datos, a oponerte a su tratamiento y a presentar una reclamación ante tu autoridad de protección de datos: la AEPD en España, la ICO en el Reino Unido.</string>
+    <string name="pp_11_t">11. Menores de edad</string>
+    <string name="pp_11_b">FoodRanker no está dirigida a menores de 13 años. No recopilamos intencionadamente datos de menores. Si crees que un menor nos ha facilitado datos, escríbenos y los eliminaremos.</string>
+    <string name="pp_12_t">12. Cambios en esta política</string>
+    <string name="pp_12_b">Podemos actualizar esta política ocasionalmente. Te notificaremos sobre cambios significativos. El uso continuado de la app implica la aceptación de la política actualizada.</string>
+    <string name="pp_13_t">13. Contacto</string>
+    <string name="pp_13_b">Si tienes preguntas sobre esta política de privacidad, escríbenos a:\n\nfoodranker.app@gmail.com</string>
+    <string name="legal_back">Volver</string>
+
+    <!-- Terminos de uso -->
+    <string name="tos_updated">Última actualización: octubre 2026</string>
+    <string name="tos_1_t">1. Aceptación de los términos</string>
+    <string name="tos_1_b">Al usar FoodRanker aceptas estos términos. Si no estás de acuerdo, no uses la aplicación. Nos reservamos el derecho de modificarlos en cualquier momento, notificándote previamente.</string>
+    <string name="tos_2_t">2. Descripción del servicio</string>
+    <string name="tos_2_b">FoodRanker es una plataforma para descubrir, compartir y puntuar platos de comida de todo el mundo. Permite subir fotos, añadir valoraciones y descubrir los mejores platos de tu ciudad y del mundo.</string>
+    <string name="tos_3_t">3. Edad mínima</string>
+    <string name="tos_3_b">Para usar FoodRanker debes tener al menos 13 años. Si eres menor de edad en tu país, necesitas el consentimiento de un padre, madre o tutor.</string>
+    <string name="tos_4_t">4. Contenido del usuario</string>
+    <string name="tos_4_b">Al publicar contenido en FoodRanker declaras que:\n\n• El contenido es tuyo o tienes permiso para publicarlo.\n• Las fotos son de platos de comida reales.\n• La información sobre el restaurante y el plato es veraz.\n• No publicas contenido ofensivo, ilegal o engañoso.\n\nNos reservamos el derecho de eliminar cualquier contenido que incumpla estas normas.</string>
+    <string name="tos_5_t">5. Contenido prohibido</string>
+    <string name="tos_5_b">Está prohibido publicar:\n\n• Fotos que no sean de comida o platos.\n• Contenido sexual, violento u ofensivo.\n• Información falsa sobre restaurantes.\n• Spam o contenido promocional no autorizado.\n• Contenido que infrinja derechos de autor.\n\nLas infracciones pueden resultar en la suspensión permanente de la cuenta.</string>
+    <string name="tos_6_t">6. Revisión automática y sistema de reportes</string>
+    <string name="tos_6_b">Antes de publicarse, cada foto se revisa automáticamente para comprobar que es comida y que no contiene material inapropiado. Si no lo es, se rechaza y el plato no se publica.\n\nAdemás, los usuarios pueden reportar contenido inapropiado. Los platos con 3 o más reportes se ocultan automáticamente mientras se revisan. El abuso del sistema de reportes puede resultar en la suspensión de la cuenta.</string>
+    <string name="tos_7_t">7. Sistema de recompensas</string>
+    <string name="tos_7_b">El sistema de XP, niveles, badges, ligas y retos es de carácter informativo y no tiene valor monetario ni puede canjearse por dinero o premios. Nos reservamos el derecho de modificar o eliminar el sistema de recompensas en cualquier momento.</string>
+    <string name="tos_8_t">8. Publicidad</string>
+    <string name="tos_8_b">La versión gratuita de FoodRanker muestra anuncios servidos por Google AdMob. Los anuncios son de terceros: no controlamos su contenido ni respaldamos los productos que aparecen en ellos.</string>
+    <string name="tos_9_t">9. Suscripción Premium</string>
+    <string name="tos_9_b">FoodRanker ofrece una suscripción opcional que elimina los anuncios y añade un distintivo en tu perfil.\n\n• El precio y la periodicidad se muestran en la app antes de confirmar la compra, y los cobra Google Play en la moneda de tu país.\n• La suscripción se renueva automáticamente hasta que la canceles.\n• Puedes cancelarla en cualquier momento desde Google Play (Suscripciones). La cancelación evita el siguiente cobro; el periodo ya pagado se mantiene hasta su fin.\n• Las devoluciones se rigen por la política de Google Play. FoodRanker no procesa pagos ni tiene acceso a tus datos bancarios.\n• Si la suscripción caduca, tu cuenta y tu contenido siguen intactos: solo vuelven los anuncios.</string>
+    <string name="tos_10_t">10. Limitación de responsabilidad</string>
+    <string name="tos_10_b">FoodRanker no verifica la exactitud de la información publicada por los usuarios. La información sobre restaurantes y platos es responsabilidad de quien la publica. No somos responsables de experiencias negativas basadas en el contenido de la app.</string>
+    <string name="tos_11_t">11. Propiedad intelectual</string>
+    <string name="tos_11_b">FoodRanker y su logo son propiedad de sus creadores. El contenido publicado por usuarios (fotos, textos) sigue siendo propiedad del usuario, quien concede a FoodRanker una licencia no exclusiva para almacenarlo y mostrarlo dentro de la app. Esa licencia termina cuando borras el contenido o tu cuenta.</string>
+    <string name="tos_12_t">12. Eliminación de cuenta</string>
+    <string name="tos_12_b">Puedes eliminar tu cuenta desde tu perfil en cualquier momento. Al hacerlo se borran permanentemente tu perfil, tus platos, tus valoraciones, tus comentarios y tus guardados. Eliminar la cuenta no cancela por sí solo una suscripción activa: hazlo desde Google Play.</string>
+    <string name="tos_13_t">13. Ley aplicable</string>
+    <string name="tos_13_b">Estos términos se rigen por la legislación española. Si alguna cláusula resultara inválida, el resto seguirá siendo aplicable. Si eres consumidor, esto no afecta a los derechos que te reconozca la legislación de tu país de residencia.</string>
+    <string name="tos_14_t">14. Contacto</string>
+    <string name="tos_14_b">Para cualquier consulta sobre estos términos:\n\nfoodranker.app@gmail.com</string>
+
+    <!-- Notificaciones (mismo texto que las Cloud Functions) -->
+    <string name="notif_from_somebody">Alguien</string>
+    <string name="notif_your_plate">tu plato</string>
+    <string name="notif_like_t">❤️ Nuevo me gusta</string>
+    <string name="notif_like_b">%1$s le ha dado like a «%2$s»</string>
+    <string name="notif_rating_t">⭐ Nueva valoración</string>
+    <string name="notif_rating_b">%1$s ha valorado «%2$s» con %3$s</string>
+    <string name="notif_comment_t">💬 Nuevo comentario</string>
+    <string name="notif_comment_b">%1$s en «%2$s»: %3$s</string>
+    <string name="notif_comment_b_plain">%1$s ha comentado «%2$s»</string>
+    <string name="notif_follow_t">✨ Nuevo seguidor</string>
+    <string name="notif_follow_b">%1$s ha empezado a seguirte</string>
+    <string name="notif_newplate_t">🍽️ Plato nuevo</string>
+    <string name="notif_newplate_b">%1$s ha publicado «%2$s»</string>
+    <string name="notif_approved_t">✅ Tu plato ya está publicado</string>
+    <string name="notif_approved_b">«%1$s» ya aparece en el ranking.</string>
+    <string name="notif_rejected_t">Plato no aprobado</string>
+    <string name="notif_rejected_b">«%1$s» no cumple las normas de la comunidad.</string>
+    <string name="notif_level_t">🎉 Has subido de nivel</string>
+    <string name="notif_level_b">Ya eres %1$s</string>
+    <string name="notif_badge_t">🏅 Logro desbloqueado</string>
+    <string name="notif_badge_b">Has conseguido %1$s</string>
+    <string name="notif_league_t">%1$s Has quedado %2$dº en la liga</string>
+    <string name="notif_league_b_win">Ganaste la liga semanal.</string>
+    <string name="notif_league_b_other">La liga vuelve a empezar hoy.</string>
+
+    <!-- Canales de notificacion y recordatorio diario -->
+    <string name="chan_social_t">Likes y valoraciones</string>
+    <string name="chan_social_d">Alguien ha valorado o dado like a tus platos</string>
+    <string name="chan_moder_t">Moderación de platos</string>
+    <string name="chan_moder_d">Estado de tus platos enviados</string>
+    <string name="chan_daily_t">Recordatorio diario</string>
+    <string name="chan_daily_d">Recordatorio para votar platos cada día</string>
+    <string name="rem_1_t">¿Qué has comido hoy? 🍽️</string>
+    <string name="rem_1_b">Comparte tu mejor plato y suma XP</string>
+    <string name="rem_2_t">¡Hora del almuerzo! 🌟</string>
+    <string name="rem_2_b">Descubre los mejores platos del mundo en FoodRanker</string>
+    <string name="rem_3_t">¿Has probado algo nuevo? 🌍</string>
+    <string name="rem_3_b">Valora y comparte tu experiencia gastronómica</string>
+    <string name="rem_4_t">El plato del día te espera 🏆</string>
+    <string name="rem_4_b">¿Cuál es el mejor plato que has comido esta semana?</string>
+    <string name="rem_5_t">¡Sube de nivel! ⭐</string>
+    <string name="rem_5_b">Publica un plato hoy y gana XP en FoodRanker</string>
+
+    <!-- Resumen de un grupo de notificaciones -->
+    <plurals name="notif_group_summary">
+        <item quantity="one">%1$d novedad</item>
+        <item quantity="other">%1$d novedades</item>
+        <item quantity="many">%1$d novedades</item>
+    </plurals>
+
+    <!-- Mensajes de los ViewModels -->
+    <string name="vm_venues_nearby_fail">No se pudieron buscar locales cerca. Prueba a buscarlo por nombre.</string>
+    <string name="vm_venue_search_fail">No se pudo buscar el local. Revisa tu conexión.</string>
+    <string name="vm_venue_pick_fail">No se pudo seleccionar ese local. Inténtalo de nuevo.</string>
+    <string name="vm_need_login">Debes iniciar sesión</string>
+    <string name="vm_pick_restaurant">Elige primero el restaurante</string>
+    <string name="vm_name_required">El nombre del plato es obligatorio</string>
+    <string name="vm_name_invalid">Ese nombre de plato no es válido</string>
+    <string name="vm_daily_limit">Has alcanzado el límite de %1$d platos por día</string>
+    <string name="vm_photo_required">La foto es obligatoria</string>
+    <string name="vm_unsaved">Eliminado de guardados</string>
+    <string name="vm_saved">🔖 Guardado en tu colección</string>
+    <string name="vm_save_fail">No se pudo actualizar tus guardados</string>
+    <string name="vm_already_reported_plate">Ya has reportado este plato anteriormente</string>
+    <string name="vm_already_reported_rating">Ya has reportado esta valoración anteriormente</string>
+    <string name="vm_already_reported_comment">Ya has reportado este comentario anteriormente</string>
+    <string name="vm_report_sent">Reporte enviado. Gracias por ayudarnos a mantener la comunidad.</string>
+    <string name="vm_plate_invalid">Plato no válido</string>
+    <string name="vm_already_rated">Ya valoraste este plato</string>
+    <string name="vm_rating_updated">¡Valoración actualizada!</string>
+    <string name="vm_ad_xp_ok">¡+50 XP ganados por ver el anuncio! ⭐</string>
+    <string name="vm_ad_xp_done">Ya has ganado XP por un anuncio hoy. Vuelve a intentarlo más tarde.</string>
+    <string name="vm_user_invalid">Usuario no válido</string>
+    <string name="vm_no_permission_delete">No tienes permiso para eliminar este plato</string>
+    <string name="vm_delete_account_fail">Error al eliminar la cuenta</string>
+    <string name="vm_a_friend">Un amigo</string>
+    <string name="vm_code_copied">Código copiado al portapapeles</string>
+    <string name="sort_score">Mejor puntuación</string>
+    <string name="sort_recent">Más recientes</string>
+    <string name="sort_ratings">Más valorados</string>
+    <string name="sort_likes">Más likes</string>
+
+    <!-- Pantallas pequenas y componentes -->
+    <string name="cd_unlike">Quitar me gusta</string>
+    <string name="cd_like">Me gusta</string>
+    <string name="cd_plate_photo">Foto del plato</string>
+    <string name="ch_weekly">RETO SEMANAL</string>
+    <string name="ch_days_left">%1$dd restantes</string>
+    <string name="ch_done">✓ Completado</string>
+    <string name="ch_post_xp">Publicar · +%1$d XP</string>
+    <string name="nb_title">Qué pido aquí</string>
+    <string name="tos_screen_title">Términos de Servicio</string>
+    <string name="tr_title">🔥 Tendencias</string>
+    <string name="tr_empty_hint">Vuelve cuando haya más likes y valoraciones</string>
+    <string name="fl_no_followers">Aún nadie sigue este perfil</string>
+    <string name="fl_no_following">No sigue a nadie por ahora</string>
+    <string name="fl_will_appear">Cuando cambie la actividad, verás aquí la lista.</string>
+    <string name="fl_view_profile">Ver perfil</string>
+
+    <!-- Seguidores, Premium y liga -->
+    <string name="prm_no_ads">Sin anuncios</string>
+    <string name="prm_double_plates">Publica hasta el doble de platos</string>
+    <string name="prm_thanks">🎉 ¡Eres Premium! Gracias por apoyar FoodRanker</string>
+    <string name="prm_watch_ad">📺 Ver anuncio — 24h sin anuncios</string>
+    <string name="prm_subscribe">⭐ Suscribirse — %1$s</string>
+    <string name="lg_week_n">Semana %1$s</string>
+    <string name="lg_title_global">⚔️ Liga semanal  ·  %1$s</string>
+    <string name="lg_title_city">⚔️ Liga %1$s  ·  %2$s</string>
+    <string name="lg_nobody_voted">Nadie ha votado aún esta semana en %1$s.\n¡Sé el primero!</string>
+    <string name="lg_gap_top3">Te faltan %1$d XP para el Top 3</string>
+
+    <!-- Pantalla Explorar -->
+    <string name="ex_toggle_view">Cambiar vista</string>
+    <string name="ex_search_hint">Buscar plato, restaurante o ciudad...</string>
+    <string name="ex_tab_plates">🍽️ Platos</string>
+    <string name="ex_tab_people">👤 Personas</string>
+    <string name="ex_no_results">Sin resultados</string>
+    <string name="ex_try_username">Prueba a buscar por nombre de usuario.</string>
+    <string name="ex_searching">Buscando...</string>
+    <string name="ex_nothing_here">Nada que mostrar aquí</string>
+    <string name="ex_check_spelling">Prueba con otro término o revisa la ortografía de «%1$s».</string>
+    <string name="ex_change_category">Cambia de categoría o usa la búsqueda para descubrir platos.</string>
+
+    <!-- Cuantos platos ha encontrado la busqueda -->
+    <plurals name="ex_found">
+        <item quantity="one">%1$s plato encontrado</item>
+        <item quantity="other">%1$s platos encontrados</item>
+        <item quantity="many">%1$s platos encontrados</item>
+    </plurals>
+
+    <!-- Pantalla de Perfil -->
+    <string name="prof_tab_my_plates">Mis platos (%1$d)</string>
+    <string name="prof_tab_saved">Guardados (%1$d)</string>
+    <string name="prof_tab_lists">Listas (%1$d)</string>
+    <string name="prof_my_lists">Mis listas</string>
+    <string name="prof_plates_load_fail">No se pudieron cargar los platos</string>
+    <string name="prof_delete_list_detail">Se eliminará la lista «%1$s». Los platos no se borrarán, solo dejarán de estar en esta lista.</string>
+    <string name="prof_new_list_title">Nueva lista</string>
+    <string name="prof_list_name">Nombre de la lista</string>
+    <string name="prof_delete_plate_detail">Se borrará «%1$s» junto con su foto y las valoraciones que haya recibido. Esta acción no se puede deshacer.</string>
+    <string name="prof_xp_to_go">solo %1$d XP más</string>
+
+    <!-- Perfil: borrado de cuenta y descripcion de plato -->
+    <string name="prof_plate_desc_hint">¿Qué lo hace especial?</string>
+    <string name="prof_plate_desc">Descripción</string>
+    <string name="prof_bio_label">Bio</string>
+
+    <!-- Pantalla de invitaciones -->
+    <string name="ref_title">Invita amigos</string>
+    <string name="ref_headline">Invita amigos a FoodRanker</string>
+    <string name="ref_sub">Gana XP por cada amigo que se une\ny sube de nivel más rápido</string>
+    <string name="ref_xp_earned">XP ganados</string>
+    <string name="ref_your_code">Tu código de invitación</string>
+    <string name="ref_step1_d">Envía tu código a amigos foodies</string>
+    <string name="ref_step2_t">Ellos se registran</string>
+    <string name="ref_step2_d">Usan tu código al crear su cuenta</string>
+    <string name="ref_step3_d">Tú ganas 100 XP y tu amigo 50 XP de bienvenida</string>
+
+    <!-- Ficha de plato, validacion de foto y subida -->
+    <string name="det_saved_by">🔖 Guardado por (%1$d)</string>
+    <string name="det_tasted_intro">Las notas de FoodRanker son de quien se lo ha comido de verdad.</string>
+    <string name="img_read_fail">No se pudo leer la imagen 📸</string>
+    <string name="img_inappropriate">Contenido inapropiado detectado ⚠️\nEsta foto no cumple nuestras normas de comunidad</string>
+    <string name="img_not_food">No hemos detectado comida en esta foto 🍽️\nPor favor sube una foto de un plato real</string>
+    <string name="img_url_fail">No se pudo obtener la URL de la imagen</string>
+
+    <!-- Textos para compartir -->
+    <string name="share_profile_text">🍽️ Sigue el perfil de %1$s en FoodRanker\n%2$s\n\n#FoodRanker</string>
+    <string name="share_profile_subject">%1$s en FoodRanker</string>
+    <string name="share_profile_chooser">Compartir perfil</string>
+    <string name="share_chooser">Compartir en...</string>
+    <string name="share_plate_chooser">Compartir plato</string>
+    <string name="share_plate_text">🍽️ ¡Descubrí «%1$s» en %2$s!\n📍 %3$s, %4$s\n★ Puntuación: %5$s/10 (%6$s)\n\nDescúbrelo y valóralo en FoodRanker 👇\n%7$s\n\n#FoodRanker #%8$s #%9$s</string>
+    <string name="share_referral_text">👋 ¡%1$s te invita a FoodRanker!\n\n🍽️ Descubre y valora los mejores platos del mundo.\nUsa mi código de invitación: %2$s\n\nDescárgala aquí 👇\n%3$s\n\n#FoodRanker #Gastronomia</string>
+
+    <!-- Cuantas valoraciones, dentro del texto para compartir -->
+    <plurals name="share_ratings">
+        <item quantity="one">%1$d valoración</item>
+        <item quantity="other">%1$d valoraciones</item>
+        <item quantity="many">%1$d valoraciones</item>
+    </plurals>
+
+    <!-- Precio de Premium -->
+    <string name="prm_per_month">%1$s/mes</string>
+    <string name="prm_subscribe_plain">⭐ Suscribirse</string>
+
+    <!-- Palabras sueltas de la UI -->
+    <string name="ex_title">Explorar</string>
+    <string name="ex_sort">Ordenar</string>
+    <string name="ex_clear">Limpiar</string>
+    <string name="ex_all">Todos</string>
+    <string name="action_refresh">Actualizar</string>
+    <string name="prof_web_hint">instagram.com/tu_usuario</string>
 </resources>

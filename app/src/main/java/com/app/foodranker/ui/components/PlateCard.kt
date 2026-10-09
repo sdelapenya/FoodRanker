@@ -35,6 +35,8 @@ import com.app.foodranker.ui.theme.TextSecondary
 import com.app.foodranker.ui.theme.cardGradient
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 
 
 @Composable
@@ -302,7 +304,9 @@ private fun LikeRowSmall(likes: Int, isLiked: Boolean, onLike: () -> Unit) {
         ) {
             Icon(
                 imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = if (isLiked) "Quitar me gusta" else "Me gusta",
+                contentDescription = stringResource(
+                    if (isLiked) R.string.cd_unlike else R.string.cd_like
+                ),
                 tint = heartColor,
                 modifier = Modifier.size(22.dp).scale(likeScale)
             )

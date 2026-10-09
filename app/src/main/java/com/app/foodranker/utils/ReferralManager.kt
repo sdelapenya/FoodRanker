@@ -6,6 +6,8 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.content.Context
+import com.app.foodranker.R
 
 @Singleton
 class ReferralManager @Inject constructor(
@@ -66,13 +68,13 @@ class ReferralManager @Inject constructor(
         }
     }
 
-    fun buildReferralShareText(code: String, userName: String): String =
-        "👋 ¡$userName te invita a FoodRanker!\n\n" +
-        "🍽️ Descubre y valora los mejores platos del mundo.\n" +
-        "Usa mi código de invitación: $code\n\n" +
-        "Descárgala aquí 👇\n" +
-        "https://foodranker.app/invite/$code\n\n" +
-        "#FoodRanker #Gastronomia"
+    fun buildReferralShareText(context: Context, code: String, userName: String): String =
+        context.getString(
+            R.string.share_referral_text,
+            userName,
+            code,
+            "https://foodranker.app/invite/$code"
+        )
 
     private fun generateCode(): String = UUID.randomUUID().toString()
         .replace("-", "").take(10).uppercase()

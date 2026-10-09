@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.viewmodel.ChallengeViewModel
+import androidx.compose.ui.res.stringResource
+import com.app.foodranker.R
 
 @Composable
 fun ChallengeBanner(
@@ -48,12 +50,14 @@ fun ChallengeBanner(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Surface(shape = RoundedCornerShape(8.dp), color = OrangePrimary) {
                             Text(
-                                "RETO SEMANAL",
+                                stringResource(R.string.ch_weekly),
                                 fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color.White,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
-                        Text("${challenge.daysLeft}d restantes", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
+                        Text(
+                            stringResource(R.string.ch_days_left, challenge.daysLeft),
+                            fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(challenge.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
@@ -63,7 +67,7 @@ fun ChallengeBanner(
                     if (uiState.isParticipating) {
                         Surface(shape = RoundedCornerShape(8.dp), color = SuccessGreen) {
                             Text(
-                                "✓ Completado",
+                                stringResource(R.string.ch_done),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
@@ -78,7 +82,7 @@ fun ChallengeBanner(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Text(
-                                "Publicar · +${challenge.xpReward} XP",
+                                stringResource(R.string.ch_post_xp, challenge.xpReward),
                                 color = OrangePrimary,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 11.sp

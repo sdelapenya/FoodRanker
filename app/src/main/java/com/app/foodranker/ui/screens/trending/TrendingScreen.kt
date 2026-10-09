@@ -54,14 +54,14 @@ fun TrendingScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "🔥 Tendencias",
+                        stringResource(R.string.tr_title),
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = TextPrimary)
                     }
                 },
                 actions = {
@@ -290,7 +290,7 @@ private fun TrendingEmpty() {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Vuelve cuando haya más likes y valoraciones",
+                stringResource(R.string.tr_empty_hint),
                 color = TextSecondary,
                 fontSize = 13.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

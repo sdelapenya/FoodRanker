@@ -23,16 +23,25 @@ object NotificationHelper {
     fun createChannels(context: Context) {
         val nm = manager(context)
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_SOCIAL, "Likes y valoraciones", NotificationManager.IMPORTANCE_DEFAULT)
-                .apply { description = "Alguien ha valorado o dado like a tus platos" }
+            NotificationChannel(
+                CHANNEL_SOCIAL,
+                context.getString(R.string.chan_social_t),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply { description = context.getString(R.string.chan_social_d) }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_MODERATION, "Moderación de platos", NotificationManager.IMPORTANCE_HIGH)
-                .apply { description = "Estado de tus platos enviados" }
+            NotificationChannel(
+                CHANNEL_MODERATION,
+                context.getString(R.string.chan_moder_t),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply { description = context.getString(R.string.chan_moder_d) }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_DAILY, "Recordatorio diario", NotificationManager.IMPORTANCE_LOW)
-                .apply { description = "Recordatorio para votar platos cada día" }
+            NotificationChannel(
+                CHANNEL_DAILY,
+                context.getString(R.string.chan_daily_t),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { description = context.getString(R.string.chan_daily_d) }
         )
     }
 
@@ -98,8 +107,12 @@ object NotificationHelper {
         val resumen = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(ContextCompat.getColor(context, R.color.notification_color))
-            .setContentTitle(tituloDeCanal(channelId))
-            .setContentText("$enElGrupo novedades")
+            .setContentTitle(tituloDeCanal(context, channelId))
+            .setContentText(
+                context.resources.getQuantityString(
+                    R.plurals.notif_group_summary, enElGrupo, enElGrupo
+                )
+            )
             .setGroup(channelId)
             .setGroupSummary(true)
             .setAutoCancel(true)
@@ -107,10 +120,10 @@ object NotificationHelper {
         nm.notify(resumenId, resumen)
     }
 
-    private fun tituloDeCanal(channelId: String) = when (channelId) {
-        CHANNEL_MODERATION -> "Moderación de platos"
-        CHANNEL_DAILY      -> "Recordatorio diario"
-        else               -> "FoodRanker"
+    private fun tituloDeCanal(context: Context, channelId: String) = when (channelId) {
+        CHANNEL_MODERATION -> context.getString(R.string.chan_moder_t)
+        CHANNEL_DAILY      -> context.getString(R.string.chan_daily_t)
+        else               -> context.getString(R.string.app_name)
     }
 
     private fun manager(context: Context) =
