@@ -50,13 +50,19 @@ class NotificationRepository @Inject constructor(
                             val plateName = data["plateName"] as? String
                                 ?: context.getString(R.string.notif_your_plate)
                             val plateId = data["plateId"] as? String
+                            fun txt(id: Int, vararg args: Any) =
+                                context.getString(id, *args)
                             // Esta lista tiene que cubrir TODOS los tipos que crea el
                             // servidor. Es un camino paralelo al push de FCM, y lo que no
                             // esté aquí se descarta sin dejar rastro: así los comentarios
                             // aparecían en la campana pero no avisaban de nada (reportado
                             // por un tester). Al añadir un tipo nuevo, añadirlo también aquí.
-                            fun txt(id: Int, vararg args: Any) =
-                                context.getString(id, *args)
+                            //
+                            // ⚠️ Y el texto tiene que ser IDÉNTICO al de TEXTOS en
+                            // functions/src/index.ts: el id del aviso sale del hash del
+                            // propio texto (ver NotificationHelper.show), así que si los
+                            // dos caminos redactan distinto el mismo hecho se ve DOS veces.
+                            // Lo vigila tools/i18n/check_notif_parity.py.
                             val (title, body) = when (type) {
                                 "like" -> txt(R.string.notif_like_t) to
                                         txt(R.string.notif_like_b, fromUser, plateName)
@@ -92,7 +98,7 @@ class NotificationRepository @Inject constructor(
                                     val medalla = if (puesto == 1) "🥇" else "🏅"
                                     txt(R.string.notif_league_t, medalla, puesto) to
                                             if (puesto == 1) txt(R.string.notif_league_b_win)
-                                            else txt(R.string.notif_league_b_other)
+                                            else txt(R.string.notif_league_b_other, puesto)
                                 }
                                 else -> return@forEach
                             }

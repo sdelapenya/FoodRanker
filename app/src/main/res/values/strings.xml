@@ -574,27 +574,27 @@
     <string name="notif_from_somebody">Someone</string>
     <string name="notif_your_plate">your dish</string>
     <string name="notif_like_t">❤️ New like</string>
-    <string name="notif_like_b">%1$s liked “%2$s”</string>
+    <string name="notif_like_b">%1$s liked \"%2$s\"</string>
     <string name="notif_rating_t">⭐ New rating</string>
-    <string name="notif_rating_b">%1$s rated “%2$s” %3$s</string>
+    <string name="notif_rating_b">%1$s rated \"%2$s\" %3$s</string>
     <string name="notif_comment_t">💬 New comment</string>
-    <string name="notif_comment_b">%1$s on “%2$s”: %3$s</string>
-    <string name="notif_comment_b_plain">%1$s commented on “%2$s”</string>
+    <string name="notif_comment_b">%1$s on \"%2$s\": %3$s</string>
+    <string name="notif_comment_b_plain">%1$s commented on \"%2$s\"</string>
     <string name="notif_follow_t">✨ New follower</string>
     <string name="notif_follow_b">%1$s started following you</string>
     <string name="notif_newplate_t">🍽️ New dish</string>
-    <string name="notif_newplate_b">%1$s posted “%2$s”</string>
+    <string name="notif_newplate_b">%1$s posted \"%2$s\"</string>
     <string name="notif_approved_t">✅ Your dish is live</string>
-    <string name="notif_approved_b">“%1$s” is now in the ranking.</string>
+    <string name="notif_approved_b">\"%1$s\" is now in the ranking.</string>
     <string name="notif_rejected_t">Dish not approved</string>
-    <string name="notif_rejected_b">“%1$s” does not meet the community rules.</string>
+    <string name="notif_rejected_b">\"%1$s\" does not meet the community rules.</string>
     <string name="notif_level_t">🎉 You levelled up</string>
     <string name="notif_level_b">You are now %1$s</string>
     <string name="notif_badge_t">🏅 Achievement unlocked</string>
     <string name="notif_badge_b">You earned %1$s</string>
-    <string name="notif_league_t">%1$s You finished #%2$d in the league</string>
-    <string name="notif_league_b_win">You won the weekly league.</string>
-    <string name="notif_league_b_other">The league starts again today.</string>
+    <string name="notif_league_t">%1$s You finished %2$d in the league</string>
+    <string name="notif_league_b_win">You won the weekly league. New week, time to defend it.</string>
+    <string name="notif_league_b_other">You finished %1$d this week. The league starts again today.</string>
 
     <!-- Canales de notificacion y recordatorio diario -->
     <string name="chan_social_t">Likes and ratings</string>

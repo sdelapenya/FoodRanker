@@ -1,18 +1,20 @@
 # Comprobaciones de idiomas
 
-Cinco scripts cortos para no publicar la app con un texto suelto o, peor, con una
-cadena que reviente al formatearse en uno de los dos idiomas. Se ejecutan **desde la
-raíz del repo** y no necesitan dependencias:
+Scripts cortos para no publicar la app con un texto suelto o, peor, con una cadena que
+reviente al formatearse en uno de los dos idiomas. Se ejecutan **desde la raíz del repo**
+y no necesitan dependencias:
 
 ```sh
-python -I tools/i18n/check_strings.py     # paridad de claves y marcadores
-python -I tools/i18n/check_args.py        # argumentos suficientes en cada llamada
-python -I tools/i18n/scan_es.py           # literales castellanos en el código
-python -I tools/i18n/scan_ui.py           # literales en posición de UI (cualquier idioma)
-./gradlew assembleDebug                   # hace falta para el siguiente
+python -I tools/i18n/check_strings.py      # paridad de claves y marcadores
+python -I tools/i18n/check_args.py         # argumentos suficientes en cada llamada
+python -I tools/i18n/check_notif_parity.py # app y servidor redactan igual los avisos
+python -I tools/i18n/check_listing.py      # la ficha de Play cabe en los límites
+python -I tools/i18n/scan_es.py            # literales castellanos en el código
+python -I tools/i18n/scan_ui.py            # literales en posición de UI (cualquier idioma)
+./gradlew assembleDebug                    # hace falta para el siguiente
 "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump resources \
     app/build/outputs/apk/debug/app-debug.apk > "$TEMP/res.txt"
-python -I tools/i18n/check_apk.py         # cobertura sobre el APK ya construido
+python -I tools/i18n/check_apk.py          # cobertura sobre el APK ya construido
 ```
 
 `-I` (modo aislado) evita que un `.py` cualquiera del directorio de trabajo se cuele
@@ -30,6 +32,18 @@ que ninguna otra herramienta ve.
 **`check_args.py`.** El compilador no comprueba que `getString`/`stringResource` pase
 tantos argumentos como marcadores tiene la cadena. Si faltan, salta
 `MissingFormatArgumentException` en cuanto se pinta esa pantalla.
+
+**`check_notif_parity.py` — el no evidente.** Un aviso puede llegar por dos caminos: el
+push que redacta Cloud Functions y el escuchador de Firestore que redacta la app. El id de
+la notificación sale del `hashCode()` del propio texto (ver `NotificationHelper.show`),
+justo para que el segundo reemplace al primero en vez de apilarse. **Si una coma cambia en
+un lado, el usuario ve dos avisos del mismo hecho.** No vale comparar plantillas, porque
+una usa `{from}` y la otra `%1$s`: el script rellena las dos con los mismos valores y
+compara el resultado. Al mover estos textos a recursos se colaron comillas tipográficas
+donde el servidor pone rectas, y eso ya bastaba para duplicarlos.
+
+**`check_listing.py`.** Cuenta los caracteres de `docs/play-store-listing.md` contra los
+límites de Play Console, que rechaza el texto al pegarlo.
 
 **`scan_es.py`.** Literales en castellano todavía en el código Kotlin. Separa los que
 solo van a `Log` (que no se traducen) de los visibles. Ignora `SeedData.kt` y

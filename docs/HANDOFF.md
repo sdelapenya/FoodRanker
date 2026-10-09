@@ -15,6 +15,67 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🟥 REPASO DE LA FASE 2: dos fallos propios encontrados y arreglados (2026-10-09)
+
+Al releer el diff con calma salieron **dos cosas que yo mismo había roto** y que ya estaban
+dentro del primer AAB de la v17. El AAB se ha regenerado.
+
+#### 1. La pantalla de liga reventaba al abrirla
+
+```kotlin
+parts[1].takeIf { parts.size == 2 }   // MAL
+```
+
+**El receptor de `takeIf` se evalua ANTES que su condicion.** `weekKey` empieza vacía (su
+valor inicial en `LeagueUiState`) y la cabecera se pinta antes de que cargue la liga, así
+que `"".split("-W")` daba una lista de un elemento y `parts[1]` lanzaba
+`IndexOutOfBoundsException`. **Era un crash garantizado, no un caso raro.** El código
+original compraba el tamaño primero; al pasarlo a recurso me comí esa comprobación.
+
+Arreglado poniendo el `takeIf` sobre la lista, que es el patrón correcto y el que ya usaba
+`DeepLinkParser`:
+
+```kotlin
+weekKey.split("-W").takeIf { it.size == 2 }?.get(1)?.takeIf { it.isNotBlank() }
+```
+
+La lógica sale del composable a `numeroDeSemana()` y tiene cinco pruebas
+(`NumeroDeSemanaTest`). El primer caso, la clave vacía, es exactamente el que fallaba.
+⚠️ **Esto no lo pilló ninguna de las comprobaciones de idiomas, porque no es un problema de
+idiomas**: era lógica cambiada de paso. Las pantallas de dentro necesitan sesión de Google
+y no se pudieron probar en el emulador, así que lo que queda sin test sigue sin red.
+
+#### 2. Cada like y cada comentario se habrían visto DOS veces
+
+Esta es la menos evidente de toda la sesión. **El id de la notificación sale del
+`hashCode()` del propio texto** (`NotificationHelper.show`), a propósito: un aviso llega por
+el push que redacta Cloud Functions **y** por el escuchador de Firestore que redacta la app,
+y en primer plano **los dos dibujan**. Coinciden en el id solo si redactan igual, y entonces
+el segundo reemplaza al primero. Al mover esos textos a recursos les cambié las comillas
+rectas del servidor por tipográficas (`« »`), y con eso el hash ya no coincide: dos
+notificaciones por cada like, comentario, valoración, plato nuevo y resultado de moderación.
+
+Los 22 textos del cliente están ahora alineados **al carácter** con `TEXTOS` de
+`functions/src/index.ts`, y lo vigila `tools/i18n/check_notif_parity.py` (probado al revés:
+con una coma de más, falla). ⚠️ **Una `"` sin escapar en `strings.xml` se la come aapt**
+(abre un tramo literal), así que van como `\"`.
+
+De paso se arreglaron **dos divergencias que venían de antes, no de esta sesión**: el
+cliente decía "Ganaste la liga semanal." y el servidor "Ganaste la liga semanal. Nueva
+semana, a defender el puesto."; y en el otro caso el cliente se dejaba el puesto. O sea que
+**un resultado de liga ya salía duplicado en la v16**, solo que la liga cierra los lunes y
+nadie lo había reportado todavía. `notif_league_b_other` lleva ahora el puesto como
+argumento.
+
+#### Lo que se revisó y estaba bien
+
+El orden de los nueve argumentos de `share_plate_text`; los dos estados vacíos de Explorar;
+las tres claves de perfil que estaban compartidas entre sitios distintos; `DeepLinkParser`
+(ya usaba el patrón correcto); y que los nombres de nivel y logro del aviso salen del campo
+que escribe el servidor en los dos caminos, así que ahí no hay duplicado posible.
+
+---
+
 ### 🟢 v17 (1.4) AAB GENERADO Y FIRMADO — listo para subir (2026-10-09)
 
 `app/build/outputs/bundle/release/app-release.aab`, copiado también a `release/`.

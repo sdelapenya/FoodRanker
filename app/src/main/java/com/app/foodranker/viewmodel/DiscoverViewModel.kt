@@ -309,8 +309,9 @@ class DiscoverViewModel @Inject constructor(
                 _uiState.value.savedPlateIds - plateId
             else
                 _uiState.value.savedPlateIds + plateId,
-            saveFeedback = appContext.getString(R.string.vm_unsaved)
-                               .takeIf { isSaved } ?: appContext.getString(R.string.vm_saved)
+            saveFeedback = appContext.getString(
+                if (isSaved) R.string.vm_unsaved else R.string.vm_saved
+            )
         )
         viewModelScope.launch {
             try {

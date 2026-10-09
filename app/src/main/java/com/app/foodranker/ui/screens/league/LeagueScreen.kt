@@ -41,6 +41,18 @@ import com.app.foodranker.ui.theme.*
 import com.app.foodranker.viewmodel.LeagueViewModel
 import kotlinx.coroutines.delay
 
+/**
+ * El numero de semana de una clave tipo "2026-W41", o null si no la trae.
+ *
+ * Esta fuera del composable para poder probarla: aqui habia un `parts[1].takeIf { ... }`
+ * y el receptor de takeIf se evalua ANTES que su condicion, asi que con weekKey vacia
+ * —su valor inicial, antes de que cargue la liga— indexaba una lista de un elemento y
+ * reventaba la pantalla al abrirla.
+ */
+internal fun numeroDeSemana(weekKey: String): String? =
+    weekKey.split("-W").takeIf { it.size == 2 }?.get(1)?.takeIf { it.isNotBlank() }
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeagueScreen(
@@ -126,9 +138,7 @@ fun LeagueScreen(
                         Spacer(Modifier.height(4.dp))
 
                         val numeroSemana = remember(uiState.weekKey) {
-                            uiState.weekKey.split("-W").let { parts ->
-                                parts[1].takeIf { parts.size == 2 }
-                            }
+                            numeroDeSemana(uiState.weekKey)
                         }
                         val weekLabel = numeroSemana
                             ?.let { stringResource(R.string.lg_week_n, it) }
