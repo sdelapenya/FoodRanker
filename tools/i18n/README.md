@@ -9,6 +9,7 @@ python -I tools/i18n/check_strings.py      # paridad de claves y marcadores
 python -I tools/i18n/check_args.py         # argumentos suficientes en cada llamada
 python -I tools/i18n/check_notif_parity.py # app y servidor redactan igual los avisos
 python -I tools/i18n/check_listing.py      # la ficha de Play cabe en los límites
+python -I tools/i18n/find_unused.py        # claves que no referencia nadie
 python -I tools/i18n/scan_es.py            # literales castellanos en el código
 python -I tools/i18n/scan_ui.py            # literales en posición de UI (cualquier idioma)
 ./gradlew assembleDebug                    # hace falta para el siguiente
@@ -41,6 +42,13 @@ un lado, el usuario ve dos avisos del mismo hecho.** No vale comparar plantillas
 una usa `{from}` y la otra `%1$s`: el script rellena las dos con los mismos valores y
 compara el resultado. Al mover estos textos a recursos se colaron comillas tipográficas
 donde el servidor pone rectas, y eso ya bastaba para duplicarlos.
+
+**`find_unused.py`.** Las claves que no referencia nadie, buscando cada una en todas las
+formas en que se puede usar (`R.string.x`, `R.plurals.x`, `@string/x`, `@plurals/x`) por el
+fuente, los recursos y el manifest — no se fia de la lista de lint. Respeta una lista de
+intocables que el SDK lee por nombre, como `default_web_client_id`. Con `--borrar` las quita
+de los dos `strings.xml`. Importa más de lo normal porque el reductor de recursos está
+apagado: lo que sobre, viaja en el APK.
 
 **`check_listing.py`.** Cuenta los caracteres de `docs/play-store-listing.md` contra los
 límites de Play Console, que rechaza el texto al pegarlo.

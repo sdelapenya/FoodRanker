@@ -1,94 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">FoodRanker</string>
-    <string name="app_tagline">EAT. RATE. REPEAT.</string>
 
     <!-- Navegación -->
-    <string name="nav_discover">Descubrir</string>
-    <string name="nav_explore">Explorar</string>
-    <string name="nav_add">Añadir</string>
     <string name="nav_profile">Perfil</string>
 
     <!-- Acciones comunes -->
-    <string name="action_like">Me gusta</string>
-    <string name="action_rate">Valorar</string>
-    <string name="action_share">Compartir</string>
     <string name="action_save">Guardar</string>
-    <string name="action_report">Reportar</string>
-    <string name="action_comment">Comentar</string>
-    <string name="action_follow">Seguir</string>
-    <string name="action_unfollow">Dejar de seguir</string>
     <string name="action_edit">Editar</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_cancel">Cancelar</string>
-    <string name="action_save_changes">Guardar cambios</string>
     <string name="action_back">Volver</string>
-    <string name="action_next">Siguiente</string>
-    <string name="action_publish">Publicar</string>
     <string name="action_retry">Reintentar</string>
 
     <!-- Errores amigables -->
-    <string name="error_no_internet">Sin conexión a internet. Comprueba tu red e inténtalo de nuevo</string>
-    <string name="error_permission_denied">No tienes permisos para realizar esta acción</string>
-    <string name="error_service_unavailable">Servicio no disponible. Inténtalo en unos minutos</string>
-    <string name="error_timeout">La operación tardó demasiado. Comprueba tu conexión</string>
-    <string name="error_not_found">El contenido ya no existe</string>
-    <string name="error_upload_failed">Error al subir la imagen. Inténtalo de nuevo</string>
-    <string name="error_generic">Algo salió mal. Inténtalo de nuevo</string>
-    <string name="error_login_required">Debes iniciar sesión</string>
-    <string name="error_photo_required">La foto es obligatoria</string>
-    <string name="error_name_required">El nombre del plato es obligatorio</string>
 
     <!-- Empty states -->
-    <string name="empty_feed">¡Añade el primer plato!</string>
-    <string name="empty_feed_subtitle">Pulsa + para empezar</string>
-    <string name="empty_notifications">Sin notificaciones</string>
-    <string name="empty_notifications_subtitle">Cuando alguien interactúe con tus platos aparecerá aquí</string>
-    <string name="empty_following">Aún no sigues a nadie</string>
-    <string name="empty_following_subtitle">Sigue a otros foodies para ver sus platos aquí</string>
-    <string name="empty_plates">Aún no has publicado ningún plato</string>
-    <string name="empty_search">Sin resultados</string>
 
     <!-- Feed -->
-    <string name="feed_for_you">Para ti</string>
     <string name="feed_following">Siguiendo</string>
-    <string name="feed_end_title">¡Has visto todos los platos!</string>
-    <string name="feed_end_subtitle">Vuelve más tarde para descubrir nuevos platos de todo el mundo</string>
-    <string name="feed_shuffle">Volver a mezclar</string>
 
     <!-- Platos -->
-    <string name="plate_publish">Publicar plato 🚀</string>
-    <string name="plate_photo_required">Foto obligatoria *</string>
-    <string name="plate_photo_hint">Una buena foto consigue 5× más likes</string>
-    <string name="plate_map">Ver en mapa</string>
-    <string name="plate_rate_this">Valorar este plato</string>
-    <string name="plate_already_rated">Ya has valorado este plato</string>
 
     <!-- Perfil -->
-    <string name="profile_edit">Editar perfil</string>
-    <string name="profile_bio">Bio</string>
-    <string name="profile_city">Ciudad</string>
-    <string name="profile_website">Web o red social (opcional)</string>
-    <string name="profile_delete_account">Eliminar mi cuenta</string>
-    <string name="profile_delete_confirm">¿Eliminar cuenta?</string>
-    <string name="profile_delete_warning">Esta acción es irreversible. Se borrarán permanentemente todos tus datos</string>
 
     <!-- Premium -->
-    <string name="premium_title">FoodRanker Premium</string>
-    <string name="premium_subtitle">La experiencia gastronómica completa</string>
-    <string name="premium_subscribe">Suscribirse</string>
-    <string name="premium_month">/mes</string>
-    <string name="premium_cancel_anytime">Cancela cuando quieras</string>
-    <string name="premium_watch_ad">📺 Ver anuncio — 24h Premium gratis</string>
-    <string name="premium_active">🎉 ¡Eres Premium! Gracias por apoyar FoodRanker</string>
 
     <!-- Notificaciones -->
-    <string name="notif_liked">le ha dado like a</string>
-    <string name="notif_rated">ha valorado</string>
-    <string name="notif_rejected">Tu plato fue rechazado</string>
 
     <!-- Offline -->
-    <string name="offline_banner">Sin conexión — mostrando datos en caché</string>
 
     <!-- Onboarding -->
     <string name="onb_1_title">Descubre los mejores\nplatos del mundo</string>
@@ -115,7 +55,6 @@
     <string name="nav_ranking">Ranking</string>
     <string name="nav_upload">Subir</string>
     <string name="nav_league">Liga</string>
-    <string name="tab_top">Top</string>
     <string name="tab_nearby">Cerca</string>
     <string name="cd_nearby_dishes">Qué pido aquí</string>
     <string name="cd_search">Buscar</string>
@@ -123,7 +62,6 @@
     <string name="explore_users">Descubrir foodies</string>
     <string name="loading_plates">Cargando platos del mundo…</string>
     <string name="offline_short">Sin conexión</string>
-    <string name="saved_just_now">acabas de guardar</string>
     <string name="mission_title">Misión diaria: mueve el ranking</string>
     <string name="mission_progress">%1$d de %2$d votos hechos · +%3$d XP si terminas hoy</string>
     <string name="mission_cta">Vota %1$d platos hoy y sube en la liga</string>
@@ -223,7 +161,6 @@
     <string name="det_see_less">Ver menos</string>
     <string name="det_view_map">Ver en mapa</string>
     <string name="det_at_venue">📍 en el local</string>
-    <string name="det_rated_at_venue">valorado en el local</string>
     <string name="det_pinch_zoom">Pellizca para hacer zoom</string>
     <string name="det_like">Dar like</string>
     <string name="det_unlike">Quitar like</string>
@@ -243,7 +180,6 @@
     <string name="det_tasted_q">¿Has probado este plato?</string>
     <string name="det_tasted_yes">Sí, lo he probado 🍽️</string>
     <string name="det_tasted_not_yet">Todavía no</string>
-    <string name="det_tasted_rule">Las notas de FoodRanker son de quien se lo ha comido de verdad. </string>
     <string name="det_tasted_hint">Si aún no lo has probado, guárdalo con el marcador 🔖 y lo tendrás en tu perfil para cuando te apetezca.</string>
     <string name="det_what_think">¿Qué te pareció?</string>
     <string name="det_flavor">Sabor</string>
@@ -352,29 +288,20 @@
     <string name="prof_photo">Foto de perfil</string>
     <string name="prof_city">Ciudad</string>
     <string name="prof_city_hint">¿Dónde eres foodie?</string>
-    <string name="prof_bio">Descripción</string>
     <string name="prof_bio_hint">Cuéntanos algo sobre ti...</string>
     <string name="prof_web">Web o red social (opcional)</string>
     <string name="prof_web_invalid">URL no válida</string>
     <string name="prof_save_changes">Guardar cambios</string>
     <string name="prof_understood">Entendido</string>
-    <string name="action_cancel2">Cancelar</string>
     <string name="prof_xp">%1$d XP</string>
     <string name="prof_city_rank_value">#%1$d en %2$s</string>
     <string name="prof_list_plates">%1$d platos</string>
-    <string name="league_title_global">⚔️ Liga semanal  ·  %1$s</string>
-    <string name="league_title_city">⚔️ Liga %1$s  ·  %2$s</string>
-    <string name="league_ends_label">Termina en </string>
-    <string name="league_restart_note">  ·  Reinicia cada lunes</string>
     <string name="league_out_of_top">Estás fuera del Top 20</string>
     <string name="league_out_hint">Vota más platos esta semana para aparecer en el ranking.</string>
     <string name="league_your_position">Tu posición</string>
     <string name="league_voted_today">Votó hoy</string>
     <string name="league_active_week">Activo esta semana</string>
     <string name="league_start_voting">¡Empieza a votar! ⚡</string>
-    <string name="league_empty">Aún no hay nadie en la liga</string>
-    <string name="league_empty_hint">Vota platos esta semana y aparecerás aquí.</string>
-    <string name="league_no_city">Configura tu ciudad en el perfil para entrar en la liga.</string>
 
     <!-- Niveles, logros y resto -->
     <string name="lvl_1">Novato Foodie</string>
@@ -398,15 +325,7 @@
     <string name="prof_public_plates">Platos públicos</string>
     <string name="prof_posts_count">Publicaciones · %1$s</string>
     <string name="prof_delete_bullets">Esta acción es irreversible. Se borrarán permanentemente:\n\n• Tu perfil y foto\n• Todos tus platos publicados\n• Todas tus valoraciones\n• Tu historial de puntuación</string>
-    <string name="prof_delete_list_body">Se eliminará la lista %1$s. Los platos no se borrarán, solo dejarán de estar en esta lista.</string>
-    <string name="prof_delete_plate_body">Se borrará %1$s junto con su foto y las valoraciones que haya recibido. Esta acción no se puede deshacer.</string>
     <string name="prof_badge_times">%1$s ×%2$d</string>
-    <string name="league_load_error">No se pudo cargar la liga. Comprueba tu conexión e inténtalo de nuevo.</string>
-    <string name="league_add_city">Añade tu ciudad en el perfil para participar en la liga local.</string>
-    <string name="league_nobody_city">Nadie ha votado aún esta semana en %1$s.\n¡Sé el primero!</string>
-    <string name="league_vote_now">Votar ahora ⚡</string>
-    <string name="league_keep_top3">¡Sigue así, estás en el Top 3! 🏅</string>
-    <string name="league_local">Local</string>
 
     <!-- Notificaciones -->
     <string name="ntf_title">Notificaciones</string>
@@ -447,7 +366,6 @@
     <!-- Liga, premium, invitar, tendencias, cerca y locales -->
     <string name="lg_ends_in">Termina en </string>
     <string name="lg_restart">  ·  Reinicia cada lunes</string>
-    <string name="lg_winner_badge">El ganador se lleva el badge 🏅</string>
     <string name="lg_add_city">Añade tu ciudad en el perfil para participar en la liga local.</string>
     <string name="lg_go_profile">Ir a mi perfil</string>
     <string name="lg_local">Local</string>
@@ -458,8 +376,6 @@
     <string name="lg_vote_hint">Vota platos para acumular XP y subir en la liga.</string>
     <string name="lg_vote_now">Votar ahora ⚡</string>
     <string name="lg_top3">¡Sigue así, estás en el Top 3! 🏅</string>
-    <string name="lg_add_city_short">añade tu ciudad</string>
-    <string name="lg_no_city">sin ciudad</string>
     <string name="prm_title">FoodRanker Premium</string>
     <string name="prm_sub">Apoya la app y quítate los anuncios</string>
     <string name="prm_badge">Badge Premium</string>
@@ -506,7 +422,6 @@
     <string name="vp_not_listed">Si tu plato no está, sigue rellenando abajo y lo creas.</string>
     <string name="vp_already_rated">Ya valorados aquí · toca uno si es el tuyo</string>
     <string name="vp_or_by_name">o búscalo por nombre</string>
-    <string name="vp_use_location">usar mi ubicación</string>
 
     <!-- Privacidad -->
     <string name="pp_title">Política de Privacidad</string>

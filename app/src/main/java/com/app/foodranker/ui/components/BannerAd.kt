@@ -1,13 +1,13 @@
 package com.app.foodranker.ui.components
 
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -19,7 +19,7 @@ import com.app.foodranker.viewmodel.BillingViewModel
 
 @Composable
 fun BannerAdView(modifier: Modifier = Modifier) {
-    val activity = LocalContext.current as? ComponentActivity ?: return
+    val activity = LocalActivity.current as? ComponentActivity ?: return
     val billingViewModel: BillingViewModel = hiltViewModel(activity)
     val isPremium by billingViewModel.isPremium.collectAsState()
     if (isPremium) return

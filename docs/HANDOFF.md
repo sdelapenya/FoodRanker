@@ -15,6 +15,50 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ CERRADO LO QUE QUEDABA DE CÓDIGO (2026-10-09)
+
+**85 claves muertas fuera.** Eran de la nomenclatura anterior (`error_*`, `empty_*`,
+`league_*`, `action_*`, `profile_*`, `premium_*`) más la `prof_bio` que quedó huérfana al
+separar la descripción de plato de la biografía. Importaba más de lo normal porque con el
+reductor de recursos apagado **ya viajaban en el APK**. No se usó la lista de lint:
+`tools/i18n/find_unused.py` busca cada clave en todas las formas en que se puede referenciar
+(`R.string.x`, `R.plurals.x`, `@string/x`, `@plurals/x`) por el fuente, los recursos y el
+manifest, y respeta una lista de intocables que lee el SDK por nombre
+(`default_web_client_id` y compañía). Quedan 579 claves propias y **cero sin referencia**.
+
+**`lintDebug` pasa limpio, por primera vez.** `BannerAd.kt` casteaba `LocalContext` a
+`ComponentActivity`, que es el error `ContextCastToActivity` que venía de `b03790a`: un
+`Context` no siempre es una Activity. Ahora usa `LocalActivity.current` (disponible desde
+activity-compose 1.10, el proyecto va con la 1.12.1). El ViewModel se le sigue pidiendo a la
+Activity **a propósito**: Premium es uno para toda la app, y `hiltViewModel()` sin argumento
+daría uno por pantalla.
+
+#### ✅ Resuelta la duda del reductor en las versiones ya publicadas
+
+Quedó apuntado que había que mirar Crashlytics por si el reductor se había llevado algún
+recurso en la v15 o la v16. **No hace falta: se comprobó directamente.** Se compiló la v16
+exacta (`427d945`) en un worktree aparte, con el reductor encendido como se publicó, y se
+cruzó lo que su código pide contra lo que su APK trae.
+
+**La v16 define 70 cadenas pero su código solo pide dos**: `app_name` (desde el manifest) y
+`default_web_client_id` (desde `AuthRepository`). Las dos están. Hasta la fase 1 el texto iba
+clavado en Kotlin, así que **el reductor nunca tuvo nada que llevarse**. El riesgo nació con
+el paso a recursos y se cogió antes de publicar. Tema cerrado.
+
+#### Estado de la verificación automática
+
+Sobre el APK de release ya minificado: **579 de 579 claves propias presentes en los dos
+idiomas**. Más paridad de marcadores, argumentos suficientes, los 22 avisos idénticos a los
+del servidor, la ficha de Play dentro de los límites, cero claves sin usar, cero literales
+sin extraer, `lintDebug` sin errores y los tests en verde.
+
+❗ **Lo que sigue sin probarse de verdad**: las pantallas de dentro (liga, explorar, perfil,
+guardar, publicar) necesitan sesión de Google y no se pueden automatizar desde aquí. El
+crash de la liga salió de releer el código, no de ejecutarlo. **Ahí está el riesgo que
+queda.**
+
+---
+
 ### 🟥 REPASO DE LA FASE 2: dos fallos propios encontrados y arreglados (2026-10-09)
 
 Al releer el diff con calma salieron **dos cosas que yo mismo había roto** y que ya estaban
@@ -115,10 +159,9 @@ compiladas de release leen esos campos de `R`** (comprobado con `javap`), y desa
 No se encontró la causa de por qué su análisis no las ve. Coste de apagarlo: 8,12 → 8,49 MB,
 **370 KB**, a cambio de no tener que adivinar cuál se llevará la próxima vez.
 
-❗ **Las versiones anteriores se compilaron con el reductor encendido.** Esas cinco cadenas
-no existían entonces (el texto iba clavado en el código), pero **no se ha comprobado si se
-llevó por delante algún otro recurso en la v15 o la v16**. Merece una mirada a Crashlytics
-buscando `Resources$NotFoundException`.
+Las versiones anteriores se compilaron con el reductor encendido, pero **ya se comprobó que
+ahí no rompió nada** (ver "Resuelta la duda del reductor" más arriba): la v16 solo pedía dos
+cadenas y las dos estaban.
 
 #### Cómo se verificó el artefacto
 
@@ -128,8 +171,8 @@ Sobre el APK de release ya minificado, no sobre el fuente:
 - versionCode 17 / versionName 1.4 en el manifest final; AAB firmado (`KEY0.RSA`).
 - `./gradlew assembleDebug testDebugUnitTest` en verde.
 
-⚠️ Sigue en pie el error de lint preexistente de `BannerAd.kt:22`
-(`ContextCastToActivity`, de `b03790a`), que hace fallar `lintDebug`. No afecta al AAB.
+El error de lint de `BannerAd.kt` ya está arreglado (ver más arriba): `lintDebug` pasa
+limpio.
 
 **Retomar aquí:** subir el AAB al canal de prueba cerrada, pegar la ficha en inglés y las
 novedades de los dos idiomas, y rehacer las tres capturas con la app en inglés (necesitan
