@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-10-08
+**Actualizado:** 2026-10-09
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,96 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🔵 IDIOMAS: FASE 2 COMPLETA — nada visible queda clavado (2026-10-09)
+
+Commit `e234005`. **No desplegado**: va en la v17 junto con la fase 1.
+
+La fase 1 dejó las pantallas, pero no el texto que no vive en ellas. Un barrido del código
+encontró **170 cadenas visibles todavía en castellano**. Con los 212 recursos nuevos de esta
+fase son **659 claves**, todas en los dos idiomas (la única suelta es `default_web_client_id`,
+que es la credencial de OAuth) más 6 plurales.
+
+Lo traducido aquí: avisos de la campana, canales de notificación, recordatorio diario,
+mensajes de los nueve ViewModels, textos para compartir (plato, perfil, invitación), explorar,
+perfil, invitar, premium, liga, seguidores, tendencias y los dos textos legales.
+
+**Las notificaciones tenían dos redacciones.** El mismo aviso llega por FCM (lo redacta Cloud
+Functions) o por el listener de Firestore (lo redacta la app), y el del cliente seguía en
+castellano para todos. Los textos del cliente replican ahora la tabla `TEXTOS` de
+`functions/src/index.ts`. ⚠️ **Al añadir un tipo de aviso hay que tocar los dos sitios**, o un
+comentario se lee de dos maneras según por dónde entre.
+
+**Nueve ViewModels** no podían leer recursos: se les inyecta `@ApplicationContext`, como ya
+hacían `AddPlateViewModel` y `ErrorMapper`. Se descartó mover los mensajes al estado como ids
+de recurso: obligaba a cambiar el tipo del estado y todos sus consumidores para lo mismo.
+
+#### Tres cosas que estaban mal, no solo sin traducir
+
+- **El título de los Términos seguía en castellano en los dos idiomas.** El script de la
+  sesión anterior buscaba "Términos de Uso" y el texto real era "Términos de Servicio": el
+  reemplazo no encajó y no avisó. ⚠️ De ahí la regla nueva: **toda sustitución automática
+  tiene que fallar si no encaja exactamente una vez**.
+- **El precio de Premium por defecto era "2,99 €/mes"** — lo que veía alguien en Reino Unido
+  mientras Play no respondía, y para siempre si no responde. Y al precio que sí da Play, que
+  ya viene en su moneda y su formato, se le pegaba "/mes" a mano. Sin precio real el botón ya
+  no inventa ninguno (`prm_subscribe_plain`).
+- **La ficha de plato pedía la "Bio" del plato en inglés**: reutilizaba `prof_bio`, la clave
+  del perfil. ⚠️ Tres claves estaban compartidas entre sitios que dicen cosas distintas
+  (`prof_bio`, `prof_bio_hint`, `prof_delete_detail`). **Antes de reutilizar una clave, mirar
+  dónde se usa ya.**
+
+#### ⚠️ Trampas nuevas de esta fase
+
+- **Un `%` literal en una cadena que se pide SIN argumentos no se puede escapar.** "100%
+  seguro" lo marcaba lint como marcador de formato roto, y `%%` se habría visto literal
+  porque `getString(id)` sin argumentos no formatea. Se reformuló el texto.
+- **El separador decimal y el de miles cambian de idioma**: el rango de precio pasa a ser una
+  cadena con argumento (`det_price_range`), no una concatenación.
+- **El castellano tiene la cantidad `many` en CLDR.** Sin ella Android cae en `other` (que
+  aquí sirve), pero lint avisa. Los 6 plurales la llevan.
+- Los literales de **una sola palabra** ("Buscando...", "Todos", "Limpiar") se escapan de
+  cualquier búsqueda por palabras castellanas. Hay que buscar **por posición** (lo que va en
+  un `Text(`, `title=`, `label=`, `contentDescription=`...), no por idioma.
+
+#### Cómo se verificó (cuatro comprobaciones sobre el APK ya construido)
+
+Los scripts están en el scratchpad de la sesión; si hacen falta otra vez, merece la pena
+rehacerlos, son cortos:
+
+1. **Paridad de claves y de marcadores entre idiomas.** Un `%1$s` en uno y `%1$d` en el otro
+   no falla al compilar: **revienta en ejecución y solo en ese idioma**. Es el fallo que hay
+   que cazar antes de publicar.
+2. **Argumentos suficientes en cada llamada.** El compilador no mira que `getString` pase
+   tantos argumentos como marcadores tiene la cadena; si faltan, `MissingFormatArgumentException`
+   en cuanto se pinta esa pantalla.
+3. **Cobertura sobre el APK** (`aapt2 dump resources`): 900 recursos de texto con las dos
+   variantes, ninguno nuestro suelto. Los 9 que faltan son de `cloudinary-android-ui`, cuyas
+   pantallas la app no abre (solo usa `MediaManager`).
+4. **Lint** sin errores de recursos. ⚠️ Queda **un error de lint preexistente y ajeno**:
+   `BannerAd.kt:22` (`ContextCastToActivity`), de `b03790a`. `lintDebug` falla por eso.
+
+En el emulador: alta, login y los dos textos legales recorridos de principio a fin en inglés
+y en castellano. Lo de dentro necesita login con Google y no se automatizó.
+
+⚠️ **El AVD `FoodRanker_Test` tiene el `/data` lleno** (5,4 G de 5,8 G) y rechaza instalar
+("Requested internal only, but not enough space"). No se puede inspeccionar sin root y la
+imagen es de Play Store. Se usó `Eligr_Pixel_35`. `Pixel_6` no arranca: le falta la imagen
+android-34. ⚠️ **Tras un `adb install`, comprobar que dice `Success`**: falló en silencio y
+se estuvo verificando el build anterior.
+
+#### Textos legales (traducidos, pendiente decisión de fondo)
+
+Ambos en los dos idiomas. La política decía "si resides en la **Unión Europea**", que
+**excluye al Reino Unido** desde el Brexit: ahora dice "en el Espacio Económico Europeo o en
+el Reino Unido" y nombra las dos autoridades (AEPD / ICO). Se añadió el apartado 0, quién
+responde de los datos. Los Términos siguen rigiéndose por la legislación española, con la
+salvedad de los derechos del consumidor en su país.
+
+❗ **Pendiente de Sergio, no es traducir:** quién figura como responsable del tratamiento y
+con qué base jurídica. Eso no lo redacta Claude.
+
+---
 
 ### 🔶 IDIOMAS: FASE 0 Y FASE 1 COMPLETAS (2026-10-08)
 
@@ -31,8 +121,7 @@ los resuelve con la suya, para que no acaben con dos nombres distintos.
 selector por app; hay una fila "Idioma" en el perfil que lleva ahí. En Android 12 y anteriores
 esa pantalla no existe: la fila se oculta y la app sigue el idioma del móvil.
 
-**Lo que sigue en castellano**: términos y privacidad (ahí no es traducir, es decidir si el
-texto cubre bajo el **UK GDPR**).
+**Lo que sigue en castellano**: nada visible. Ver la fase 2 más arriba.
 
 #### ⚠️ Trampas aprendidas
 
@@ -54,7 +143,8 @@ Se abre la app a usuarios en Reino Unido (la prima de Sergio, en Edimburgo).
 **Fase 1 — las pantallas de entrada (NO desplegado, va en la v17).**
 Onboarding, login, ranking, publicar y ficha de plato: ~250 textos fuera del código, en
 `values/` (inglés, por defecto) y `values-es/`. Las 18 categorías también.
-Quedan sin tocar: perfil, liga, explorar, premium, notificaciones, términos y privacidad.
+Lo que quedaba (perfil, liga, explorar, premium, notificaciones, legales) se cerró en la
+fase 2, más arriba.
 
 **Elegir idioma**: `locales_config.xml` + `android:localeConfig` hacen que Android 13+ ponga
 su propio selector por app. Hay una fila "Idioma" en el perfil que lleva ahí. En Android 12 y
