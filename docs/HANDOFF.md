@@ -15,6 +15,61 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ SEGUNDA TANDA EN EL REDMI: cinco textos más, y las 3 pantallas que faltaban (2026-10-09)
+
+Commit `33c0d79`. Probado con `sdelapenya1991@` (0 seguidores), para poder tocar sin que le
+llegue nada a nadie.
+
+**Las tres pantallas que quedaban sin abrir** — "Qué pido aquí", lista de seguidores e
+invitar amigos — **abren sin crash en inglés**. Con eso, los nueve ViewModels a los que se
+les inyectó `@ApplicationContext` están ejercitados en el móvil.
+
+**Cinco textos más, todos encontrados mirando la pantalla:**
+- "Qué pido aquí" **mentía**: tras buscar decía "tampoco hemos encontrado locales cerca"
+  **con la lista de locales justo debajo**. La condición era de dos casos y hacen falta
+  tres. Nuevo `nrb_empty_pick`.
+- El título de la lista de seguidores salía **"Seguidores" con la app en inglés**: lo ponía
+  `titleFor()` en el companion object del ViewModel. Ahora es un id de recurso en el estado.
+- El título de la ficha mientras carga decía **"Detalle"**; la hoja de editar plato
+  **"Editar <nombre>"** concatenando; la pestaña del ranking **"Top"** a pelo.
+- El nombre de respaldo era **"Usuario" en ocho sitios**. ⚠️ Ese **se persiste** en
+  `addedByUserName`/`userName`, así que queda en el idioma de quien escribe, igual que el
+  país del local. `AuthRepository` no tenía contexto: se le inyecta.
+
+#### ⚠️ Por qué se colaron los cinco, y los tres de antes
+
+**Palabras SUELTAS en castellano.** `scan_es.py` descartaba de golpe cualquier literal sin
+espacios, porque casi todos son identificadores. Ahora conserva el que parece texto y no
+código: **inicial mayúscula y resto minúsculas**, lo que deja fuera `UNCHECKED_CAST`,
+`MissingPermission` y `cardScale`. Con esa sola regla aparecieron estos cinco.
+
+Y antes, "Platos publicados" se coló por ir de **argumento posicional** de un composable
+propio; `scan_ui.py` mira ahora también esa posición, exigiendo que el texto lleve un
+espacio o un `
+` para no ahogarse en rutas y nombres de animación.
+
+❗ **La lección, por si sirve en la próxima sesión:** las comprobaciones automáticas
+verifican que la clave exista en los dos idiomas y que los marcadores cuadren — **no que el
+inglés esté en inglés**. Todo lo encontrado en el móvil salió de mirar pantallas, no de
+compilar. Media hora con el móvil vale más que otra vuelta de scripts.
+
+#### ⚠️ Dos trampas del móvil
+
+- **MIUI desactiva "Instalar vía USB" cada cierto tiempo**: funcionó por la mañana y por la
+  tarde volvió `INSTALL_FAILED_USER_RESTRICTED`. Hay que reactivarlo.
+- **Al crear un local, la app manda el idioma del móvil a Places.** El documento del local
+  es único y compartido, así que **publicar con la app en inglés dejaría "Spain" para
+  todos**. Si se prueba publicar, hacerlo con la app en castellano.
+
+#### Lo que sigue sin probarse
+
+El **envío real** de un plato. La pantalla se recorrió entera en los dos idiomas, pero el
+botón se protege solo con un aviso en línea, así que los mensajes de error de
+`AddPlateViewModel` (`vm_name_required` y compañía) son defensivos y no se pueden disparar
+sin publicar. Están en el APK en los dos idiomas y son `getString` de una línea.
+
+---
+
 ### ✅ PROBADO EN EL REDMI REAL, CON SESIÓN Y EN LOS DOS IDIOMAS (2026-10-09)
 
 Lo que quedaba sin probar ya está probado. Redmi Note 10S (Android 13), APK de release
