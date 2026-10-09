@@ -14,22 +14,8 @@
     <string name="action_back">Back</string>
     <string name="action_retry">Retry</string>
 
-    <!-- Friendly errors -->
-
-    <!-- Empty states -->
-
     <!-- Feed -->
     <string name="feed_following">Following</string>
-
-    <!-- Dishes -->
-
-    <!-- Profile -->
-
-    <!-- Premium -->
-
-    <!-- Notifications -->
-
-    <!-- Offline -->
 
     <!-- Onboarding -->
     <string name="onb_1_title">Discover the best\ndishes in the world</string>

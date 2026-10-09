@@ -13,22 +13,8 @@
     <string name="action_back">Volver</string>
     <string name="action_retry">Reintentar</string>
 
-    <!-- Errores amigables -->
-
-    <!-- Empty states -->
-
     <!-- Feed -->
     <string name="feed_following">Siguiendo</string>
-
-    <!-- Platos -->
-
-    <!-- Perfil -->
-
-    <!-- Premium -->
-
-    <!-- Notificaciones -->
-
-    <!-- Offline -->
 
     <!-- Onboarding -->
     <string name="onb_1_title">Descubre los mejores\nplatos del mundo</string>

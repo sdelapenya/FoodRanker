@@ -49,6 +49,37 @@ def texto_del_proyecto():
     return "\n".join(trozos)
 
 
+def limpiar_comentarios(s):
+    """Quita los comentarios de seccion que se han quedado sin cadenas debajo.
+
+    Por lineas y no con una expresion: en el fichero los comentarios van
+    separados por lineas en blanco, y un lookahead se complica de mas. Un
+    comentario sobra si la siguiente linea con algo es otro comentario o el
+    cierre de <resources>.
+    """
+    lineas = s.split("\n")
+    fuera = set()
+    for i, l in enumerate(lineas):
+        if not re.match(r'^\s*<!--.*-->\s*$', l):
+            continue
+        for j in range(i + 1, len(lineas)):
+            sig = lineas[j].strip()
+            if not sig:
+                continue
+            if sig.startswith("<!--") or sig.startswith("</resources>"):
+                fuera.add(i)
+            break
+    if not fuera:
+        return s
+    # Se quita el comentario y la linea en blanco que lo seguia, si la habia.
+    for i in sorted(fuera, reverse=True):
+        fin = i + 1
+        while fin < len(lineas) and not lineas[fin].strip():
+            fin += 1
+        del lineas[i:fin]
+    return limpiar_comentarios("\n".join(lineas))
+
+
 todo = texto_del_proyecto()
 # Tambien dentro de los propios strings.xml puede haber referencias cruzadas.
 for r in (EN, ES):
@@ -84,8 +115,7 @@ for ruta in (EN, ES):
             pat = re.compile(r'[ \t]*<plurals name="%s">.*?</plurals>\n' % re.escape(nombre), re.S)
         s, n = pat.subn("", s)
         fuera += n
-    # Comentarios de seccion que se quedan sin ninguna cadena debajo.
-    s = re.sub(r'\n[ \t]*<!--[^>]*-->\n(?=[ \t]*(<!--|</resources>))', "\n", s)
+    s = limpiar_comentarios(s)
     with io.open(ruta + ".tmp", "w", encoding="utf-8", newline="\n") as f:
         f.write(s)
     os.replace(ruta + ".tmp", ruta)
