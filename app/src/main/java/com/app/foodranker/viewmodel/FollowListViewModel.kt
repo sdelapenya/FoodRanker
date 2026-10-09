@@ -16,6 +16,7 @@ import javax.inject.Inject
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.app.foodranker.R
+import androidx.annotation.StringRes
 
 data class FollowListRow(
     val userId: String,
@@ -25,7 +26,10 @@ data class FollowListRow(
 
 data class FollowListUiState(
     val isLoading: Boolean = true,
-    val title: String = "",
+    // Id de recurso, no texto: el titulo lo ponia el ViewModel con "Seguidores" /
+    // "Siguiendo" clavados, y salian en castellano con la app en ingles. Asi ademas
+    // sigue a un cambio de idioma sin tener que recrear nada.
+    @StringRes val titleRes: Int = R.string.fl_followers_title,
     val listType: String = "followers",
     val users: List<FollowListRow> = emptyList(),
     val error: String? = null
@@ -44,7 +48,7 @@ class FollowListViewModel @Inject constructor(
         savedStateHandle.get<String>("listType") ?: Screen.FollowList.LIST_FOLLOWERS
 
     private val _uiState = MutableStateFlow(
-        FollowListUiState(title = titleFor(listType), listType = listType)
+        FollowListUiState(titleRes = titleFor(listType), listType = listType)
     )
     val uiState: StateFlow<FollowListUiState> = _uiState
 
@@ -85,21 +89,23 @@ class FollowListViewModel @Inject constructor(
                     val user = userMap[uid] ?: return@mapNotNull null
                     FollowListRow(
                         userId = uid,
-                        name = user.name.ifBlank { "Usuario" },
+                        name = user.name.ifBlank {
+                            appContext.getString(R.string.user_fallback_name)
+                        },
                         photoUrl = user.photoUrl
                     )
                 }.sortedBy { it.name.lowercase() }
 
                 _uiState.value = FollowListUiState(
                     isLoading = false,
-                    title = titleFor(listType),
+                    titleRes = titleFor(listType),
                     listType = listType,
                     users = rows
                 )
             } catch (e: Exception) {
                 _uiState.value = FollowListUiState(
                     isLoading = false,
-                    title = titleFor(listType),
+                    titleRes = titleFor(listType),
                     listType = listType,
                     error = ErrorMapper.toUserMessage(e)
                 )
@@ -108,7 +114,9 @@ class FollowListViewModel @Inject constructor(
     }
 
     companion object {
+        @StringRes
         fun titleFor(type: String) =
-            if (type == Screen.FollowList.LIST_FOLLOWING) "Siguiendo" else "Seguidores"
+            if (type == Screen.FollowList.LIST_FOLLOWING) R.string.fl_following_title
+            else R.string.fl_followers_title
     }
 }

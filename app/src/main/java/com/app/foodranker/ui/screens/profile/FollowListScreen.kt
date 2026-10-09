@@ -43,7 +43,7 @@ fun FollowListScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(uiState.title, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(stringResource(uiState.titleRes), fontWeight = FontWeight.Bold, color = TextPrimary)
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {

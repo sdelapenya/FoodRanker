@@ -10,6 +10,11 @@ PAL = re.compile(
     r'aún|más|este|esta|hay|ya|sé|no|en|al|del|se|es|son|ha|'
     r'han|te|le|lo|su|sus|y)\b', re.I)
 
+# Una palabra sola que parece texto: empieza por mayuscula y sigue en minusculas,
+# con acentos y signos finales permitidos. No encajan ni UNCHECKED_CAST ni
+# MissingPermission ni cardScale.
+PALABRA_SUELTA = re.compile(r'^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}[.!?…]*$')
+
 # Codigo muerto: la siembra de MealDB se descarto como decision de producto.
 IGNORAR = ("SeedData.kt", "MealDBSeeder.kt")
 
@@ -33,7 +38,13 @@ for root, _, fs in os.walk("app/src/main/java/com/app/foodranker"):
                 if not LETRAS.search(nucleo):
                     continue
                 if " " not in nucleo and not PAL.search(nucleo):
-                    continue
+                    # Una palabra suelta: casi siempre es un identificador, pero por
+                    # aqui se colaron "Seguidores", "Siguiendo" y "Buscando...". Se
+                    # queda si parece texto y no codigo: inicial mayuscula y el resto
+                    # minusculas. Asi caen fuera UNCHECKED_CAST, MissingPermission,
+                    # cardScale y las rutas, que son lo que de verdad abunda.
+                    if not PALABRA_SUELTA.match(nucleo):
+                        continue
                 destino = logs if re.search(r'(Log\.[a-z]|println|Timber)', l2) else vis
                 destino.append((corto, i, t))
 

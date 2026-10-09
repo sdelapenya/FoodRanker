@@ -665,4 +665,17 @@
 
     <!-- Perfil: estadisticas -->
     <string name="prof_plates_published">Dishes\nposted</string>
+
+    <!-- Que pido aqui: hay locales pero ningun plato puntuado -->
+    <string name="nrb_empty_pick">Pick one of the venues below and post the first dish.</string>
+
+    <!-- Titulo de la lista de seguidores -->
+    <string name="fl_followers_title">Followers</string>
+    <string name="fl_following_title">Following</string>
+
+    <!-- Nombres y titulos de respaldo -->
+    <string name="det_loading_title">Details</string>
+    <string name="prof_edit_plate">Edit %1$s</string>
+    <string name="tab_top">Top</string>
+    <string name="user_fallback_name">User</string>
 </resources>

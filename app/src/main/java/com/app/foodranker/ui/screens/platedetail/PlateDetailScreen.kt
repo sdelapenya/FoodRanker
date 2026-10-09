@@ -143,7 +143,7 @@ fun PlateDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        uiState.plate?.name ?: "Detalle",
+                        uiState.plate?.name ?: stringResource(R.string.det_loading_title),
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )

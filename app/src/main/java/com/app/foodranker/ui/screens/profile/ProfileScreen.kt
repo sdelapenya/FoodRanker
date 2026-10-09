@@ -1499,10 +1499,7 @@ private fun EditPlateSheet(
             ) {
                 Icon(Icons.Default.Edit, contentDescription = null, tint = OrangePrimary)
                 Text(
-                    text = buildString {
-                        append("Editar ")
-                        append(plate.name)
-                    },
+                    text = stringResource(R.string.prof_edit_plate, plate.name),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,

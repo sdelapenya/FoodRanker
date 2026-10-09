@@ -21,6 +21,8 @@ import com.app.foodranker.utils.InputLimits.sanitized
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 /** El usuario cerró la hoja de cuentas. No es un error: no se le muestra nada. */
 class SignInCancelledException : Exception("Login cancelado por el usuario")
@@ -28,7 +30,8 @@ class SignInCancelledException : Exception("Login cancelado por el usuario")
 @Singleton
 class AuthRepository @Inject constructor(
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    @ApplicationContext private val appContext: Context
 ) {
     private companion object { const val TAG = "AuthRepository" }
 
@@ -175,7 +178,7 @@ class AuthRepository @Inject constructor(
         val displayName = (
             firebaseUser.displayName?.takeIf { it.isNotBlank() }
                 ?: (rawProfile?.get("name") as? String)?.takeIf { it.isNotBlank() }
-                ?: "Usuario"
+                ?: appContext.getString(R.string.user_fallback_name)
             ).sanitized(InputLimits.USER_NAME)
         val photoUrl = firebaseUser.photoUrl?.toString()?.takeIf { it.isNotBlank() }
             ?: (rawProfile?.get("picture") as? String)

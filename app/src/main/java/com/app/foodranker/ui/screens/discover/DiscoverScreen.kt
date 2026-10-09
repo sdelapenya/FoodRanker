@@ -381,7 +381,11 @@ private fun RankingTopBar(
             ) {
                 // "Top semana" era mentira: la consulta ordena por nota sin filtrar fecha ninguna,
                 // así que es el ranking de siempre, no el de esta semana.
-                listOf("Top", stringResource(R.string.tab_nearby), stringResource(R.string.feed_following)).forEachIndexed { index, label ->
+                listOf(
+                    stringResource(R.string.tab_top),
+                    stringResource(R.string.tab_nearby),
+                    stringResource(R.string.feed_following)
+                ).forEachIndexed { index, label ->
                     Tab(
                         selected = selectedTab == index,
                         onClick  = { onTabSelected(index) },

@@ -80,12 +80,12 @@ class PlateDetailViewModel @Inject constructor(
         val fallbackPhoto = user?.photoUrl?.toString() ?: ""
         return try {
             val snap = firestore.collection("users").document(user?.uid ?: "").get().await()
-            val name = snap.getString("name")?.takeIf { it.isNotBlank() } ?: "Usuario"
+            val name = snap.getString("name")?.takeIf { it.isNotBlank() } ?: appContext.getString(R.string.user_fallback_name)
             val photo = snap.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: fallbackPhoto
             name.sanitized(InputLimits.USER_NAME) to photo
         } catch (e: Exception) {
             // Sin red u otro fallo: mejor un nombre de respaldo que bloquear el envío.
-            (user?.displayName?.takeIf { it.isNotBlank() } ?: "Usuario").sanitized(InputLimits.USER_NAME) to fallbackPhoto
+            (user?.displayName?.takeIf { it.isNotBlank() } ?: appContext.getString(R.string.user_fallback_name)).sanitized(InputLimits.USER_NAME) to fallbackPhoto
         }
     }
 

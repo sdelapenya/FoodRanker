@@ -670,4 +670,17 @@
 
     <!-- Perfil: estadisticas -->
     <string name="prof_plates_published">Platos\npublicados</string>
+
+    <!-- Que pido aqui: hay locales pero ningun plato puntuado -->
+    <string name="nrb_empty_pick">Elige uno de los locales de abajo y publica el primer plato.</string>
+
+    <!-- Titulo de la lista de seguidores -->
+    <string name="fl_followers_title">Seguidores</string>
+    <string name="fl_following_title">Siguiendo</string>
+
+    <!-- Nombres y titulos de respaldo -->
+    <string name="det_loading_title">Detalle</string>
+    <string name="prof_edit_plate">Editar %1$s</string>
+    <string name="tab_top">Top</string>
+    <string name="user_fallback_name">Usuario</string>
 </resources>

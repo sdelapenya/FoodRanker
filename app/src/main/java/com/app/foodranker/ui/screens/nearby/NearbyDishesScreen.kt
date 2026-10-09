@@ -92,10 +92,17 @@ fun NearbyDishesScreen(
                     EmptyStateCentered(
                         icon = Icons.Default.MyLocation,
                         title = stringResource(R.string.nrb_empty),
-                        message = if (uiState.searchedPlaces)
-                            stringResource(R.string.nrb_empty_searched)
-                        else
-                            stringResource(R.string.nrb_empty_hint),
+                        // Tres casos, no dos: antes, buscar y SÍ encontrar locales
+                        // enseñaba "tampoco hemos encontrado locales cerca" con la
+                        // lista de locales justo debajo.
+                        message = when {
+                            !uiState.searchedPlaces ->
+                                stringResource(R.string.nrb_empty_hint)
+                            uiState.placesSuggestions.isEmpty() ->
+                                stringResource(R.string.nrb_empty_searched)
+                            else ->
+                                stringResource(R.string.nrb_empty_pick)
+                        },
                         actionLabel = if (uiState.searchedPlaces) null else stringResource(R.string.nrb_search),
                         onAction = if (uiState.searchedPlaces) null else { { viewModel.searchNearbyViaPlaces() } }
                     )
