@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-10-09
+**Actualizado:** 2026-10-11
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,51 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🚀 v17 (1.4) PUBLICADA EN ALPHA + ficha en tres idiomas (2026-10-10/11)
+
+**La v17 está publicada** en prueba cerrada desde el 10 oct 9:12, al 100 % en **178 países**.
+Notas de versión en **3 de 3 idiomas** (es-ES, en-GB, en-US).
+
+**La ficha pasó a tres idiomas.** Se añadieron `en-GB` y `en-US` con el texto de
+`docs/play-store-listing.md`, y se sustituyeron las capturas castellanas por las nuevas.
+⚠️ **Se añadieron las DOS variantes de inglés a propósito**: Play sirve la ficha del idioma
+exacto del usuario y, si no la encuentra, **cae al predeterminado (castellano)**. Con solo
+`en-GB`, cualquiera con el móvil en inglés de EE.UU., Irlanda, Australia o India habría
+visto la ficha en castellano.
+
+Esos tres cambios quedaron **en revisión** el 11 de octubre.
+
+#### Declaración de recursos de IA: "No etiquetar"
+
+Play pide declarar los recursos **visuales** creados o editados con IA. Se marcó **"No
+etiquetar"**, y está justificado recurso a recurso: las capturas son fotografías literales
+del Redmi con la app real y datos reales, sin retoque ni recorte; el icono es el `pathData`
+vectorial del propio logo renderizado; el gráfico destacado está compuesto con el logo y el
+texto de la app. **Ninguno es imagen generada.**
+
+⚠️ Marcar "etiquetar" habría sido **falso en la dirección contraria**: Play le habría puesto
+a esas imágenes un aviso de "creado con IA", diciendo a los usuarios que las pantallas
+podrían no ser reales cuando son exactamente lo que se encuentran al instalar.
+
+El único punto gris es **el texto de la descripción inglesa, escrito por Claude**. La
+documentación de Play menciona "imágenes, texto o vídeo" en la introducción pero la lista de
+recursos declarables solo nombra los visuales, y el flujo va asset por asset sobre imágenes.
+Queda así; si alguna vez molesta, la salida limpia es reescribirla a mano.
+
+#### Lo que falta, y no es código
+
+1. **Comprobar en el Redmi desde Play** (cuando aprueben): desinstalar la build local (va
+   firmada con la clave de subida, no con la de Play) e instalar desde el enlace de prueba
+   cerrada. Dos cosas que **no se pueden ver con un sideload**: que Premium enseñe el
+   **precio real en euros**, y que con el móvil en inglés la app salga en inglés — esto
+   último valida `language.enableSplit = false`, el cambio de empaquetado hecho a ciegas.
+2. **Los 14 días**: van **7 de 14** con 12 testers (visto el 10 oct). Lo único que reinicia
+   el contador es que alguien **se salga** del grupo; subir versiones no lo reinicia.
+3. **Responsable del tratamiento y base jurídica** de los textos legales: decisión de Sergio,
+   necesaria antes de pedir producción, no antes de seguir testeando.
+
+---
 
 ### ✅ SEGUNDA TANDA EN EL REDMI: cinco textos más, y las 3 pantallas que faltaban (2026-10-09)
 
