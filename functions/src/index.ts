@@ -71,12 +71,11 @@ const WEIGHT_FLAVOR = 0.50;
 const WEIGHT_PRESENTATION = 0.20;
 const WEIGHT_SATISFACTION = 0.30;
 
-// Media bayesiana del ranking: un plato necesita BAYESIAN_MIN_VOTES votos para que su nota
-// pese por completo; con menos, tira hacia la media global. Impide que un voto solo (siempre
-// el del autor) encabece el ranking.
-const BAYESIAN_MIN_VOTES = 5;
-// Se usa si stats/global aún no existe (primer despliegue, o el job programado no ha corrido).
-const DEFAULT_GLOBAL_AVERAGE = 7.0;
+// Desempate del ranking por número de votos. El tope (40 × 0,001 = 0,04) se queda muy por
+// debajo de los 0,1 que separan dos notas visibles, así que NUNCA puede colocar un plato por
+// encima de otro con mejor nota: solo ordena entre los que muestran la misma.
+const RANKING_VOTE_TIEBREAK = 0.001;
+const RANKING_VOTE_TIEBREAK_CAP = 40;
 // Cuántas valoraciones recientes se miran para la mediana de precio. Acota el coste por voto
 // y, de paso, da más peso a lo reciente: los precios cambian.
 const PRICE_SAMPLE_LIMIT = 50;
@@ -109,22 +108,29 @@ function ratingAverage(data: admin.firestore.DocumentData): number {
   );
 }
 
-/** Media bayesiana — lo que ordena el ranking. `averageScore` sigue siendo lo que se muestra. */
-function bayesianScore(average: number, count: number, globalAverage: number): number {
+/**
+ * Lo que ordena el ranking. Sale de `averageScore`, que es lo que se muestra.
+ *
+ * Por qué se ordena por la nota REDONDEADA y no por la media exacta.
+ *
+ * Antes esto era una media bayesiana: ordenaba por un número que el usuario no ve nunca, y
+ * el resultado era un ranking que parecía roto (platos con 10,00 en el puesto 20). Peor aún,
+ * cada plato congelaba la media global del día en que se votó, así que el orden acababa
+ * dependiendo de la FECHA: dos platos con 10,00 y un voto salían en los puestos 4 y 20.
+ *
+ * La app pinta la nota con un decimal. Si se ordena por la media exacta, dos platos que se
+ * ven como 9,6 y 9,7 pueden estar separados por una diezmilésima — menos que el desempate —
+ * y aparecer al revés de como se leen. Redondeando primero, eso no puede pasar: el orden es
+ * exactamente el que se ve, y los votos solo deciden dentro de una misma nota.
+ *
+ * ⚠️ El redondeo tiene que coincidir con el de la app ("%.1f"). Si allí cambia el número de
+ * decimales, hay que cambiarlo aquí.
+ */
+function rankingScoreFor(average: number, count: number): number {
   if (count <= 0) return 0;
-  return (count / (count + BAYESIAN_MIN_VOTES)) * average
-       + (BAYESIAN_MIN_VOTES / (count + BAYESIAN_MIN_VOTES)) * globalAverage;
-}
-
-async function getGlobalAverage(): Promise<number> {
-  try {
-    const snap = await db.collection("stats").doc("global").get();
-    const value = snap.get("averageScore");
-    return typeof value === "number" && value > 0 ? value : DEFAULT_GLOBAL_AVERAGE;
-  } catch (err) {
-    logger.warn("getGlobalAverage failed, using default:", err);
-    return DEFAULT_GLOBAL_AVERAGE;
-  }
+  const notaVisible = Math.round(average * 10) / 10;
+  return notaVisible
+       + Math.min(count, RANKING_VOTE_TIEBREAK_CAP) * RANKING_VOTE_TIEBREAK;
 }
 
 /**
@@ -729,7 +735,6 @@ async function approveplate(
   // Update plate status + apply initial rating score atomically.
   // Returns the rating author info only when this invocation actually set
   // processed=true, so XP/league are awarded exactly once even on retries.
-  const globalAverage = await getGlobalAverage();
   let awarded: { userName: string; userPhotoUrl: string } | null = null;
   try {
     awarded = await db.runTransaction(async (tx) => {
@@ -752,7 +757,7 @@ async function approveplate(
         totalRatings: 1,
         wouldOrderAgainCount: ratingSnap.get("wouldOrderAgain") === true ? 1 : 0,
         wouldOrderAgainResponses: typeof ratingSnap.get("wouldOrderAgain") === "boolean" ? 1 : 0,
-        rankingScore: bayesianScore(ratingAvg, 1, globalAverage),
+        rankingScore: rankingScoreFor(ratingAvg, 1),
         ...(typeof price === "number" && price > 0
           ? { priceMedianCents: price, priceReportCount: 1, priceUpdatedAt: Date.now() }
           : {}),
@@ -1005,7 +1010,6 @@ export const onRatingCreated = onDocumentCreated(
     }
 
     // Update plate score + mark processed (idempotent)
-    const globalAverage = await getGlobalAverage();
     let processed = false;
     try {
       await db.runTransaction(async (tx) => {
@@ -1026,7 +1030,7 @@ export const onRatingCreated = onDocumentCreated(
           totalRatings: count,
           wouldOrderAgainCount: rating.wouldOrderAgain === true ? oldRepeats + 1 : oldRepeats,
           wouldOrderAgainResponses: answered ? oldResponses + 1 : oldResponses,
-          rankingScore: bayesianScore(avg, count, globalAverage),
+          rankingScore: rankingScoreFor(avg, count),
         });
         // Se reescribe también la nota del propio rating: el cliente manda la suya, y un
         // cliente antiguo la calcula con la fórmula vieja. Sin esto, la lista de valoraciones
@@ -1341,7 +1345,6 @@ export const onRatingUpdated = onDocumentUpdated(
     }
 
     const plateRef = db.collection("plates").doc(plateId);
-    const globalAverage = await getGlobalAverage();
     try {
       await db.runTransaction(async (tx) => {
         const plateDoc = await tx.get(plateRef);
@@ -1373,7 +1376,7 @@ export const onRatingUpdated = onDocumentUpdated(
           averageScore: recalculated,
           wouldOrderAgainCount: repeats,
           wouldOrderAgainResponses: responses,
-          rankingScore: bayesianScore(recalculated, totalRatings, globalAverage),
+          rankingScore: rankingScoreFor(recalculated, totalRatings),
         });
         tx.update(event.data!.after.ref, { averageScore: newAvg });
       });
@@ -1412,7 +1415,6 @@ export const onRatingDeleted = onDocumentDeleted(
 
     const deletedAvg = ratingAverage(rating);
     const plateRef = db.collection("plates").doc(plateId);
-    const globalAverage = await getGlobalAverage();
 
     try {
       await db.runTransaction(async (tx) => {
@@ -1442,7 +1444,7 @@ export const onRatingDeleted = onDocumentDeleted(
           totalRatings: count,
           wouldOrderAgainCount: repeats,
           wouldOrderAgainResponses: responses,
-          rankingScore: count > 0 ? bayesianScore(avg, count, globalAverage) : 0,
+          rankingScore: rankingScoreFor(avg, count),
         });
       });
     } catch (err) {
@@ -1459,13 +1461,20 @@ export const onRatingDeleted = onDocumentDeleted(
 // ── refreshGlobalStats ────────────────────────────────────────────────────
 
 /**
- * Recalcula `stats/global.averageScore`: la media de las notas de los platos aprobados, que
- * es la `C` de la media bayesiana del ranking. Diario sobra — C se mueve muy despacio, y si
- * el documento falta se usa DEFAULT_GLOBAL_AVERAGE, así que nada depende de que esto corra.
+ * Red de seguridad del ranking: reescribe el `rankingScore` de todos los platos con la
+ * fórmula actual, y de paso deja en `stats/global` la media de las notas (solo informativa
+ * desde que el ranking dejó de usar una media bayesiana — nadie la lee).
  *
- * Solo recalcula la media global; NO reescribe el `rankingScore` de cada plato. Esos se van
- * poniendo al día solos con cada voto. Para forzar un recálculo completo está el script de
- * migración.
+ * Con la fórmula de ahora el `rankingScore` sale solo de `averageScore` y `totalRatings`,
+ * que se actualizan en la misma transacción que el voto, así que no puede desajustarse solo.
+ * Esto sigue aquí por dos motivos: aplica de una pasada cualquier cambio futuro de la
+ * fórmula, y repara a mano lo que algún fallo haya dejado torcido.
+ *
+ * ⚠️ Antes NO reescribía nada, confiando en que cada plato se pondría al día con su siguiente
+ * voto. Con los datos reales eso no pasa: 47 de 53 platos tienen UN voto y no van a recibir
+ * otro. Con la media bayesiana, cada uno congelaba la media global del día en que lo votaron
+ * y el ranking acababa ordenado por FECHA: dos platos con 10,00 y un voto tenían 9,0573 y
+ * 8,8397, y salían en los puestos 4 y 20.
  */
 export const refreshGlobalStats = onSchedule("every day 04:00", async () => {
   try {
@@ -1496,7 +1505,34 @@ export const refreshGlobalStats = onSchedule("every day 04:00", async () => {
       plateCount: count,
       updatedAt: Date.now(),
     }, { merge: true });
-    logger.info(`refreshGlobalStats: averageScore=${average.toFixed(3)} over ${count} plates`);
+
+    // Todos los platos con la MISMA C, para que el ranking no dependa de la fecha.
+    let escritos = 0;
+    let lote = db.batch();
+    let enLote = 0;
+    for (const doc of snap.docs) {
+      const avg = doc.get("averageScore");
+      const n = doc.get("totalRatings");
+      if (typeof avg !== "number" || typeof n !== "number" || n <= 0) continue;
+      const nuevo = rankingScoreFor(avg, n);
+      const previo = doc.get("rankingScore");
+      if (typeof previo === "number" && Math.abs(previo - nuevo) < 1e-9) continue;
+      lote.update(doc.ref, { rankingScore: nuevo });
+      enLote++;
+      escritos++;
+      // 500 es el máximo de operaciones por lote en Firestore.
+      if (enLote === 450) {
+        await lote.commit();
+        lote = db.batch();
+        enLote = 0;
+      }
+    }
+    if (enLote > 0) await lote.commit();
+
+    logger.info(
+      `refreshGlobalStats: averageScore=${average.toFixed(3)} over ${count} plates, ` +
+      `rankingScore reescrito en ${escritos}`
+    );
   } catch (err) {
     logger.error("refreshGlobalStats failed:", err);
   }
