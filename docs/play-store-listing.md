@@ -136,6 +136,44 @@ Food is better when it gets talked about. Start with the last dish that surprise
 Límite de Play: 500 caracteres por idioma. Un texto por cada uno; si solo pones el del
 idioma por defecto, a quien tenga el móvil en inglés le llega en castellano.
 
+⚠️ La caja de Play **ya trae las etiquetas** `<es-ES>`, `<en-GB>` y `<en-US>`. Pega
+dentro de cada una; si pegas el bloque con etiquetas se duplican y da error.
+
+---
+
+## v18 (1.5) — consentimiento de anuncios y textos legales
+
+### Castellano (es-ES) — v18
+
+```
+Ahora FoodRanker te pregunta antes de usar tus datos para anuncios personalizados, como exige la normativa europea. Decides tú, y puedes cambiar de opinión cuando quieras desde Perfil → Opciones de privacidad de anuncios.
+
+La política de privacidad dice además quién responde de tus datos y con qué base legal se tratan, y ya se puede leer en inglés y en castellano.
+```
+*(366 caracteres)*
+
+### Inglés (en-GB) — v18
+
+```
+FoodRanker now asks before using your data for personalised ads, as European rules require. It is your choice, and you can change your mind at any time under Profile → Ad privacy options.
+
+The privacy policy now also says who is responsible for your data and the legal basis for processing it, and you can read it in English as well as Spanish.
+```
+*(344 caracteres)*
+
+### Inglés (en-US) — v18
+
+```
+FoodRanker now asks before using your data for personalized ads, as European rules require. It is your choice, and you can change your mind at any time under Profile → Ad privacy options.
+
+The privacy policy now also says who is responsible for your data and the legal basis for processing it, and you can read it in English as well as Spanish.
+```
+*(344 caracteres)*
+
+---
+
+## v17 (1.4) — histórico
+
 ### Castellano (es-ES)
 
 ```
