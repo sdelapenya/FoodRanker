@@ -15,6 +15,48 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 📦 AAB DE LA v18 (1.5) COMPILADO Y VERIFICADO — falta subirlo (2026-11-01)
+
+`app/build/outputs/bundle/release/app-release.aab`, 16,0 MB, `BUILD SUCCESSFUL in 4m 50s`.
+Commits `f5c29c8` (consentimiento), `ec23e33` (textos legales) y `f26247b` (versión y notas).
+**Todo pusheado a `origin`**, `main` y `gh-pages`.
+
+Verificado sobre el binario, no sobre el fuente:
+
+| Comprobación | Cómo | Resultado |
+|---|---|---|
+| Clave correcta | `keytool -list -v` | SHA-1 idéntica a la de agosto |
+| Firma | `jarsigner -verify` | `jar verified` |
+| Versión | manifest fusionado | 18 / 1.5 |
+| UMP sobrevive a R8 | cadenas en `base/dex/*.dex` | `__GOOGLE_FUNDING_CHOICE_SDK_INTERNAL__`, `IABTCF_gdprApplies`, `UserMessagingPlatform`, `privacy_options_requirement_status` |
+| Textos legales | cadenas en `base/resources.pb` | 8 marcadores, castellano **e** inglés |
+| Split por idioma | `BundleConfig.pb` en crudo | `08 03 10 01` = LANGUAGE negate:true, desactivado |
+
+⚠️ **Lo de R8 no es ceremonia.** La release lleva `isMinifyEnabled = true`. Si R8 se llevara
+el SDK de consentimiento, el formulario no saldría **sin dar ningún error** y los anuncios se
+apagarían en Europa en silencio. Hay que comprobarlo en cada release, buscando esas cadenas
+en el dex — no vale buscar nombres de clases propias, que R8 ofusca.
+
+⚠️ **`BundleConfig.pb` es protobuf**: el enum va como número, no como la cadena "LANGUAGE".
+Buscar el texto no encuentra nada aunque esté bien. Hay que leer los 4 bytes `08 03 10 01`.
+
+**Datos de firma, para no volver a buscarlos:** keystore en `e:\FoodRanker\foodranker-keystore.jks`
+(ignorado en git, **nunca commiteado**, comprobado), alias `key0`, credenciales en
+`local.properties`. El alias y la ruta también están en `.idea/workspace.xml`, que Android
+Studio rellena y que también está ignorado; las contraseñas las guarda Windows, no el
+proyecto. Certificado: `CN=Sergio de la Peña, O=sdelapenya.dev`, válido hasta 2051.
+
+⚠️ Los valores de `local.properties` llevan **escapes de Java** (`E\:\\FoodRanker\\...`).
+Un `grep -o` con un patrón que acaba en `=` devuelve solo el nombre de la clave y parece que
+está vacía: pasó en esta sesión y costó dos comprobaciones en falso.
+
+**Falta:** subir el AAB a prueba cerrada, pegar las notas de los tres idiomas
+(`docs/play-store-listing.md`, sección v18) y probarlo en el Redmi desde Play — ahí sí se
+puede ver el formulario de consentimiento, el precio en euros de Premium y el idioma.
+
+---
+
+
 ### ✅ TEXTOS LEGALES: responsable con nombre, base jurídica, y la web ya se genera (2026-11-01)
 
 **Responsable del tratamiento: Sergio de la Peña**, decisión suya del 1 de noviembre, con
