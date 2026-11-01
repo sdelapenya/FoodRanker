@@ -15,6 +15,52 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ TEXTOS LEGALES: responsable con nombre, base jurídica, y la web ya se genera (2026-11-01)
+
+**Responsable del tratamiento: Sergio de la Peña**, decisión suya del 1 de noviembre, con
+nombre y apellido publicados. Antes `pp_0_b` decía "un particular" sin nombrar a nadie, y el
+art. 13.1.a del RGPD pide la identidad del responsable.
+
+**Base jurídica añadida** (art. 13.1.c, que faltaba entera). No se creó sección nueva: se
+amplió la 3, que pasa a ser "Cómo usamos tu información y con qué base legal". Renumerar
+diez secciones en dos idiomas más el HTML era justo donde se cuela un descuadre, y poner
+cada finalidad junto a su base legal se lee mejor. Las tres bases: ejecución del contrato
+(cuenta, perfil, publicaciones), consentimiento (ubicación, notificaciones, cámara, fotos y
+**publicidad personalizada** — encaja con el consentimiento de anuncios de hoy) e interés
+legítimo (fallos, abusos, analítica agregada).
+
+### 🔧 La web legal ya NO se mantiene a mano: `tools/legal/build_pages.py`
+
+Los textos salían de `strings.xml` y se copiaban a mano a `gh-pages`. Había dejado de
+coincidir **sin que nadie lo notara**. Al generar por primera vez aparecieron, de golpe:
+
+- la web **no tenía la sección 0, "Quién es responsable de tus datos"** — la política a la
+  que apuntan Play y AdMob no decía quién responde de los datos
+- daba **otro correo** (`sdelapenya1991@`) en dos sitios, y `index.html` y
+  `delete-account.html` también — esta última es **la URL declarada en Seguridad de los
+  datos**, así que las peticiones de borrado iban a un buzón distinto del que dice la política
+- hablaba de "la Unión Europea" donde la app ya decía EEE y Reino Unido, con AEPD e ICO
+- fecha de agosto, y sin el idioma del dispositivo entre los datos recogidos
+- **solo existía en castellano**, mientras las fichas `en-GB` y `en-US` apuntaban a ella
+
+Ahora `privacy.html`, `privacy-en.html`, `terms.html` y `terms-en.html` se generan desde
+`strings.xml`. **Correo unificado en las seis páginas: `foodranker.app@gmail.com`**
+(confirmado por Sergio; las otras dos cuentas no se usan para esto).
+
+Commit en `gh-pages`: `eb44128`. **Sin pushear.** Ver `tools/legal/README.md` para publicar.
+
+⚠️ `index.html`, `style.css` y `delete-account.html` **no se generan**, se mantienen a mano.
+Y **`delete-account.html` solo existe en castellano** aunque las páginas inglesas enlazan a
+ella: conviene traducirla antes de producción, porque esa URL está declarada en Play.
+
+⚠️ **Trampa de escapes, la tercera vez que muerde.** Un heredoc de bash colapsa `\\n` en
+`\n`, y Python lo convierte en un salto de línea real en vez de los dos caracteres que el XML
+lleva de verdad. Mató dos intentos seguidos. La salida es escribir el script con la
+herramienta de ficheros y construir la barra con `chr(92)`, nunca con un literal.
+
+---
+
+
 ### ✅ CONSENTIMIENTO DE ANUNCIOS (EEE / Reino Unido) — HECHO Y VERIFICADO (2026-11-01)
 
 **El agujero más serio que ha aparecido, y no estaba en ninguna lista.** La app lleva

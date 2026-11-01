@@ -30,3 +30,6 @@ app/build/outputs/
 firestore-debug.log
 firebase-debug.log
 ui-debug.log
+
+# Salida del generador de paginas legales (se publica en gh-pages, no en main)
+tools/legal/out/
