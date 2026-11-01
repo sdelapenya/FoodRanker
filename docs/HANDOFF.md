@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-10-11
+**Actualizado:** 2026-11-01
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,126 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### ✅ CONSENTIMIENTO DE ANUNCIOS (EEE / Reino Unido) — HECHO Y VERIFICADO (2026-11-01)
+
+**El agujero más serio que ha aparecido, y no estaba en ninguna lista.** La app lleva
+`play-services-ads` desde siempre y **no tenía ni una línea de CMP**: ni la dependencia
+`user-messaging-platform` declarada, ni `ConsentInformation`, ni `ConsentForm`.
+
+Desde enero de 2024 Google exige una **CMP certificada** para servir anuncios a usuarios
+del Espacio Económico Europeo y Reino Unido. La app está al 100 % en 178 países, el
+público es español y la prima está en Edimburgo: es justo el territorio donde es
+obligatorio. Lo más probable es que **AdMob ya estuviera limitando los anuncios en
+Europa** sin que nadie se diera cuenta.
+
+⚠️ Dato que despista: `play-services-ads:23.0.0` **ya arrastraba UMP 2.2.0 de forma
+transitiva**. Las clases estaban en el APK desde siempre, solo que no las llamaba nadie.
+Buscar la dependencia en el árbol de Gradle no sirve para saber si esto está resuelto —
+hay que buscar `ConsentInformation` en el código.
+
+**Hecho (compila y `assembleDebug` correcto):**
+- `utils/ConsentManager.kt` (nuevo). Pide el consentimiento, enseña el formulario solo si
+  toca y arranca `AdManager.initialize()` cuando `canRequestAds()` dice que sí.
+- Dependencia explícita `user-messaging-platform:3.0.0` en `app/build.gradle.kts`.
+- `FoodRankerApp` **ya no llama a `AdManager.initialize()`**. Ahora sale de `ConsentManager`,
+  desde `MainActivity`, que es quien tiene Activity para el diálogo.
+- `BannerAdView` se tapa mientras `canRequestAds` sea false.
+- Entrada permanente **"Opciones de privacidad de anuncios"** en el perfil (`prof_ad_privacy`),
+  que solo aparece donde el SDK dice que hace falta. El RGPD exige poder cambiar de opinión.
+- En debug se fuerza `DEBUG_GEOGRAPHY_EEA` con los IDs de `ADMOB_TEST_DEVICE_IDS`, para
+  poder ver el formulario desde España sin estar en otro país.
+
+**Mensaje de AdMob creado y publicado el 2026-11-01.** Reglamentos europeos → app
+FoodRanker, idioma por defecto inglés + español añadido, **"No consentir" activado en los
+30 y pico países**, "Cerrar (no consentir)" desactivado, URL de privacidad apuntando a
+`privacy.html`.
+
+**✅ VERIFICADO DE PUNTA A PUNTA en el emulador FoodRanker_Test (2026-11-01).** El
+formulario sale con el logo de la app, el nombre sustituido y las tres opciones. Al aceptar:
+
+| Comprobación | Resultado |
+|---|---|
+| `is_pub_misconfigured` | `false` — la configuración de AdMob es correcta |
+| `IABTCF_gdprApplies` | `1` — el SDK detecta territorio RGPD |
+| `consent_status` antes / después | `2` (REQUIRED) → `3` (OBTAINED) |
+| `privacy_options_requirement_status` | `REQUIRED` — la entrada del perfil sí aparece |
+| Antes de consentir | **ni una línea de `MobileAds`** — los anuncios no arrancan |
+| Al consentir | `ChimeraMobileAdsSettingManagerCreatorImpl` — arrancan |
+
+Lo último es la prueba que importa: sin consentimiento no se pide ni un anuncio.
+
+⚠️ **Trampa del emulador, para no perder otra tarde.** Las dos primeras ejecuciones
+fallaron con `W ConsentManager: Formulario de consentimiento: 4 Web view timed out`, y el
+`Wall html loaded` llegaba 7 segundos DESPUÉS de que el SDK se rindiera. No era el código:
+era el WebView del emulador recién borrado. Se arregló subiendo la RAM del AVD de 2048 a
+4096 (`~/.android/avd/FoodRanker_Test.avd/config.ini`, con `.bak` al lado) y relanzando un
+par de veces hasta que el WebView entró en calor.
+
+⚠️ **No se puede probar con sideload en el Redmi**: tiene la versión de prueba cerrada
+instalada desde Play (`installer=com.android.vending`), firmada por Google. Instalar la de
+debug encima falla por firma, y desinstalarla cierra la sesión. Por eso se usó el emulador.
+
+**Falta, y es de Sergio:** nada de AdMob. Queda verlo en el Redmi cuando la v18 esté en
+prueba cerrada, junto con el precio en euros de Premium y el idioma.
+
+### 🔴 FORMULARIO DE SEGURIDAD DE LOS DATOS — SIN HACER (2026-11-01)
+
+Confirmado por Sergio el 1 de noviembre: **no se ha tocado**. Dos incoherencias con lo que
+el código hace de verdad, detectadas comparando el CSV exportado contra el repo:
+
+1. **`PSL_SUPPORT_DATA_DELETION_BY_USER` = `DATA_DELETION_NO`.** Declara que NO se ofrece
+   borrado de datos, y es falso por triplicado: `deleteUserAccount` existe y borra en diez
+   colecciones (`users`, `plates`, `ratings`, `comments`, `follows`, `saves`, `collections`,
+   `items`, `notifications`, `reports`), la app lo ofrece desde el perfil, y la URL de
+   borrado **ya está rellena** en el propio formulario. → cambiar a **Sí**, con
+   `https://sdelapenya.github.io/FoodRanker/delete-account.html`.
+2. **Falta "Otro contenido generado por el usuario"** en Actividad en la aplicación. La app
+   recoge valoraciones, comentarios, nombres y descripciones de platos y nombre y dirección
+   del local; la política de privacidad los lista, el formulario no. → recogido **sí**,
+   compartido **no**, efímero **no**, **opcional**, finalidad **Funciones de la aplicación**.
+
+Lo demás del CSV está bien, incluido lo que más se suele fallar: IDs de dispositivo
+recogidos **y compartidos** con finalidad Publicidad, y la ubicación como opcional y efímera.
+
+**Regla para que no se descuadre otra vez:** el formulario y la política de privacidad son
+dos declaraciones sobre lo mismo y Google las lee juntas. Si cambia `AndroidManifest.xml`
+(permiso nuevo) o `app/build.gradle.kts` (dependencia de Google, analítica o publicidad),
+hay que repasar **las dos**. Son los únicos dos ficheros por donde entra algo que recoja datos.
+
+### 🟠 POLÍTICA DE PRIVACIDAD: falta la base jurídica (2026-11-01)
+
+Las 14 secciones (`pp_0_t` a `pp_13_t`) cubren responsable, datos, ubicación, uso, terceros,
+publicidad, seguridad, conservación, derechos, menores, cambios y contacto. **Ninguna dice
+bajo qué base legal se tratan los datos**, que el RGPD exige (art. 13.1.c).
+
+Y `pp_0_b` dice "una aplicación desarrollada y mantenida por un particular" **sin nombrar a
+nadie**; el art. 13.1.a pide la identidad del responsable. Sergio ya decidió que el
+responsable es él; queda decidir si se publica su nombre completo o se deja solo el email.
+
+⚠️ **Los textos legales viven en DOS sitios** y tienen que decir lo mismo palabra por
+palabra: `strings.xml` (`values/` y `values-es/`) y la rama huérfana **`gh-pages`** de
+`origin`, que sirve `privacy.html` y `terms.html`. Tocar solo uno crea justo la
+incoherencia que Google compara. Y como la política va dentro de la app, cambiarla
+obliga a **v18**.
+
+### ✅ El ranking ya ordena por la nota que se ve — VERIFICADO EN PRODUCCIÓN (2026-10-15)
+
+Commit `bfb8e76`. Desplegado y recalculado. Comprobado el 1 de noviembre con el script en
+simulación: **`platos: 56 | a cambiar: 0`**. Había 53 platos cuando se hizo el cambio y hay
+56: los tres nuevos salieron ya con la fórmula nueva, lo que confirma que **las Cloud
+Functions desplegadas son las nuevas** (si no, habrían salido con la bayesiana y el script
+los marcaría).
+
+Para repetir la comprobación (solo lectura, no escribe nada): ADC desde el `refresh_token`
+de `firebase-tools.json` y `node scripts/recalcRankingScores.js` sin `--confirm`.
+
+**Pendiente, acordado pero sin escribir:** fase 2 del ranking — umbral de 2 valoraciones
+para entrar y estantería de "recién publicados". El problema de fondo sigue siendo que
+**47 de 53 platos los votó solo su propio autor**.
+
+---
+
 
 ### 🚀 v17 (1.4) PUBLICADA EN ALPHA + ficha en tres idiomas (2026-10-10/11)
 

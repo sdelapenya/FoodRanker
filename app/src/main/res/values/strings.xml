@@ -247,6 +247,8 @@
     <string name="prof_notifications_sub">Choose which alerts you get</string>
     <string name="prof_privacy">Privacy policy</string>
     <string name="prof_terms">Terms of use</string>
+    <string name="prof_ad_privacy">Ad privacy options</string>
+    <string name="prof_ad_privacy_error">Could not open the privacy options. Try again in a moment.</string>
     <string name="prof_delete_account">Delete account</string>
     <string name="prof_delete_account_cta">Permanently delete my account</string>
     <string name="prof_delete_q">Delete account?</string>

@@ -15,6 +15,7 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.app.foodranker.utils.AdManager
+import com.app.foodranker.utils.ConsentManager
 import com.app.foodranker.viewmodel.BillingViewModel
 
 @Composable
@@ -23,6 +24,10 @@ fun BannerAdView(modifier: Modifier = Modifier) {
     val billingViewModel: BillingViewModel = hiltViewModel(activity)
     val isPremium by billingViewModel.isPremium.collectAsState()
     if (isPremium) return
+    // Sin consentimiento no se pide ni un anuncio. Fuera del EEE y Reino Unido esto es
+    // true casi al instante; dentro, hasta que el usuario responde el formulario.
+    val canRequestAds by ConsentManager.canRequestAds.collectAsState()
+    if (!canRequestAds) return
 
     AndroidView(
         modifier = modifier

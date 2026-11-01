@@ -48,6 +48,7 @@ import androidx.compose.material.icons.outlined.Collections
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
@@ -60,6 +61,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.LocalActivity
+import com.app.foodranker.utils.ConsentManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -115,6 +118,7 @@ fun ProfileScreen(
     var showEditSheet by remember { mutableStateOf(false) }
     var showEditPlateId by remember { mutableStateOf<String?>(null) }
     var deleteError by remember { mutableStateOf<String?>(null) }
+    var adPrivacyError by remember { mutableStateOf(false) }
 
     // ON_RESUME carga el perfil tanto en la primera apertura como al volver.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -130,6 +134,13 @@ fun ProfileScreen(
         val msg = uiState.error ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(msg)
         viewModel.clearError()
+    }
+
+    val adPrivacyErrorMsg = stringResource(R.string.prof_ad_privacy_error)
+    LaunchedEffect(adPrivacyError) {
+        if (!adPrivacyError) return@LaunchedEffect
+        snackbarHostState.showSnackbar(adPrivacyErrorMsg)
+        adPrivacyError = false
     }
 
     Scaffold(
@@ -460,6 +471,7 @@ fun ProfileScreen(
                             onTerms = onNavigateToTerms,
                             onReferral = onNavigateToReferral,
                             onPremium = onNavigateToPremium,
+                            onAdPrivacyError = { adPrivacyError = true },
                             isPremium = ownIsPremium,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
@@ -666,6 +678,7 @@ private fun ProfileAccountDangerZone(
     onTerms: () -> Unit,
     onReferral: () -> Unit = {},
     onPremium: () -> Unit = {},
+    onAdPrivacyError: () -> Unit = {},
     isPremium: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -772,6 +785,29 @@ private fun ProfileAccountDangerZone(
             )
 
             Spacer(Modifier.height(6.dp))
+
+            // El RGPD exige poder cambiar de opinión sobre los anuncios, así que la entrada
+            // tiene que ser permanente, no solo el diálogo del primer arranque. Solo sale
+            // donde el SDK dice que hace falta (EEE y Reino Unido): en el resto del mundo
+            // no abriría nada y sería una opción muerta.
+            val actividad = LocalActivity.current
+            var privacidadAnuncios by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                privacidadAnuncios = ConsentManager.isPrivacyOptionsRequired(ctxAjustes)
+            }
+            if (privacidadAnuncios) {
+                ProfileMenuRow(
+                    icon = Icons.Outlined.PrivacyTip,
+                    title = stringResource(R.string.prof_ad_privacy),
+                    iconTint = OrangePrimary.copy(alpha = 0.85f),
+                    onClick = {
+                        val act = actividad
+                        if (act != null) ConsentManager.showPrivacyOptionsForm(act, onAdPrivacyError)
+                        else onAdPrivacyError()
+                    }
+                )
+                Spacer(Modifier.height(6.dp))
+            }
 
             ProfileMenuRow(
                 icon = Icons.AutoMirrored.Outlined.Article,

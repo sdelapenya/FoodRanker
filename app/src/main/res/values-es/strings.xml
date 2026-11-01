@@ -249,6 +249,8 @@
     <string name="prof_notifications_sub">Elige qué avisos quieres recibir</string>
     <string name="prof_privacy">Política de privacidad</string>
     <string name="prof_terms">Términos de uso</string>
+    <string name="prof_ad_privacy">Opciones de privacidad de anuncios</string>
+    <string name="prof_ad_privacy_error">No se han podido abrir las opciones de privacidad. Inténtalo dentro de un momento.</string>
     <string name="prof_delete_account">Eliminación de cuenta</string>
     <string name="prof_delete_account_cta">Eliminar mi cuenta permanentemente</string>
     <string name="prof_delete_q">¿Eliminar cuenta?</string>

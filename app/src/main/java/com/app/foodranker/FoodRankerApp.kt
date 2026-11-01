@@ -1,7 +1,6 @@
 package com.app.foodranker
 
 import android.app.Application
-import com.app.foodranker.utils.AdManager
 import com.app.foodranker.utils.AnalyticsManager
 import com.app.foodranker.utils.BillingManager
 import com.app.foodranker.utils.CloudinaryManager
@@ -26,10 +25,11 @@ class FoodRankerApp : Application() {
         // instalar el proveedor viajan sin token de App Check.
         AppCheckInstaller.install()
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
-        // initialize() ya encadena las precargas cuando el SDK termina de arrancar,
-        // en segundo plano. Llamarlas aquí las lanzaba antes de que estuviera listo.
         ErrorMapper.initialize(this)
-        AdManager.initialize(this)
+        // Los anuncios NO arrancan aquí. En el EEE y Reino Unido no se puede pedir ni uno
+        // antes de que el usuario pase por el formulario de consentimiento, así que de
+        // AdManager.initialize() se encarga ConsentManager cuando el SDK da permiso
+        // (desde MainActivity, que es quien tiene Activity para enseñar el diálogo).
         CloudinaryManager.initialize(this)
         AnalyticsManager.initialize(this)
         RemoteConfigManager.initialize()

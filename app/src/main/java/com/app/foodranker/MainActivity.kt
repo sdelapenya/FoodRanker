@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.app.foodranker.utils.FoodRankerMessagingService
+import com.app.foodranker.utils.ConsentManager
 
 
 @AndroidEntryPoint
@@ -65,6 +66,9 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Antes de que el SDK de anuncios pida nada: el formulario es un diálogo y
+        // necesita Activity. De aquí sale el arranque de AdManager.
+        ConsentManager.gather(this)
         setContent {
             FoodRankerTheme {
                 FoodRankerNavigation()
