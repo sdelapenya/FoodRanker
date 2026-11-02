@@ -740,6 +740,17 @@ private fun ProfileAccountDangerZone(
                             ctxAjustes.startActivity(
                                 Intent(Settings.ACTION_APP_LOCALE_SETTINGS)
                                     .setData(android.net.Uri.fromParts("package", ctxAjustes.packageName, null))
+                                    // FLAG_ACTIVITY_NEW_TASK no es cosmético. En MIUI (Redmi
+                                    // Note 10S, Android 13) el selector de idioma del sistema
+                                    // se estrella solo al abrirse —NPE en su propio onCreate,
+                                    // AppLocalePickerActivity:82, ActionBar nulo— y si entra
+                                    // en NUESTRA tarea, Android termina toda la pila con él:
+                                    // "Force finishing activity com.app.foodranker/.MainActivity".
+                                    // El usuario ve desaparecer FoodRanker y cree que ha
+                                    // petado la app. En su propia tarea, Ajustes se cae igual
+                                    // (eso no lo arreglamos desde aquí) pero nosotros seguimos
+                                    // vivos. El runCatching no basta: la excepción no es nuestra.
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             )
                         }
                     }

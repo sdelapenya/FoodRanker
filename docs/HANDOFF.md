@@ -15,7 +15,137 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-### 📦 AAB DE LA v18 (1.5) COMPILADO Y VERIFICADO — falta subirlo (2026-11-01)
+### 🔴 PROBADO EN EL REDMI: PREMIUM NO EXISTE Y EL IDIOMA TUMBA LA APP (2026-11-02)
+
+**La v18 (1.5) está PUBLICADA en alpha** desde el 2 nov ~15:45. El formulario de Seguridad
+de los datos fue en el mismo envío, y el borrado parcial se mandó después, por separado.
+App Check quedó registrado con Play Integrity (ver más abajo).
+
+Probado sobre la build **de Play**, pilotando el Redmi por ADB. Cuatro cosas bien y dos mal.
+
+| Qué | Resultado |
+|---|---|
+| Formulario de consentimiento (CMP) | ✅ Sale con logo y nombre, en castellano, con "No consentir" |
+| Anuncios sin consentimiento | ✅ **Cero anuncios**, y `MobileAds` ni se inicializa |
+| "Opciones de privacidad de anuncios" en el perfil | ✅ Presente |
+| App en inglés | ✅ Completo. Hasta el formato numérico cambia: `10.0`, no `10,0` |
+| Política de privacidad en inglés | ✅ Con el responsable y la base jurídica nuevos |
+| **Premium** | ❌ No hay precio y la compra no arranca |
+| **Idioma** | ❌ Se lleva la app por delante |
+
+#### ❌ PREMIUM NUNCA HA SIDO REAL — no hay cuenta de comercio
+
+**No es un bug del cliente.** El código se comporta exactamente como está escrito:
+`queryProductDetails` no devuelve nada → el botón sale como "Suscribirse" a secas
+(rama `price.isBlank()`) → `launchPurchase` devuelve `false` → "No se pudo iniciar la
+compra. Inténtalo de nuevo". La app **no se cierra**: eso era el fallo del idioma.
+
+La causa está en Play Console → **Monetizar con Play**, que dice literalmente *"Para
+monetizar esta aplicación, configura una cuenta de comercio"*. Sin cuenta de comercio no
+hay productos, así que **`foodranker_premium_monthly` no existe en Play**. El cliente pide
+un producto que nunca se dio de alta.
+
+⚠️ **Este handoff lleva desde agosto diciendo "Billing implementado y real (el precio
+2,99 €/mes lo devuelve Google Play)". Era falso.** Lo implementado es el código cliente;
+la tienda nunca ha tenido nada que vender. Corregido más abajo, en "Qué funciona".
+
+**Para arreglarlo, en este orden:** crear la cuenta de comercio (datos fiscales y bancarios,
+y Google tarda en verificarla) → crear la suscripción con el id exacto
+`foodranker_premium_monthly` (`BillingManager.kt:23`) → plan base **activo** con precio para
+España → volver a probar. Mientras no exista, la pantalla de Premium enseña un botón que
+siempre falla: **conviene ocultarla o desactivarla antes de abrir producción**, porque un
+revisor que la pulse ve exactamente lo que hemos visto nosotros.
+
+⚠️ El Redmi tiene **dos cuentas de Google** dadas de alta (`sergiodelapen...` y
+`sdelapenya1...`). Cuando la suscripción exista, la que esté activa en Play Store decide
+qué productos ve: si no aparece, mirar eso antes de buscar un bug.
+
+#### ❌ IDIOMA: el bug es de Xiaomi, pero se llevaba la app — ARREGLADO
+
+```
+Process: com.android.settings
+AppLocalePickerActivity.onCreate(AppLocalePickerActivity.java:82)
+NullPointerException: ... ActionBar.setDisplayHomeAsUpEnabled(boolean) on a null object reference
+```
+
+El selector de idioma por aplicación **de MIUI** se estrella solo. Nosotros lanzamos el
+intent correcto. El problema es que entraba en **nuestra tarea**, y al caerse Android
+terminaba toda la pila: `W/ActivityTaskManager: Force finishing activity
+com.app.foodranker/.MainActivity`. El usuario ve desaparecer FoodRanker y cree que ha
+petado la app.
+
+**Arreglado** anadiendo `FLAG_ACTIVITY_NEW_TASK` al intent (`ProfileScreen.kt`, fila de
+idioma). Ajustes se sigue cayendo —eso no se arregla desde aquí— pero FoodRanker queda en
+pie. ⚠️ El `runCatching` que ya había **no servía de nada**: la excepción ocurre en otro
+proceso, no en el nuestro, así que no hay nada que capturar.
+
+**Arreglo bueno, para la v19:** selector de idioma propio dentro de la app con
+`LocaleManager.setApplicationLocales()` (API 33+, está en el framework, no hace falta
+AppCompat). Deja de depender de una pantalla de Ajustes que cada fabricante rompe a su
+manera, y de paso permite ofrecer solo los dos idiomas que la app realmente tiene.
+
+#### ⚠️ HALLAZGO NUEVO: AdMob sirvió un anuncio de CBD
+
+El banner que salió durante la prueba era de **CBD** ("+100G de CBD gratis"). En una app de
+comida con clasificación para público amplio, eso puede dar problemas en la revisión de
+producción. En AdMob se pueden bloquear categorías sensibles. **Mirarlo antes de pedir
+producción.**
+
+#### 💰 DECISIÓN DE NEGOCIO PENDIENTE: quien no consiente no deja un céntimo
+
+Verificado: quien pulsa "No consentir" **no ve ningún anuncio**. Es legalmente correcto y es
+lo que está configurado, pero no es la única opción: en el mensaje de AdMob se puede ofrecer
+**anuncios no personalizados** a quien rechace el seguimiento. Siguen siendo anuncios, sin
+perfilado. Es lo que hace casi todo el mundo. **Decisión de Sergio**, y se toca en AdMob, no
+en el código.
+
+#### ✅ APP CHECK REGISTRADO (pasos 1 y 2 de los cuatro)
+
+Registrado con **Play Integrity** en Firebase Console, TTL 1 hora, **enforcement todavía
+apagado** en todo (Firestore, Storage, Authentication y Places API (New) comprobados en
+"No se aplica").
+
+⚠️ **La clave de firma de Play ha cambiado desde agosto, y hay TRES.** Firebase precargaba
+en el formulario una SHA-256 que **no** era la que Play usa hoy. Si se hubiera guardado solo
+esa, el enforcement habría rechazado a todos los usuarios reales. Se declararon las tres
+(el campo admite varias justo por esto). Declarar de más no abre ningún agujero; declarar
+de menos rompe en silencio.
+
+| SHA-256 de Play | Qué es |
+|---|---|
+| `DB:9A:33:74:AA:77:...` | La clave **En uso** hoy |
+| `4D:A9:19:25:BB:E5:...` | Anterior (20 ago, "preparada para computación cuántica") |
+| `98:9F:85:51:E6:1C:...` | La única que Firebase tenía registrada |
+
+Las **SHA-1** de las tres (`9E:6D:CB:79`, `B6:D0:BF:6D`, `99:93:55:93`) sí estaban las tres
+en Firebase, así que el login nunca estuvo en peligro. Comprobado con
+`npx firebase apps:android:sha:list 1:350322634794:android:42b4b2e91a8df170c4d353`.
+
+**Lo que falta de App Check:** dar de alta el token de depuración del emulador → mirar las
+métricas hasta ver tráfico **verificado** → y solo entonces `enforceAppCheck: true`.
+
+💡 **Extra que no estaba previsto:** en la pestaña APIs aparece **Places API (New)**.
+El cliente llama a Places **directamente** con la clave en el binario
+(`PlacesModule.kt:24`), protegida solo por la restricción de huella. Meterla en App Check
+es la que más dinero ahorra. Hacerlo en el mismo lote que las callables.
+
+#### Cómo se pilotó el Redmi (para repetirlo)
+
+Nada de instalar a mano: la app es la **de Play**, que es la única que obtiene token de
+Play Integrity. Para forzar el idioma **sin pasar por el selector roto**:
+
+```
+adb shell cmd locale set-app-locales com.app.foodranker --locales en-GB
+adb shell cmd locale get-app-locales com.app.foodranker
+```
+
+Y para los crashes, `adb logcat -b crash -d`: el buffer guarda los últimos aunque hayan
+pasado minutos, pero **se rota rápido**. Limpiar con `-c` antes de reproducir.
+
+---
+
+
+### ✅ AAB DE LA v18 (1.5) — COMPILADO, VERIFICADO Y YA PUBLICADO (2026-11-01/02)
 
 `app/build/outputs/bundle/release/app-release.aab`, 16,0 MB, `BUILD SUCCESSFUL in 4m 50s`.
 Commits `f5c29c8` (consentimiento), `ec23e33` (textos legales) y `f26247b` (versión y notas).
@@ -50,9 +180,15 @@ proyecto. Certificado: `CN=Sergio de la Peña, O=sdelapenya.dev`, válido hasta 
 Un `grep -o` con un patrón que acaba en `=` devuelve solo el nombre de la clave y parece que
 está vacía: pasó en esta sesión y costó dos comprobaciones en falso.
 
-**Falta:** subir el AAB a prueba cerrada, pegar las notas de los tres idiomas
-(`docs/play-store-listing.md`, sección v18) y probarlo en el Redmi desde Play — ahí sí se
-puede ver el formulario de consentimiento, el precio en euros de Premium y el idioma.
+✅ **Subido y publicado el 2026-11-02.** Notas de versión en los tres idiomas pegadas
+desde `docs/play-store-listing.md`. Probado en el Redmi: ver la sección del 2026-11-02
+arriba del todo — el consentimiento y el idioma bien, Premium no (no hay cuenta de
+comercio, así que el producto no existe).
+
+⚠️ **Trampa al subirlo:** un borrador de versión `1.0 - primera prueba interna`, con el
+app bundle `1 (1.0)` dentro, llevaba bloqueando "Crear nueva versión" desde el principio sin
+que nadie lo notara. Nunca se habría podido publicar (versionCode 1 < 17 ya en vivo). Hubo
+que descartarlo.
 
 ---
 
@@ -234,15 +370,12 @@ bloquea, pero es lo primero que ve quien llega a la raiz del dominio.
    de **No** a **Si**, con `https://sdelapenya.github.io/FoodRanker/delete-account.html`.
    Eso es un cambio mas en la cola de publicacion, que ira en el siguiente envio.
 
-### 🟠 POLÍTICA DE PRIVACIDAD: falta la base jurídica (2026-11-01)
+### ✅ POLÍTICA DE PRIVACIDAD: base jurídica y responsable — RESUELTO (2026-11-01)
 
-Las 14 secciones (`pp_0_t` a `pp_13_t`) cubren responsable, datos, ubicación, uso, terceros,
-publicidad, seguridad, conservación, derechos, menores, cambios y contacto. **Ninguna dice
-bajo qué base legal se tratan los datos**, que el RGPD exige (art. 13.1.c).
-
-Y `pp_0_b` dice "una aplicación desarrollada y mantenida por un particular" **sin nombrar a
-nadie**; el art. 13.1.a pide la identidad del responsable. Sergio ya decidió que el
-responsable es él; queda decidir si se publica su nombre completo o se deja solo el email.
+**Cerrado en `ec23e33`.** La política nombra a **Sergio de la Peña** como responsable
+(art. 13.1.a) y declara la base jurídica de cada tratamiento (art. 13.1.c). Verificado el
+2026-11-02 **en el móvil, sobre la build de Play y en inglés**: la sección "0. Who is
+responsible for your data" sale con el nombre y con `foodranker.app@gmail.com`.
 
 ⚠️ **Los textos legales viven en DOS sitios** y tienen que decir lo mismo palabra por
 palabra: `strings.xml` (`values/` y `values-es/`) y la rama huérfana **`gh-pages`** de
@@ -2060,7 +2193,8 @@ todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `
    El enforcement se dejó **desactivado a propósito**, y este es el orden correcto para
    activarlo, no antes:
 
-   1. Firebase Console → App Check → registrar la app Android con **Play Integrity**.
+   1. ~~Firebase Console → App Check → registrar la app Android con **Play Integrity**.~~
+      **HECHO el 2026-11-02**, con las tres huellas SHA-256 de Play (ver arriba).
    2. Subir el AAB a Play, aunque sea a un track **interno**. Play Integrity solo valida
       builds distribuidas por Google Play: hasta ese momento un APK instalado a mano **no
       obtiene token**, así que activar el enforcement ahora dejaría las callables sin
@@ -2071,10 +2205,11 @@ todas las llamadas de la CF como un solo usuario y un tope bajo estrangularía `
    4. Mirar en la consola las métricas de App Check hasta ver tráfico **verificado**, y solo
       entonces activar el enforcement. En las callables v2 no se activa desde la consola:
       se añade `enforceAppCheck: true` a las opciones de cada `onCall` en
-      `functions/src/index.ts` y se redespliega. Son **cinco**: `validateFoodImage` (l. 365),
-      `awardAdXp` (979), `getLeagueId` (1013), `resolveVenue` (1295) y `deleteUserAccount`
-      (1391). Empezar por `resolveVenue` y `validateFoodImage`, que son las que gastan cuota
-      de Places y de Vision.
+      `functions/src/index.ts` y se redespliega. Son **cinco**: `validateFoodImage` (l. 677),
+      `awardAdXp` (1866), `getLeagueId` (1900), `resolveVenue` (2185) y `deleteUserAccount`
+      (2306) — líneas comprobadas el 2026-11-02; las anteriores (365/979/1013/1295/1391)
+      llevaban meses desfasadas. Empezar por `resolveVenue` y `validateFoodImage`, que son
+      las que gastan cuota de Places y de Vision.
 
    Mientras tanto el log seguirá diciendo `{auth: VALID, app: MISSING}` en las llamadas sin
    token, que es lo esperado: en monitorización pasan igual.
@@ -2119,7 +2254,11 @@ app cuyo valor es que las puntuaciones sean creíbles.
 - XP/badges server-side (Cloud Functions + Admin SDK; el cliente no los escribe)
 - Liga semanal por ciudad con clawback de XP si el plato se rechaza
 - Moderación de imagen fail-closed (Vision en servidor)
-- Billing implementado y **real** (el precio 2,99 €/mes lo devuelve Google Play)
+- Billing implementado en el **cliente**. ⚠️ **La tienda NO tiene nada que vender**: no
+  hay cuenta de comercio, así que la suscripción `foodranker_premium_monthly` no existe en
+  Play y la compra siempre falla. Comprobado en el móvil el 2026-11-02 (ver arriba). Lo que
+  este fichero afirmaba hasta entonces —"real, el precio 2,99 €/mes lo devuelve Google
+  Play"— **era falso**
 - Borrado de cuenta (lo exige Play)
 
 ### Verificado en móvil real (Redmi Note 10S, Android 13) el 2026-08-09
@@ -2163,11 +2302,14 @@ comprobado.
   ⚠️ Al rellenar **Data safety**, la política declara **ubicación, fotos, correo y datos de
   diagnóstico**: las cuatro categorías tienen que aparecer marcadas o Play rechaza por
   incoherencia con la política.
-- Formulario de Data safety (email, fotos, ubicación, datos de uso)
-- Ficha: capturas, descripciones, icono, gráfico destacado
-- Cuestionario de clasificación de contenido
-- Declaración de contenido generado por usuarios (hay moderación y reportes, hay que
-  declararlos)
+- ~~Formulario de Data safety~~ — **hecho**. Repasado y ampliado el 2026-11-02
+- ~~Ficha: capturas, descripciones, icono, gráfico destacado~~ — **hecha**, en tres idiomas
+- ~~Cuestionario de clasificación de contenido~~ — **hecho**
+- ~~Declaración de contenido generado por usuarios~~ — **hecha** el 2026-11-02
+
+⚠️ Esta lista es de agosto de 2026 y se quedó sin actualizar durante meses. Lo único que
+sigue abierto de Play Console es **la cuenta de comercio** (sin ella no hay Premium) y
+**pedir acceso a producción**.
 
 ### SHA-1
 | | SHA-1 |
@@ -2175,6 +2317,14 @@ comprobado.
 | Debug | `00:56:2C:9F:18:0E:7F:6C:EB:03:BB:3F:7A:03:B5:CE:F9:82:34:C7` |
 | Release (clave de carga, la del keystore local) | `27:78:23:4B:D8:97:89:FE:86:23:28:F4:F7:65:10:23:15:E1:1A:59` |
 | **Firma de Play** (App Signing key, la que Google usa de verdad para lo que llega a los usuarios) | `B6:D0:BF:6D:59:E8:DC:52:2E:0D:AC:E8:1C:B7:16:05:BA:90:00:DF` |
+
+⚠️ **Esa ya NO es la única ni la que está en uso (2026-11-02).** Play tiene **tres** claves
+de firma y la activa hoy es otra. Las SHA-1 de las tres: `9E:6D:CB:79:07:78:AD:01:BE:7B:4E:77:A6:0E:78:BE:EA:F5:0E:71`,
+`B6:D0:BF:6D:...` (la de arriba) y `99:93:55:93:DE:3C:2D:E1:2D:1D:45:58:56:E5:94:D9:A7:2C:A5:5A`.
+Las tres están registradas en Firebase, por eso el login funciona. Se leen en Play Console
+→ Protegida con Play → Firma de aplicaciones → "Copiar todas las huellas digitales de
+certificados" (dos opciones en el desplegable, una por algoritmo; salen separadas por comas).
+Para App Check hacen falta las **SHA-256**, que son otras.
 
 ⚠️ **Trampa real, no teórica** (encontrada el 2026-08-20 al probar el primer build subido a
 prueba interna): al aceptar "Firma de aplicaciones de Play" en la creación de la app, Google
