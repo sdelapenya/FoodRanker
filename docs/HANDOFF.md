@@ -91,13 +91,27 @@ comida con clasificación para público amplio, eso puede dar problemas en la re
 producción. En AdMob se pueden bloquear categorías sensibles. **Mirarlo antes de pedir
 producción.**
 
-#### 💰 DECISIÓN DE NEGOCIO PENDIENTE: quien no consiente no deja un céntimo
+#### 💰 DECIDIDO: quien no consienta verá anuncios, pero NO personalizados
 
-Verificado: quien pulsa "No consentir" **no ve ningún anuncio**. Es legalmente correcto y es
-lo que está configurado, pero no es la única opción: en el mensaje de AdMob se puede ofrecer
-**anuncios no personalizados** a quien rechace el seguimiento. Siguen siendo anuncios, sin
-perfilado. Es lo que hace casi todo el mundo. **Decisión de Sergio**, y se toca en AdMob, no
-en el código.
+Verificado en el móvil: hoy quien pulsa "No consentir" **no ve ningún anuncio**, y por tanto
+no genera un céntimo.
+
+**Sergio decidió el 2026-11-02 cambiarlo**: quien rechace el seguimiento seguirá viendo
+anuncios, solo que **sin perfilado**.
+
+✅ **No hay que tocar código.** `ConsentManager.startAdsIfAllowed()` usa
+`info.canRequestAds()` como única condición, que es justo la API que contempla este caso:
+en cuanto AdMob permita servir anuncios a quien rechaza, `canRequestAds()` devolverá `true`
+y el banner saldrá solo. Que hoy no salga significa que **el mensaje de AdMob está
+configurado para que rechazar lo bloquee todo**.
+
+**Se toca en AdMob** → Privacidad y mensajes → RGPD → el mensaje de FoodRanker. Hay que
+permitir que, al rechazar, Google sirva anuncios **no personalizados / limitados** en vez de
+ninguno. Al terminar hay que **publicar** el mensaje otra vez: guardarlo no basta.
+
+⚠️ Después hay que **volver a probarlo en el Redmi**, y es más lioso de lo que parece: la
+respuesta anterior queda guardada, así que hay que entrar en Perfil → "Opciones de
+privacidad de anuncios", rechazar otra vez, y mirar si ahora sí aparece banner.
 
 #### ✅ APP CHECK REGISTRADO (pasos 1 y 2 de los cuatro)
 
