@@ -109,12 +109,36 @@ proceso, no en el nuestro, así que no hay nada que capturar.
 AppCompat). Deja de depender de una pantalla de Ajustes que cada fabricante rompe a su
 manera, y de paso permite ofrecer solo los dos idiomas que la app realmente tiene.
 
-#### ⚠️ HALLAZGO NUEVO: AdMob sirvió un anuncio de CBD
+#### ✅ RESUELTO: AdMob sirvió un anuncio de CBD → categorías bloqueadas (2026-11-02)
 
 El banner que salió durante la prueba era de **CBD** ("+100G de CBD gratis"). En una app de
-comida con clasificación para público amplio, eso puede dar problemas en la revisión de
-producción. En AdMob se pueden bloquear categorías sensibles. **Mirarlo antes de pedir
-producción.**
+comida con clasificación para público amplio eso puede dar un disgusto en la revisión de
+producción.
+
+**Arreglado en AdMob → Controles de bloqueo**, a nivel de cuenta (solo hay una app). De las
+11 **categorías estándar** quedaron bloqueadas **8**:
+
+| Bloqueada | Por qué |
+|---|---|
+| Medicamentos y complementos alimenticios | **Aquí cae el CBD** — la que motivó todo esto |
+| Pérdida de peso | En una app de **comida** es lo más delicado: dieta junto a fotos de platos roza el trastorno alimentario |
+| Citas | Estaba sirviendo (0,4 % impresiones) |
+| Referencias al sexo | Mismos números que Citas: es el **mismo anuncio** contado dos veces |
+| Salud reproductiva y sexual | 0,4 % de impresiones y **0,0 % de ingresos**: gratis |
+| Ganar dinero rápidamente | La categoría de los timos |
+| Juegos de casino sociales | El hueco por el que se cuela el casino que no tapa la restringida |
+| Sensacionalismo | Clickbait |
+
+**Se dejaron permitidas a propósito**: Estética y modificaciones corporales, Política y
+Religión. No son riesgo de revisión y bloquearlas solo quita inventario.
+
+Las dos **categorías restringidas** (Bebidas alcohólicas y Juegos de azar) ya venían
+bloqueadas de fábrica — no hubo que tocarlas.
+
+⚠️ **Coste conocido**: Citas y Referencias al sexo marcaban el **15,6 % de los ingresos**
+de 30 días, pero es el mismo anuncio contado dos veces y el total de esos días son céntimos.
+Cada bloqueo reduce la competencia por el inventario y baja algo el eCPM. Con este volumen
+es irrelevante; el riesgo de revisión no lo era.
 
 #### 💰 DECIDIDO: quien no consienta verá anuncios, pero NO personalizados
 
