@@ -105,11 +105,17 @@ h2 {
   margin: 0 0 8px;
 }
 
-p, ul { color: var(--text-muted); margin: 0 0 12px; }
+/* Sin esto el h3 hereda el tamaño por defecto del navegador y sale MAYOR que el h2. */
+h3 {
+  font-size: 15px;
+  margin: 20px 0 6px;
+}
 
-p:last-child, ul:last-child { margin-bottom: 0; }
+p, ul, ol { color: var(--text-muted); margin: 0 0 12px; }
 
-ul { padding-left: 20px; }
+p:last-child, ul:last-child, ol:last-child { margin-bottom: 0; }
+
+ul, ol { padding-left: 20px; }
 
 li { margin-bottom: 6px; }
 

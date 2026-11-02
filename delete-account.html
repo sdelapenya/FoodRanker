@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Eliminar cuenta — FoodRanker</title>
-<meta name="description" content="Cómo eliminar tu cuenta de FoodRanker y qué datos se borran.">
+<title>Eliminar cuenta y datos &mdash; FoodRanker</title>
+<meta name="description" content="Cómo eliminar tu cuenta de FoodRanker, cómo borrar solo una parte de tus datos, y qué se borra en cada caso.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,16 +15,28 @@
       <a href="privacy.html">Privacidad</a>
       <a href="terms.html">Términos</a>
       <a href="delete-account.html" aria-current="page">Eliminar cuenta</a>
+      <a href="delete-account-en.html">English</a>
     </nav>
   </div>
 </header>
 
 <main>
-  <h1>Eliminar tu cuenta</h1>
-  <p class="updated">Última actualización: agosto 2026</p>
+  <h1>Eliminar tu cuenta y tus datos</h1>
+  <p class="updated">Última actualización: noviembre 2026</p>
 
   <section>
-    <h2>Cómo eliminarla desde la app</h2>
+    <h2>Dos formas de borrar</h2>
+    <p>En FoodRanker puedes eliminar la cuenta entera, o borrar solo una parte de lo que has
+      publicado y seguir usando la app. Las dos se hacen desde dentro de la aplicación y no
+      hay que pedir permiso a nadie.</p>
+    <ul>
+      <li><a href="#cuenta">Eliminar la cuenta entera</a> &mdash; se borra todo y la cuenta desaparece.</li>
+      <li><a href="#parcial">Borrar solo una parte</a> &mdash; un plato, un comentario, una lista.</li>
+    </ul>
+  </section>
+
+  <section id="cuenta">
+    <h2>Eliminar la cuenta entera</h2>
     <ol>
       <li>Abre FoodRanker e inicia sesión con la cuenta que quieras eliminar.</li>
       <li>Ve a la pestaña <strong>Perfil</strong>.</li>
@@ -35,35 +47,78 @@
   </section>
 
   <section>
-    <h2>Si no tienes la app instalada</h2>
-    <p>Puedes solicitar la eliminación de tu cuenta y tus datos escribiendo a
-      <a href="mailto:foodranker.app@gmail.com">foodranker.app@gmail.com</a> desde el correo asociado a tu cuenta.
-      Confirma tu identidad y procesaremos la eliminación en un plazo máximo de 30 días.</p>
-  </section>
-
-  <section>
-    <h2>Qué se elimina</h2>
-    <p>Al eliminar tu cuenta se borra de forma permanente:</p>
+    <h2>Qué se elimina al borrar la cuenta</h2>
+    <p>Se borra de forma permanente:</p>
     <ul>
-      <li>Tu perfil y foto de perfil.</li>
+      <li>Tu perfil y tu foto de perfil.</li>
       <li>Todos los platos que has publicado, junto con sus fotos.</li>
-      <li>Todas tus valoraciones y comentarios, tanto los tuyos como los que otros usuarios dejaron en tus platos.</li>
+      <li>Todas tus valoraciones y comentarios, tanto los tuyos como los que otras personas dejaron en tus platos.</li>
       <li>Tus seguidores, a quién sigues, y tus platos guardados.</li>
+      <li>Tus listas.</li>
       <li>Tus reportes enviados y tu historial en la liga semanal.</li>
       <li>Tus notificaciones.</li>
       <li>Tu cuenta de inicio de sesión (Firebase Authentication).</li>
     </ul>
-    <p>No queda ningún dato personal retenido tras la eliminación. Los informes de fallos y las estadísticas de uso agregadas y anónimas pueden conservarse según los plazos propios de Firebase, pero no están asociados a tu identidad tras el borrado.</p>
+    <p>No queda ningún dato personal retenido tras la eliminación. Los informes de fallos y
+      las estadísticas de uso agregadas y anónimas pueden conservarse según los plazos
+      propios de Firebase, pero no están asociados a tu identidad tras el borrado.</p>
+  </section>
+
+  <section id="parcial">
+    <h2>Borrar solo una parte de tus datos</h2>
+    <p>No hace falta eliminar la cuenta para quitar algo concreto. Desde la app puedes borrar:</p>
+
+    <h3>Un plato que publicaste</h3>
+    <p>Perfil &rarr; pestaña <strong>Mis platos</strong> &rarr; botón de editar del plato &rarr;
+      <strong>Eliminar</strong>.</p>
+    <p>Se borra el plato, su foto, <strong>todas las valoraciones y comentarios que tuviera</strong>
+      (también los de otras personas) y los guardados que apuntaban a él. El XP que ese plato
+      te dio se te descuenta. Es inmediato e irreversible.</p>
+
+    <h3>Un comentario tuyo</h3>
+    <p>En el plato donde lo escribiste, desliza tu comentario hacia la izquierda, o usa el
+      botón de borrar del propio comentario. Solo aparece en los comentarios que son tuyos.</p>
+
+    <h3>Una de tus listas</h3>
+    <p>Perfil &rarr; pestaña <strong>Colecciones</strong> &rarr; eliminar la lista. Se borra la
+      lista; los platos que contenía siguen publicados, porque no son tuyos, son de quien los
+      publicó.</p>
+
+    <h3>Un plato guardado</h3>
+    <p>Pulsa otra vez el icono de guardar para quitarlo de tus guardados.</p>
+
+    <h3>A quién sigues</h3>
+    <p>Desde el perfil de esa persona, <strong>Dejar de seguir</strong>.</p>
+  </section>
+
+  <section>
+    <h2>Qué no se puede borrar por separado</h2>
+    <p><strong>Las valoraciones que has puesto a platos de otras personas.</strong> Puedes
+      cambiar las notas y el texto cuando quieras, pero no borrar una valoración suelta.</p>
+    <p>El motivo es que cada persona solo puede valorar un plato una vez: si las valoraciones
+      se pudieran borrar, bastaría con borrar y volver a votar para saltarse ese límite y
+      mover el ranking a voluntad.</p>
+    <p>Esas valoraciones desaparecen igualmente cuando se borra el plato al que pertenecen o
+      cuando eliminas tu cuenta.</p>
+  </section>
+
+  <section>
+    <h2>Si no tienes la app instalada</h2>
+    <p>Puedes solicitar la eliminación de tu cuenta y tus datos, o de una parte de ellos,
+      escribiendo a <a href="mailto:foodranker.app@gmail.com">foodranker.app@gmail.com</a>
+      desde el correo asociado a tu cuenta. Confirma tu identidad y procesaremos la
+      eliminación en un plazo máximo de 30 días.</p>
   </section>
 
   <section>
     <h2>Contacto</h2>
-    <p>Para cualquier duda sobre este proceso, escríbenos a:
+    <p>El responsable del tratamiento de tus datos es <strong>Sergio de la Peña</strong>. Para
+      cualquier duda sobre este proceso, escríbenos a:
       <a href="mailto:foodranker.app@gmail.com">foodranker.app@gmail.com</a></p>
   </section>
 
   <footer>
-    <p>© 2026 FoodRanker · <a href="privacy.html">Política de Privacidad</a> · <a href="terms.html">Términos de Servicio</a></p>
+    <p>&copy; 2026 FoodRanker &middot; <a href="privacy.html">Política de Privacidad</a> &middot; <a href="terms.html">Términos de Servicio</a></p>
   </footer>
 </main>
 </body>
