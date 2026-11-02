@@ -165,29 +165,54 @@ debug encima falla por firma, y desinstalarla cierra la sesión. Por eso se usó
 **Falta, y es de Sergio:** nada de AdMob. Queda verlo en el Redmi cuando la v18 esté en
 prueba cerrada, junto con el precio en euros de Premium y el idioma.
 
-### 🔴 FORMULARIO DE SEGURIDAD DE LOS DATOS — SIN HACER (2026-11-01)
+### 🟡 SEGURIDAD DE LOS DATOS — un arreglo hecho, otro aplazado (2026-11-02)
 
-Confirmado por Sergio el 1 de noviembre: **no se ha tocado**. Dos incoherencias con lo que
-el código hace de verdad, detectadas comparando el CSV exportado contra el repo:
+**Hecho hoy**, en el mismo envio que la v18: marcado **"Otro contenido generado por el
+usuario"** en Actividad en aplicaciones (paso 3 del asistente), y en el paso 4 recogido
+**si**, compartido **no**, efimero **no**, **opcional**, finalidad **Funciones de la
+aplicacion**. Antes el formulario no declaraba valoraciones, comentarios, nombres y
+descripciones de platos ni nombre y direccion del local, que la politica si lista.
 
-1. **`PSL_SUPPORT_DATA_DELETION_BY_USER` = `DATA_DELETION_NO`.** Declara que NO se ofrece
-   borrado de datos, y es falso por triplicado: `deleteUserAccount` existe y borra en diez
-   colecciones (`users`, `plates`, `ratings`, `comments`, `follows`, `saves`, `collections`,
-   `items`, `notifications`, `reports`), la app lo ofrece desde el perfil, y la URL de
-   borrado **ya está rellena** en el propio formulario. → cambiar a **Sí**, con
-   `https://sdelapenya.github.io/FoodRanker/delete-account.html`.
-2. **Falta "Otro contenido generado por el usuario"** en Actividad en la aplicación. La app
-   recoge valoraciones, comentarios, nombres y descripciones de platos y nombre y dirección
-   del local; la política de privacidad los lista, el formulario no. → recogido **sí**,
-   compartido **no**, efímero **no**, **opcional**, finalidad **Funciones de la aplicación**.
+El resto del paso 3 se comprobo en pantalla y coincide con lo auditado en agosto:
+ubicacion 2/2, informacion personal 3/9 (nombre, correo, IDs de usuario), fotos 1/2,
+rendimiento 2/3, IDs de dispositivo 1/1, y todo lo demas a cero.
 
-Lo demás del CSV está bien, incluido lo que más se suele fallar: IDs de dispositivo
-recogidos **y compartidos** con finalidad Publicidad, y la ubicación como opcional y efímera.
+⚠️ **Lo que esta seccion decia antes sobre `PSL_SUPPORT_DATA_DELETION_BY_USER` estaba mal
+mapeado.** Viendo el asistente de verdad son **dos campos distintos**, no uno:
 
-**Regla para que no se descuadre otra vez:** el formulario y la política de privacidad son
-dos declaraciones sobre lo mismo y Google las lee juntas. Si cambia `AndroidManifest.xml`
-(permiso nuevo) o `app/build.gradle.kts` (dependencia de Google, analítica o publicidad),
-hay que repasar **las dos**. Son los únicos dos ficheros por donde entra algo que recoja datos.
+| Campo del asistente | Estado real | ¿Correcto? |
+|---|---|---|
+| URL de eliminacion de **cuentas** | Rellena desde agosto con `delete-account.html` | ✅ si, no habia nada que arreglar |
+| ¿Se pueden borrar **algunos** datos sin eliminar la cuenta? (Opcional) | **No** | ❌ deberia ser **Si** |
+
+El segundo es falso: la app deja borrar platos (`ProfileViewModel.deletePlate`, linea 335),
+comentarios (`PlateDetailViewModel.deleteComment`, 358) y colecciones
+(`ProfileViewModel.deleteCollection`, 263), los tres enganchados a la interfaz y
+comprobados. Pero marcar "Si" **exige una segunda URL**, la *"URL de eliminacion de
+datos"*, que Play obliga a que explique los pasos del borrado parcial y que diga que se
+borra y que se conserva. `delete-account.html` solo habla de borrar la cuenta entera.
+
+Se dejo en **"No" a proposito** para no bloquear el envio de la v18: el campo es
+**(Opcional)**, y quedarse corto declarando un control del usuario no es lo que hace que
+rechacen una app — lo que la hunde es declarar menos datos de los que se recogen o mas
+privacidad de la que se da, y de eso no hay nada aqui. Es reversible en el siguiente envio.
+
+### 📝 TAREA PENDIENTE: ampliar y traducir `delete-account.html`
+
+Una sola tarea con dos partes, que cierra dos pendientes de golpe:
+
+1. **Anadir el borrado parcial**: como borrar un plato, un comentario o una coleccion desde
+   la app, que se borra, que se conserva y en cuanto tiempo. Sin esto no se puede marcar
+   "Si" en la pregunta de arriba, porque la URL no cumpliria los requisitos de Play.
+2. **Traducirla al ingles**. Solo existe en castellano, y `privacy-en.html` y
+   `terms-en.html` ya enlazan a ella. Esa URL esta declarada en Seguridad de los datos.
+
+⚠️ **No la genera `tools/legal/build_pages.py`**: se mantiene a mano en `gh-pages`, igual
+que `index.html` y `style.css`. Para generarla habria que meter su texto en `strings.xml`,
+pero esa pagina no existe dentro de la app, asi que no esta claro que compense.
+
+Cuando este publicada: volver a Seguridad de los datos → paso 2, marcar **Si** en la
+pregunta del borrado parcial y poner su URL.
 
 ### 🟠 POLÍTICA DE PRIVACIDAD: falta la base jurídica (2026-11-01)
 
