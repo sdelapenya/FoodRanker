@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.utils.AdManager
+import com.app.foodranker.utils.BillingManager
 import com.app.foodranker.viewmodel.BillingViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,13 +88,19 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("⭐", fontSize = 48.sp)
                     Text(
-                        stringResource(R.string.prm_title),
+                        stringResource(
+                            if (BillingManager.SUSCRIPCION_A_LA_VENTA) R.string.prm_title
+                            else R.string.prm_title_adfree
+                        ),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 22.sp
                     )
                     Text(
-                        stringResource(R.string.prm_sub),
+                        stringResource(
+                            if (BillingManager.SUSCRIPCION_A_LA_VENTA) R.string.prm_sub
+                            else R.string.prm_sub_adfree
+                        ),
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 14.sp
                     )
@@ -104,7 +111,10 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
 
             // Solo se anuncian beneficios que la app entrega hoy: los anuncios se ocultan
             // (BannerAd) y el badge aparece en el perfil. No prometer funciones no implementadas.
-            val benefits = listOf(
+            // Sin suscripcion a la venta la lista se va entera: los tres beneficios solo se
+            // consiguen pagando, y el anuncio recompensado unicamente quita los anuncios, y
+            // por 24 horas. Anunciarlos seria prometer lo que no se puede dar.
+            val benefits = if (!BillingManager.SUSCRIPCION_A_LA_VENTA) emptyList() else listOf(
                 stringResource(R.string.prm_no_ads) to stringResource(R.string.prm_no_interrupt),
                 stringResource(R.string.prm_badge) to stringResource(R.string.prm_stand_out),
                 stringResource(R.string.prm_more_plates) to stringResource(R.string.prm_double_plates)
@@ -178,7 +188,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                 // Los textos se leen fuera del onClick: ahi no se puede componer.
                 val msgError = stringResource(R.string.prm_error)
                 val msgNoDisponible = stringResource(R.string.prm_unavailable)
-                Button(
+                if (BillingManager.SUSCRIPCION_A_LA_VENTA) Button(
                     onClick = {
                         isPurchasing = true
                         val activity = context as? Activity

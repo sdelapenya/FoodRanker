@@ -51,10 +51,35 @@ la tienda nunca ha tenido nada que vender. Corregido más abajo, en "Qué funcio
 
 **Para arreglarlo, en este orden:** crear la cuenta de comercio (datos fiscales y bancarios,
 y Google tarda en verificarla) → crear la suscripción con el id exacto
-`foodranker_premium_monthly` (`BillingManager.kt:23`) → plan base **activo** con precio para
-España → volver a probar. Mientras no exista, la pantalla de Premium enseña un botón que
-siempre falla: **conviene ocultarla o desactivarla antes de abrir producción**, porque un
-revisor que la pulse ve exactamente lo que hemos visto nosotros.
+`foodranker_premium_monthly` → plan base **activo** con precio para España → poner
+`BillingManager.SUSCRIPCION_A_LA_VENTA` en `true` → volver a probar.
+
+✅ **VENTA OCULTA MIENTRAS TANTO (2026-11-02).** `BillingManager.SUSCRIPCION_A_LA_VENTA`
+en `false` esconde el botón de suscribirse, la lista de beneficios y cambia los textos de
+la fila del perfil y de la cabecera. **La pantalla sigue existiendo a propósito**: dentro
+está el **anuncio recompensado** (24h sin anuncios), que no depende de Billing, funciona y
+genera ingresos. Ocultar la pantalla entera lo habría matado también.
+
+Los beneficios se van **enteros**, no solo el botón: "Badge Premium" y "Más platos al día"
+solo se consiguen pagando, y el anuncio recompensado únicamente quita los anuncios, y por
+24 horas. Dejarlos anunciados sería prometer lo que no se puede dar.
+
+Textos nuevos para este estado, en los dos idiomas: `prof_adfree`, `prof_adfree_sub`,
+`prm_title_adfree`, `prm_sub_adfree`. Los antiguos (`prof_premium`, `prm_title`…) siguen
+ahí y vuelven solos al poner el flag en `true`.
+
+💶 **Lo que de verdad frena esto no es técnico, es fiscal.** Abrir la cuenta de comercio
+obliga a mirar el alta censal (modelo 036, obligatoria desde el primer euro), el alta en
+RETA (depende de la habitualidad) y, como Google paga desde **Irlanda**, el ROI/VIES y el
+modelo 349. ⚠️ **Esto ya aplica hoy por AdMob**, no lo crea Premium: hay anuncios sirviendo
+en una app publicada y un perfil de pagos de AdSense ya creado (`2483-2588-0840`). Sergio
+decidió el 2026-11-02 consultarlo con una gestoría antes de seguir, y **dejar AdMob como
+está**. Salir a producción **no** requiere Premium.
+
+⚠️ Si se abre la cuenta de comercio: el "Perfil público del comerciante" trae marcada la
+casilla *"Utiliza la dirección, el contacto y el nombre de la información legal"*, lo que
+haría **pública la dirección de casa**. Y el correo de atención al cliente tiene que ser
+`foodranker.app@gmail.com`, el mismo de la política y los términos, no un Gmail personal.
 
 ⚠️ El Redmi tiene **dos cuentas de Google** dadas de alta (`sergiodelapen...` y
 `sdelapenya1...`). Cuando la suscripción exista, la que esté activa en Play Store decide

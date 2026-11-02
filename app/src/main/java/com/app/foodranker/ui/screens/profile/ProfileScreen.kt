@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.LocalActivity
+import com.app.foodranker.utils.BillingManager
 import com.app.foodranker.utils.ConsentManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -702,10 +703,19 @@ private fun ProfileAccountDangerZone(
             HorizontalDivider(color = DividerColor.copy(alpha = 0.85f))
 
             if (!isPremium) {
+                // Mientras la suscripcion no este a la venta, la fila no puede decir "Hazte
+                // Premium ... y funciones exclusivas": lo unico que hay detras es el anuncio
+                // recompensado, que quita los anuncios 24 horas y nada mas.
                 ProfileMenuRow(
                     icon = Icons.Default.Star,
-                    title = stringResource(R.string.prof_premium),
-                    subtitle = stringResource(R.string.prof_premium_sub),
+                    title = stringResource(
+                        if (BillingManager.SUSCRIPCION_A_LA_VENTA) R.string.prof_premium
+                        else R.string.prof_adfree
+                    ),
+                    subtitle = stringResource(
+                        if (BillingManager.SUSCRIPCION_A_LA_VENTA) R.string.prof_premium_sub
+                        else R.string.prof_adfree_sub
+                    ),
                     iconTint = StarYellow,
                     arrowTint = StarYellow,
                     backgroundColor = Color(0xFFFFF8E1),

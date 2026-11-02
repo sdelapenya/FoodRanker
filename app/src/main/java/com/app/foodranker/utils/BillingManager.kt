@@ -20,6 +20,23 @@ class BillingManager @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
     companion object {
+        /**
+         * Si la suscripción se puede comprar de verdad.
+         *
+         * En `false` desde el 2026-11-02: la cuenta de desarrollador **no tiene cuenta de
+         * comercio**, así que el producto de abajo no existe en Play y
+         * `queryProductDetails` siempre vuelve vacío. Con el botón visible, cualquiera que
+         * lo pulse —un usuario o un revisor de Google— se come un "No se pudo iniciar la
+         * compra", que parece un fallo de la app y no lo es.
+         *
+         * Lo que sigue funcionando es el anuncio recompensado (24h sin anuncios), que no
+         * depende de Billing para nada. Por eso se oculta la venta, no la pantalla.
+         *
+         * Para reactivarlo: crear la cuenta de comercio, dar de alta la suscripción con
+         * este id exacto y un plan base activo con precio, y poner esto en `true`.
+         */
+        const val SUSCRIPCION_A_LA_VENTA = false
+
         const val PRODUCT_PREMIUM_MONTHLY = "foodranker_premium_monthly"
         private const val PREFS_NAME = "billing_prefs"
         private const val KEY_TEMP_PREMIUM_UNTIL = "temp_premium_until"

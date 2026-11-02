@@ -239,6 +239,10 @@
     <string name="prof_account">Your account</string>
     <string name="prof_premium">Go Premium</string>
     <string name="prof_premium_sub">No ads and exclusive features</string>
+    <!-- Used while BillingManager.SUSCRIPCION_A_LA_VENTA is false: with no merchant account
+         the subscription does not exist and the rewarded ad is the only real option. -->
+    <string name="prof_adfree">Remove the ads</string>
+    <string name="prof_adfree_sub">Watch an ad and get 24 hours without them</string>
     <string name="prof_invite">Invite friends</string>
     <string name="prof_invite_sub">Share your code and earn XP</string>
     <string name="prof_language">Language</string>
@@ -364,6 +368,8 @@
     <string name="lg_top3">Keep it up, you are in the Top 3! 🏅</string>
     <string name="prm_title">FoodRanker Premium</string>
     <string name="prm_sub">Support the app and remove the ads</string>
+    <string name="prm_title_adfree">24 hours ad-free</string>
+    <string name="prm_sub_adfree">Watch a short ad and they are gone</string>
     <string name="prm_badge">Premium badge</string>
     <string name="prm_stand_out">Stand out in the community</string>
     <string name="prm_no_interrupt">Enjoy it without interruptions</string>
