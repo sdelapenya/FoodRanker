@@ -100,18 +100,40 @@ no genera un céntimo.
 anuncios, solo que **sin perfilado**.
 
 ✅ **No hay que tocar código.** `ConsentManager.startAdsIfAllowed()` usa
-`info.canRequestAds()` como única condición, que es justo la API que contempla este caso:
-en cuanto AdMob permita servir anuncios a quien rechaza, `canRequestAds()` devolverá `true`
-y el banner saldrá solo. Que hoy no salga significa que **el mensaje de AdMob está
-configurado para que rechazar lo bloquee todo**.
+`info.canRequestAds()` como única condición, que es la API correcta para esto.
 
-**Se toca en AdMob** → Privacidad y mensajes → RGPD → el mensaje de FoodRanker. Hay que
-permitir que, al rechazar, Google sirva anuncios **no personalizados / limitados** en vez de
-ninguno. Al terminar hay que **publicar** el mensaje otra vez: guardarlo no basta.
+🛑 **PERO NO ES UN INTERRUPTOR, y se investigó el 2026-11-02 sin éxito.** Lo que hay
+en AdMob → Privacidad y mensajes → RGPD → Configuración de la cuenta: partners
+publicitarios, maximizar cobertura, interés legítimo, modo de consentimiento, función
+especial 2, sincronización y finalidades propias. **Ninguna opción de anuncios no
+personalizados.**
 
-⚠️ Después hay que **volver a probarlo en el Redmi**, y es más lioso de lo que parece: la
-respuesta anterior queda guardada, así que hay que entrar en Perfil → "Opciones de
-privacidad de anuncios", rechazar otra vez, y mirar si ahora sí aparece banner.
+**Por qué**: el mensaje de FoodRanker es el conforme al **TCF de IAB**, y ahí un anuncio no
+personalizado **sigue usando identificadores del dispositivo** (frecuencia e informes), así
+que necesita el mismo consentimiento de "almacenar información en el dispositivo" que el
+usuario acaba de denegar. No es una configuración mal puesta: es cómo funciona el marco.
+Lo que sí se puede servir sin consentimiento son los **anuncios limitados / entrega técnica
+de anuncios** (sin identificadores, apoyados en la IP), pero no se encontró documentación
+fiable de cómo activarlos, y las fuentes se contradicen hasta en si `canRequestAds()`
+devuelve `true` o `false` tras rechazar.
+
+🚨 **TRAMPA: NO activar "Función especial 2" creyendo que es esto.** Esa opción deja a
+los proveedores **escanear las características del dispositivo para identificarlo**
+(fingerprinting). Es más invasiva, no menos, y no sirve para servir anuncios a quien
+rechaza.
+
+**Decisión del 2026-11-02: se deja como está de momento.** El comportamiento actual es el
+más conservador legalmente, no bloquea Play ni producción, y es puro dinero. Merece una
+sesión propia, no un apaño la semana de pedir producción.
+
+⚠️ Cuando se retome: **volver a probarlo en el Redmi** es más lioso de lo que parece,
+porque la respuesta anterior queda guardada. Hay que entrar en Perfil → "Opciones de
+privacidad de anuncios", rechazar otra vez, y mirar si aparece banner. Y al cambiar el
+mensaje en AdMob hay que **publicarlo**: guardarlo no basta.
+
+Documentación consultada: `support.google.com/admob/answer/9760862` (integración con el TCF)
+y `developers.google.com/admob/android/beta/privacy/ad-serving-modes` (los cuatro modos:
+personalizado, no personalizado, limitado y entrega técnica).
 
 #### ✅ APP CHECK REGISTRADO (pasos 1 y 2 de los cuatro)
 
