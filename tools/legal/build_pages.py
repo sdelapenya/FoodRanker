@@ -43,6 +43,14 @@ PAGINAS = {
     ("terms", "en"): "terms-en.html",
 }
 
+# Esta página NO se genera —se mantiene a mano en gh-pages—, pero las generadas la
+# enlazan y tienen que apuntar a la del idioma que están mostrando: hasta noviembre de
+# 2026 solo existía la castellana y las páginas inglesas llevaban a ella.
+BORRADO = {
+    "es": "delete-account.html",
+    "en": "delete-account-en.html",
+}
+
 DOCS = {
     "privacy": {"prefijo": "pp_", "titulo": "pp_title", "fecha": "pp_updated"},
     "terms": {"prefijo": "tos_", "titulo": "tos_screen_title", "fecha": "tos_updated"},
@@ -193,7 +201,7 @@ def construye(doc, idioma, claves):
     <nav>
       <a href="{href_privacy}"{cur_p}>{nav_privacy}</a>
       <a href="{href_terms}"{cur_t}>{nav_terms}</a>
-      <a href="delete-account.html">{nav_delete}</a>
+      <a href="{href_delete}">{nav_delete}</a>
       <a href="{href_otro}">{otro_idioma}</a>
     </nav>
   </div>
@@ -219,6 +227,7 @@ def construye(doc, idioma, claves):
         fecha=html.escape(fecha),
         href_privacy=href_privacy,
         href_terms=href_terms,
+        href_delete=BORRADO[idioma],
         href_otro=href_otro,
         cur_p=' aria-current="page"' if doc == "privacy" else "",
         cur_t=' aria-current="page"' if doc == "terms" else "",

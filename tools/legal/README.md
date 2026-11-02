@@ -56,12 +56,17 @@ Comprobar después que las cuatro responden 200.
 
 ## Lo que NO genera
 
-`index.html`, `style.css` y `delete-account.html` no salen de `strings.xml` y se mantienen a
-mano en `gh-pages`.
+`index.html`, `style.css`, `delete-account.html` y `delete-account-en.html` no salen de
+`strings.xml` y se mantienen a mano en `gh-pages`.
 
-⚠️ **`delete-account.html` solo existe en castellano**, y las páginas inglesas enlazan a ella.
-Esa URL está declarada en el formulario de Seguridad de los datos de Play, así que conviene
-traducirla antes de producción.
+Las generadas **sí las enlazan**, y cada una a la de su idioma: eso lo fija el diccionario
+`BORRADO` del script. Hasta noviembre de 2026 solo existía la castellana y las páginas
+inglesas llevaban a ella, así que quien leía la política en inglés y pulsaba "Delete
+account" aterrizaba en castellano. Si se renombra alguna de las dos, hay que tocar `BORRADO`.
+
+⚠️ **`index.html` sigue existiendo solo en castellano.** No está declarada en ningún sitio
+de Play (allí van `privacy.html` y `delete-account.html`), así que no es un bloqueante, pero
+es la primera página que ve quien llega a la raíz del dominio.
 
 ## Si añades una sección
 

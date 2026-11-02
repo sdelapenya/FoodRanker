@@ -197,22 +197,42 @@ Se dejo en **"No" a proposito** para no bloquear el envio de la v18: el campo es
 rechacen una app — lo que la hunde es declarar menos datos de los que se recogen o mas
 privacidad de la que se da, y de eso no hay nada aqui. Es reversible en el siguiente envio.
 
-### 📝 TAREA PENDIENTE: ampliar y traducir `delete-account.html`
+### ✅ `delete-account.html`: borrado parcial y version inglesa (2026-11-02)
 
-Una sola tarea con dos partes, que cierra dos pendientes de golpe:
+Escrita mientras Google revisaba la v18. Las dos partes hechas:
 
-1. **Anadir el borrado parcial**: como borrar un plato, un comentario o una coleccion desde
-   la app, que se borra, que se conserva y en cuanto tiempo. Sin esto no se puede marcar
-   "Si" en la pregunta de arriba, porque la URL no cumpliria los requisitos de Play.
-2. **Traducirla al ingles**. Solo existe en castellano, y `privacy-en.html` y
-   `terms-en.html` ya enlazan a ella. Esa URL esta declarada en Seguridad de los datos.
+1. **Borrado parcial documentado.** Que puede borrar el usuario sin eliminar la cuenta
+   (plato, comentario, lista, guardado, dejar de seguir), con la ruta exacta en la app, y
+   **que no se puede borrar suelto**: las valoraciones puestas a platos de otros, porque
+   `firestore.rules` tiene `allow delete: if false` en `ratings` para que nadie pueda
+   borrar-y-revotar y saltarse el limite de una valoracion por plato. Se pueden editar, y
+   desaparecen al borrar el plato o la cuenta.
+2. **`delete-account-en.html`**, la version inglesa.
 
-⚠️ **No la genera `tools/legal/build_pages.py`**: se mantiene a mano en `gh-pages`, igual
-que `index.html` y `style.css`. Para generarla habria que meter su texto en `strings.xml`,
-pero esa pagina no existe dentro de la app, asi que no esta claro que compense.
+Lo que se borra en cascada al eliminar un plato esta sacado de `onPlateDeleted`
+(`functions/src/index.ts:2124`), no inventado: plato, imagen en Cloudinary, `ratings`,
+`comments` y `saves` del plato, y `revertAuthorXP` si estaba aprobado.
 
-Cuando este publicada: volver a Seguridad de los datos → paso 2, marcar **Si** en la
-pregunta del borrado parcial y poner su URL.
+**`tools/legal/build_pages.py` ya enlaza a la pagina del idioma que toca**, via el
+diccionario `BORRADO`. Antes las cuatro generadas apuntaban a la castellana, asi que quien
+leia la politica en ingles y pulsaba "Delete account" aterrizaba en castellano. Las cuatro
+regeneradas y la auditoria de enlaces internos del sitio pasa sin ninguno roto.
+
+De paso, `style.css`: **`h3` no tenia estilo** y heredaba el tamano por defecto del
+navegador, que es MAYOR que el `h2` de 17px. Los subtitulos nuevos habrian salido mas
+grandes que los titulos de seccion. Anadido `h3` a 15px, y `ol` metido en las reglas de
+color y sangria que solo tenian `ul` (eso ya estaba mal antes, con los pasos numerados).
+
+⚠️ **`index.html` sigue solo en castellano.** No esta declarada en Play, asi que no
+bloquea, pero es lo primero que ve quien llega a la raiz del dominio.
+
+**Falta por hacer, en este orden:**
+
+1. **Pushear `gh-pages`** — hasta que no este publicada, la URL no existe.
+2. Comprobar que las seis paginas responden 200.
+3. Volver a Play: Seguridad de los datos → paso 2 → la pregunta del borrado parcial pasa
+   de **No** a **Si**, con `https://sdelapenya.github.io/FoodRanker/delete-account.html`.
+   Eso es un cambio mas en la cola de publicacion, que ira en el siguiente envio.
 
 ### 🟠 POLÍTICA DE PRIVACIDAD: falta la base jurídica (2026-11-01)
 
