@@ -18,7 +18,7 @@ object ShareManager {
     // Compartir texto simple (siempre funciona)
     /** Compartir enlace público del perfil (mismo dominio que los platos). */
     fun shareProfile(context: Context, userId: String, displayName: String) {
-        val url = "https://foodranker.app/user/$userId"
+        val url = DeepLinks.user(userId)
         val text = context.getString(R.string.share_profile_text, displayName, url)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -119,7 +119,7 @@ object ShareManager {
             plate.country,
             "%.1f".format(plate.averageScore),
             valoraciones,
-            "https://foodranker.app/plate/${plate.id}",
+            DeepLinks.plate(plate.id),
             plate.categoryType.name.lowercase(),
             plate.city.replace(" ", "")
         )

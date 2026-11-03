@@ -73,7 +73,7 @@ class ReferralManager @Inject constructor(
             R.string.share_referral_text,
             userName,
             code,
-            "https://foodranker.app/invite/$code"
+            DeepLinks.invite(code)
         )
 
     private fun generateCode(): String = UUID.randomUUID().toString()

@@ -61,6 +61,7 @@ import com.app.foodranker.ui.screens.addplate.FoodTextField
 import com.app.foodranker.ui.screens.addplate.ScoreSlider
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.ui.theme.categoryGradient
+import com.app.foodranker.utils.DeepLinks
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
@@ -217,7 +218,7 @@ fun PlateDetailScreen(
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.det_full_ranking)) },
                                 onClick = {
-                                    val url = "https://foodranker.app/plate/$plateId"
+                                    val url = DeepLinks.plate(plateId)
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                     context.startActivity(intent)
                                     showShareMenu = false

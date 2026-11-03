@@ -1,0 +1,18 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.app.foodranker",
+      "sha256_cert_fingerprints": [
+        "DB:9A:33:74:AA:77:45:E9:4C:09:01:FA:23:DD:41:FC:C4:51:37:1E:6E:99:45:E9:50:31:3D:C8:AE:26:FD:1D",
+        "4D:A9:19:25:BB:E5:34:FE:6E:D3:93:15:EF:84:F0:78:78:E5:00:C5:A6:64:6F:D7:32:DB:93:42:1A:CB:09:21",
+        "98:9F:85:51:E6:1C:6E:95:06:2F:64:EC:E4:1D:D0:2E:44:CD:FD:ED:80:45:A2:BD:7D:3C:4D:B7:27:E7:11:93",
+        "24:B8:7F:C8:9A:A9:25:9B:CE:87:B0:F0:BA:E1:7E:FE:86:C3:DA:5E:2A:3B:FA:7C:CB:B0:6F:3E:66:43:1A:81",
+        "7F:3C:39:D4:52:FC:16:03:66:30:C2:A3:95:84:AB:A7:06:65:B1:65:BC:0E:A6:E5:7E:03:02:A8:79:D5:39:55"
+      ]
+    }
+  }
+]

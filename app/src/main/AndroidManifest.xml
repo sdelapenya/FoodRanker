@@ -109,27 +109,27 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="foodranker.app"
+                    android:host="foodranker.web.app"
                     android:pathPrefix="/user" />
             </intent-filter>
-            <!-- Deep link plato: https://foodranker.app/plate/{id} -->
+            <!-- Deep link plato: https://foodranker.web.app/plate/{id} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="foodranker.app"
+                    android:host="foodranker.web.app"
                     android:pathPrefix="/plate" />
             </intent-filter>
-            <!-- Deep link invitación: https://foodranker.app/invite/{code} -->
+            <!-- Deep link invitación: https://foodranker.web.app/invite/{code} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="foodranker.app"
+                    android:host="foodranker.web.app"
                     android:pathPrefix="/invite" />
             </intent-filter>
         </activity>

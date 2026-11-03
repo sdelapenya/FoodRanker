@@ -70,6 +70,30 @@ class DeepLinkParserTest {
         assertNull(uri.parseFoodRankerInviteCode())
     }
 
+    // --- El dominio actual, y el que se acepta por si se registra algun dia ---
+    // Los tests de arriba usan foodranker.app a proposito: es el dominio viejo, sigue
+    // aceptado, y si alguien lo quita de DeepLinks.ACCEPTED_HOSTS tienen que ponerse
+    // rojos. Un enlace ya compartido no se puede apagar.
+
+    @Test
+    fun `current host parses all three link types`() {
+        assertEquals("abc123", Uri.parse("https://foodranker.web.app/user/abc123").parseFoodRankerProfileUserId())
+        assertEquals("xyz789", Uri.parse("https://foodranker.web.app/plate/xyz789").parseFoodRankerPlateId())
+        assertEquals("REF42",  Uri.parse("https://foodranker.web.app/invite/REF42").parseFoodRankerInviteCode())
+    }
+
+    @Test
+    fun `generated links are parsed back`() {
+        assertEquals("abc123", Uri.parse(DeepLinks.user("abc123")).parseFoodRankerProfileUserId())
+        assertEquals("xyz789", Uri.parse(DeepLinks.plate("xyz789")).parseFoodRankerPlateId())
+        assertEquals("REF42",  Uri.parse(DeepLinks.invite("REF42")).parseFoodRankerInviteCode())
+    }
+
+    @Test
+    fun `http is not accepted, only https`() {
+        assertNull(Uri.parse("http://foodranker.web.app/plate/xyz789").parseFoodRankerPlateId())
+    }
+
     @Test
     fun `unrelated host returns null for all parsers`() {
         val uri = Uri.parse("https://example.com/user/abc123")

@@ -2,6 +2,14 @@
   "projects": {
     "default": "foodranker-51270"
   },
-  "targets": {},
+  "targets": {
+    "foodranker-51270": {
+      "hosting": {
+        "links": [
+          "foodranker"
+        ]
+      }
+    }
+  },
   "etags": {}
 }

@@ -109,6 +109,82 @@ proceso, no en el nuestro, así que no hay nada que capturar.
 AppCompat). Deja de depender de una pantalla de Ajustes que cada fabricante rompe a su
 manera, y de paso permite ofrecer solo los dos idiomas que la app realmente tiene.
 
+#### 🔴 ENCONTRADO Y ARREGLADO: la app repartía enlaces a un dominio que no existe (2026-11-02)
+
+Play avisó de que "3 enlaces profundos no funcionan porque tus dominios web no están
+asociados a tu aplicación". El aviso se queda corto: **`foodranker.app` no estaba sin
+verificar, estaba sin registrar.**
+
+```
+$ nslookup foodranker.app
+*** Non-existent domain
+```
+
+Y la app lo usaba en cuatro sitios para construir enlaces que los usuarios comparten de
+verdad: compartir perfil y compartir plato (`ShareManager`), copiar enlace
+(`PlateDetailScreen`) e invitar amigos (`ReferralManager`). **Cada vez que un tester
+compartía un plato, mandaba un enlace muerto.** El mecanismo de referidos llevaba roto
+desde siempre, en silencio, porque nadie llegó a pulsar un enlace compartido — se probó
+que el botón abría el selector de compartir, no dónde iba el enlace.
+
+**Arreglado con Firebase Hosting**, no comprando dominio. Se descartó pagar 15 €/año por
+ahora: el proyecto ya tenía Firebase, el sitio es gratis, da HTTPS automático y sirve
+`/.well-known/assetlinks.json`, que es lo único que Android necesita.
+
+| Pieza | Dónde |
+|---|---|
+| Sitio | `foodranker.web.app` (sitio `foodranker` del proyecto `foodranker-51270`) |
+| Config | `firebase.json` → `hosting`, target **`links`**; mapeado en `.firebaserc` |
+| Página | `hosting/public/open.html` — bilingüe según el navegador, botón a Play y respaldo `foodranker://` |
+| Verificación | `hosting/public/.well-known/assetlinks.json` — **5 huellas SHA-256** |
+| Dominio en código | `DeepLinks.kt` — un solo sitio, antes eran cuatro a pelo |
+
+Desplegar: `firebase deploy --only hosting:links --project foodranker-51270`.
+
+⚠️ **TRAMPA: el `ignore` por defecto de Firebase Hosting incluye `**/.*`**, que se lleva
+por delante `.well-known/assetlinks.json` y deja los App Links sin verificar **para
+siempre, sin ningún error**. Por eso el `ignore` del `firebase.json` está escrito a mano
+sin esa línea. Si alguna vez el despliegue dice "found 1 file" en vez de **2**, es esto.
+
+⚠️ **El parser acepta DOS dominios a propósito** (`DeepLinks.ACCEPTED_HOSTS`):
+`foodranker.web.app` y `foodranker.app`. Un enlace compartido por WhatsApp sigue vivo años,
+así que la app tiene que entender todos los dominios que haya repartido alguna vez. El
+segundo está por adelantado: **si algún día se compra `foodranker.app` y se apunta al mismo
+sitio de Firebase, los enlaces funcionan sin actualizar la app.** De esa lista solo se
+añade; quitar un dominio rompe enlaces que ya circulan.
+
+**Las 5 huellas de `assetlinks.json`**: las **tres de Play** (`DB:9A:33:74`, `4D:A9:19:25`,
+`98:9F:85:51` — las mismas de App Check), la **de carga** del keystore local
+(`24:B8:7F:C8:9A:A9:25:9B:CE:87:B0:F0:BA:E1:7E:FE:86:C3:DA:5E:2A:3B:FA:7C:CB:B0:6F:3E:66:43:1A:81`)
+y la **de debug**
+(`7F:3C:39:D4:52:FC:16:03:66:30:C2:A3:95:84:AB:A7:06:65:B1:65:BC:0E:A6:E5:7E:03:02:A8:79:D5:39:55`),
+para que los builds locales también verifiquen. Se sacan con
+`keytool -list -v -keystore <ks> -alias <alias>`; las de Play, de Play Console.
+
+**Comprobado en vivo** con el validador oficial de Google, que es el mismo que usa Android:
+```
+GET https://digitalassetlinks.googleapis.com/v1/statements:list
+      ?source.web.site=https://foodranker.web.app
+      &relation=delegate_permission/common.handle_all_urls
+→ statements: 5 · errores: ninguno
+```
+Las cuatro rutas (`/`, `/plate/x`, `/user/x`, `/invite/x`) responden 200. 13 tests de
+`DeepLinkParserTest` en verde, `compileDebugKotlin` limpio.
+
+🚨 **NADA DE ESTO LLEGA AL USUARIO HASTA LA v19.** La v18 instalada sigue llevando
+`foodranker.app` en su manifest, así que **los enlaces siguen rotos en el móvil de todos
+los testers ahora mismo**. El sitio está listo esperando a la app, no al revés. Al probar
+la v19 en el Redmi: compartir un plato, abrir el enlace desde WhatsApp y ver que **abre la
+app directamente**, sin pasar por el navegador. Si pasa por el navegador, la verificación
+no ha prendido — se diagnostica con
+`adb shell pm get-app-links com.app.foodranker`.
+
+💡 **Mejora pendiente, no hecha**: la página no enseña el plato. Un enlace compartido
+por WhatsApp sale sin imagen ni título del plato, que es justo lo que hace que a alguien le
+entren ganas de pulsar. Arreglarlo pide Open Graph por plato, o sea renderizado en servidor
+con una Cloud Function detrás del hosting. Candidato fuerte para después de la v19: el
+mecanismo viral ya está construido y es lo que más lo potenciaría.
+
 #### ✅ RESUELTO: AdMob sirvió un anuncio de CBD → categorías bloqueadas (2026-11-02)
 
 El banner que salió durante la prueba era de **CBD** ("+100G de CBD gratis"). En una app de

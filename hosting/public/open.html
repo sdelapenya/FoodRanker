@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoodRanker</title>
+<meta name="description" content="Rankings de platos hechos por quien se los come.">
+<meta property="og:title" content="FoodRanker">
+<meta property="og:description" content="Rankings de platos hechos por quien se los come.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --orange:#FF6B35; --orange-dark:#E85520;
+    --bg:#FFFFFF; --text:#1A1A2E; --muted:#6B6B7B; --card:#FFFFFF; --border:#ECECF1;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#121218; --text:#F2F2F7; --muted:#9A9AA8; --card:#1C1C25; --border:#2A2A36;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:32px 16px;
+  }
+  .card{width:100%; max-width:420px; text-align:center}
+  .mark{
+    width:88px; height:88px; margin:0 auto 24px; border-radius:24px;
+    background:linear-gradient(160deg,var(--orange),var(--orange-dark));
+    display:flex; align-items:center; justify-content:center; font-size:44px;
+  }
+  h1{font-size:26px; margin:0 0 8px; letter-spacing:-.02em}
+  p{color:var(--muted); font-size:15px; line-height:1.55; margin:0 0 28px}
+  .btn{
+    display:block; padding:15px 20px; border-radius:14px; text-decoration:none;
+    font-weight:700; font-size:15px; margin-bottom:12px;
+  }
+  .btn-primary{background:var(--orange); color:#fff}
+  .btn-secondary{background:transparent; color:var(--orange); border:1.5px solid var(--border)}
+  footer{margin-top:32px; font-size:12px; color:var(--muted)}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark">🍽️</div>
+    <h1 id="title">Ábrelo en FoodRanker</h1>
+    <p id="sub">Este enlace lleva a un contenido de FoodRanker. Instala la app para verlo.</p>
+    <a class="btn btn-primary" id="store"
+       href="https://play.google.com/store/apps/details?id=com.app.foodranker">Descargar en Google Play</a>
+    <a class="btn btn-secondary" id="openapp" href="#">Ya tengo la app</a>
+    <footer>
+      <a href="https://sdelapenya.github.io/FoodRanker/privacy.html" id="privacy">Privacidad</a> ·
+      <a href="https://sdelapenya.github.io/FoodRanker/terms.html" id="terms">Términos</a>
+    </footer>
+  </main>
+<script>
+// La ruta es la unica fuente de informacion: Firebase reescribe /plate/**, /user/** e
+// /invite/** a este mismo fichero, asi que location.pathname es lo que distingue un caso
+// de otro. Si Android ha verificado los App Links esta pagina no llega a verse nunca: el
+// sistema abre la app directamente. Esto es lo que ve quien no la tiene, quien entra desde
+// un ordenador, o quien la abre en iOS.
+var parts = location.pathname.split('/').filter(Boolean);
+var kind  = parts[0] || '';
+var id    = parts[1] || '';
+
+var ES = (navigator.language || 'es').toLowerCase().indexOf('es') === 0;
+
+var COPY = {
+  plate:  {es:['Mira este plato','Alguien ha puntuado este plato en FoodRanker. Abre la app para verlo.'],
+           en:['Check out this dish','Someone rated this dish on FoodRanker. Open the app to see it.']},
+  user:   {es:['Mira este perfil','Este perfil esta en FoodRanker. Abre la app para verlo.'],
+           en:['Check out this profile','This profile lives on FoodRanker. Open the app to see it.']},
+  invite: {es:['Te han invitado a FoodRanker','Instala la app y entra con este enlace para que cuente la invitacion.'],
+           en:['You have been invited to FoodRanker','Install the app and open this link so the invite counts.']},
+  '':     {es:['FoodRanker','Rankings de platos hechos por quien se los come.'],
+           en:['FoodRanker','Dish rankings made by the people who eat them.']}
+};
+
+var c = COPY[kind] || COPY[''];
+var t = ES ? c.es : c.en;
+document.documentElement.lang = ES ? 'es' : 'en';
+document.getElementById('title').textContent = t[0];
+document.getElementById('sub').textContent   = t[1];
+document.title = t[0] + ' · FoodRanker';
+
+if (!ES) {
+  document.getElementById('store').textContent   = 'Get it on Google Play';
+  document.getElementById('openapp').textContent = 'I already have the app';
+  var pv = document.getElementById('privacy'), tm = document.getElementById('terms');
+  pv.textContent = 'Privacy'; tm.textContent = 'Terms';
+  pv.href = 'https://sdelapenya.github.io/FoodRanker/privacy-en.html';
+  tm.href = 'https://sdelapenya.github.io/FoodRanker/terms-en.html';
+}
+
+// El esquema propio foodranker:// no necesita verificacion de dominio y lo soporta
+// DeepLinkParser desde siempre, asi que sirve de respaldo cuando los App Links no estan
+// verificados todavia (la verificacion de Android tarda en propagarse tras publicar).
+var openapp = document.getElementById('openapp');
+if (kind && id) {
+  openapp.href = 'foodranker://' + kind + '/' + id;
+} else {
+  openapp.style.display = 'none';
+}
+</script>
+</body>
+</html>
