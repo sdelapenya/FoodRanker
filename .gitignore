@@ -33,3 +33,6 @@ ui-debug.log
 
 # Salida del generador de paginas legales (se publica en gh-pages, no en main)
 tools/legal/out/
+
+# Cache de despliegue de Firebase Hosting (artefacto local, no versionar)
+.firebase/
