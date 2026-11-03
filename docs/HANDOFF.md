@@ -109,6 +109,97 @@ proceso, no en el nuestro, así que no hay nada que capturar.
 AppCompat). Deja de depender de una pantalla de Ajustes que cada fabricante rompe a su
 manera, y de paso permite ofrecer solo los dos idiomas que la app realmente tiene.
 
+### 🟢 SOLICITADO EL ACCESO A PRODUCCIÓN (2026-11-03, 9:42)
+
+**Los tres requisitos aparecieron cumplidos y tachados**: versión de prueba cerrada
+publicada, 12 testers aceptados y 14 días de prueba. Los dos últimos llevaban meses
+dándose por pendientes en este fichero y en la memoria — ya no lo estaban.
+
+Google responde por correo **al propietario de la cuenta** (`sdelapenya1991@`, no el de
+contacto de la app). Dice **7 días o menos**, "pero en ocasiones puede llevar más tiempo".
+
+⚠️ **Esto NO publica la app.** Habilita el canal de producción. Después hay que crear la
+versión de producción y pasar **otra** revisión distinta.
+
+#### Lo que se contestó, palabra por palabra
+
+Guárdese: si rechazan o piden aclaraciones, hay que saber qué se dijo. Todas las casillas
+eran de **300 caracteres**.
+
+**Paso 1 — Sobre la prueba cerrada**
+
+> *¿Cómo reclutaste usuarios?* — Amigos, familia y compañeros de trabajo, contactados uno a
+> uno por mensaje directo. No he usado servicios de pago ni grupos de intercambio de
+> testers: quería gente que saliera a comer de verdad y me contara qué veía, no
+> instalaciones para cumplir el requisito.
+
+> *¿Cómo de fácil resultó?* — **Difícil**
+
+> *Interacciones de los testers* — Uso real y variado: 57 platos con foto en 34
+> restaurantes de España y Francia, 66 valoraciones y 41 comentarios, repartidos entre 6
+> usuarios activos. También usaron seguir perfiles y reportar contenido. Lo único que nadie
+> usó fueron las invitaciones, por un fallo que ya he corregido.
+
+> *Comentarios recibidos y cómo* — Por WhatsApp y hablando con ellos en persona,
+> preguntando uno a uno. Reportaron: no llegaban los avisos de comentario (fallo real, ya
+> corregido), no se podía iniciar sesión con el navegador de Xiaomi (añadí login nativo) y
+> el corrector del teclado cambió el nombre de un plato al subirlo.
+
+**Paso 2 — Sobre la aplicación**
+
+> *Audiencia* — Adultos a partir de 18 años a los que les gusta salir a comer y quieren
+> saber qué plato pedir en un sitio concreto, no si el restaurante está bien en general. La
+> ficha está declarada solo para mayores de 18 porque el contenido lo publican los propios
+> usuarios y la app muestra anuncios.
+
+> *Valor* — Las reseñas puntúan restaurantes; aquí se puntúa el plato concreto, por sabor,
+> presentación, relación calidad-precio y si lo volverías a pedir. Así sabes qué pedir, no
+> solo dónde ir. Cada plato va atado a un local real de Google Places, con ranking por
+> ciudad y la foto de quien se lo comió.
+
+> *Descargas el primer año* — **Entre 0 y 10.000**
+
+**Paso 3 — Preparación para producción**
+
+> *Cambios hechos con lo aprendido* — Login nativo con Credential Manager, porque con el
+> navegador de Xiaomi no se podía entrar. Arreglados los avisos de comentario, que no
+> llegaban. Traducida entera al inglés tras probarla con el móvil en ese idioma. Añadida
+> moderación de platos y comentarios. Son 18 versiones durante la prueba.
+
+> *Cómo decidiste que estaba lista* — (versión A, la que reconoce el fallo abierto)
+> Probando la v18 en un Redmi físico pantalla por pantalla, en castellano y en inglés, hasta
+> dejar de encontrar fallos nuevos, y con Crashlytics limpio. El último que encontré, los
+> enlaces compartidos, ya está corregido y lo subiré antes de publicar en producción.
+
+🚨 **ESA ÚLTIMA RESPUESTA ES UN COMPROMISO POR ESCRITO ANTE GOOGLE.** Dice que la v19
+con el arreglo de los enlaces se sube **antes** de publicar en producción. No se puede
+sacar producción con la v18.
+
+#### De dónde salieron los números
+
+De contar Firestore y Auth con el Admin SDK el 2026-11-03, no de estimarlos:
+
+| | |
+|---|---|
+| Cuentas | 13 en Auth (10 con nombre), 12 en `users` |
+| Platos | **57, todos con foto**, de **6 usuarios distintos** |
+| Locales | **34 restaurantes distintos**, España y Francia |
+| Valoraciones | **66**, de 6 usuarios distintos, nota media **9,03** |
+| Comentarios | **41**, de 5 usuarios distintos |
+| Seguimientos | 15 |
+| Reportes | 1 (la moderación se ejercitó de verdad) |
+| **Referidos** | **0** |
+
+⚠️ Ese **0 en referidos confirma por otra vía lo de los enlaces muertos**: no es que nadie
+invitara, es que invitar no servía de nada. Cuando la v19 lleve una temporada fuera, ese
+número es la forma de comprobar que el arreglo funcionó.
+
+⚠️ `createdAt` **no es un Timestamp de Firestore** en `plates`/`ratings`/`comments`: al
+contar por fecha sale 0 documentos. Si alguna vez se quiere actividad por día, hay que
+mirar primero cómo está guardado de verdad.
+
+---
+
 #### 🔴 ENCONTRADO Y ARREGLADO: la app repartía enlaces a un dominio que no existe (2026-11-02)
 
 Play avisó de que "3 enlaces profundos no funcionan porque tus dominios web no están
