@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-01
+**Actualizado:** 2026-11-04
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,62 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🟢 AAB DE LA v19 (1.6) — COMPILADO Y VERIFICADO, SIN SUBIR (2026-11-04)
+
+`app/build/outputs/bundle/release/app-release.aab`, 15,98 MB, `BUILD SUCCESSFUL in 5m`.
+**Esta es la versión comprometida ante Google** en la solicitud de acceso a producción:
+dije por escrito que el arreglo de los enlaces se sube antes de publicar. La v18 que llevan
+hoy los testers sigue repartiendo enlaces muertos.
+
+Lleva tres arreglos de app sobre la v18, no solo uno:
+
+| Commit | Qué |
+|---|---|
+| `10ab7a3` | Los enlaces compartidos (plato, perfil, invitación) iban a un dominio inexistente |
+| `2217d00` | El selector de idioma de MIUI se llevaba FoodRanker por delante |
+| `677bb3c` | Oculta la venta de Premium mientras no haya cuenta de comercio |
+
+Verificado sobre el binario, no sobre el fuente:
+
+| Comprobación | Cómo | Resultado |
+|---|---|---|
+| Tests unitarios | `testDebugUnitTest` | **49 tests, 0 fallos, 0 errores** |
+| Versión | manifest fusionado | 19 / 1.6 |
+| Clave correcta | `keytool -printcert -jarfile` | SHA-256 `24:B8:7F:…:1A:81` |
+| Firma | `jarsigner -verify` | `jar verified` |
+| **Host nuevo en el manifest** | manifest binario del AAB | `foodranker.web.app` presente, `foodranker.app` **ausente** |
+| **Host muerto en el código** | cadenas en `base/dex/*.dex` | aparece 1 vez, en `ACCEPTED_HOSTS`; `https://foodranker.app/` no se construye nunca |
+| UMP sobrevive a R8 | cadenas en `base/dex/*.dex` | las 4 marcas presentes |
+| Textos legales | cadenas en `base/resources.pb` | 9 marcadores, castellano **e** inglés |
+| Split por idioma | `BundleConfig.pb` en crudo | `08 03 10 01` = LANGUAGE negate:true, desactivado |
+| Lado web | `curl` + API de Digital Asset Links | HTTP 200, `application/json`, **5 statements, sin errores** |
+
+⚠️ **El host muerto en el dex no es un fallo, y el `OK` de esa fila cuesta leerlo.**
+`DeepLinks.ACCEPTED_HOSTS` incluye `foodranker.app` **a propósito**: si algún día se
+registra el dominio y se apunta al mismo sitio de Firebase, los enlaces funcionarán sin
+tocar la app. Lo que importa es que `DeepLinks.HOST`, el único que **genera** enlaces, es
+`foodranker.web.app`. Buscar el host muerto a secas da positivo siempre; hay que buscar
+`https://foodranker.app/`, que es lo que diría que se sigue generando.
+
+⚠️ **Las sondas de los textos legales no van en `strings.xml` donde uno cree.** El
+responsable y la base jurídica están en `pp_0_b` y `pp_3_b`, y la base jurídica se escribe
+`Legitimate interests` / `Art. 6(1)(f)`. Buscar `privacy.html` o `legitimate interest` en
+minúsculas da **FALTA** aunque todo esté bien — esas cadenas viven en las páginas de
+GitHub Pages, no en los recursos de la app.
+
+**Notas de la tienda ya redactadas** en `docs/play-store-listing.md`, en los tres idiomas
+(es-ES 352, en-GB 320, en-US 320 caracteres — límite 500). Esta vez en-US es **idéntico** a
+en-GB porque no hay ninguna palabra que cambie de ortografía, pero hay que pegarlo igual:
+si en-US se queda vacío, Play le sirve el castellano.
+
+**Retomar aquí:** subir el AAB a prueba cerrada, pegar las notas en los tres idiomas, y
+**verificar los App Links en el Redmi con la build de Play** (no con la local: la
+verificación se hace contra la clave con la que está instalada la app). Compartir un plato
+por WhatsApp y comprobar que el enlace **abre la app directamente**, sin pasar por el
+navegador. Si no lo hace: `adb shell pm get-app-links com.app.foodranker`.
+
+---
 
 ### 🔴 PROBADO EN EL REDMI: PREMIUM NO EXISTE Y EL IDIOMA TUMBA LA APP (2026-11-02)
 

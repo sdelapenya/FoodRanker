@@ -141,6 +141,41 @@ dentro de cada una; si pegas el bloque con etiquetas se duplican y da error.
 
 ---
 
+## v19 (1.6) — los enlaces compartidos, y el idioma en Xiaomi
+
+### Castellano (es-ES) — v19
+
+```
+Los enlaces que compartías de un plato, un perfil o una invitación no llevaban a ningún sitio. Ya funcionan: quien reciba uno abre la app directamente en lo que le mandaste, y si no la tiene instalada, una página le explica qué es FoodRanker.
+
+Y el atajo para cambiar el idioma de la app ya no se lleva FoodRanker por delante en algunos móviles Xiaomi.
+```
+*(352 caracteres)*
+
+### Inglés (en-GB) — v19
+
+```
+Links you shared to a dish, a profile or an invite led nowhere. They work now: whoever gets one opens the app straight on what you sent them, and if they do not have it installed, a page explains what FoodRanker is.
+
+Also, the shortcut for changing the app language no longer takes FoodRanker down on some Xiaomi phones.
+```
+*(320 caracteres)*
+
+### Inglés (en-US) — v19
+
+El texto es **idéntico** al de en-GB: esta vez no hay ninguna palabra que se escriba
+distinto. Hay que pegarlo igual, porque si en-US se queda vacío Play le sirve el del
+idioma por defecto, que es el castellano.
+
+```
+Links you shared to a dish, a profile or an invite led nowhere. They work now: whoever gets one opens the app straight on what you sent them, and if they do not have it installed, a page explains what FoodRanker is.
+
+Also, the shortcut for changing the app language no longer takes FoodRanker down on some Xiaomi phones.
+```
+*(320 caracteres)*
+
+---
+
 ## v18 (1.5) — consentimiento de anuncios y textos legales
 
 ### Castellano (es-ES) — v18
