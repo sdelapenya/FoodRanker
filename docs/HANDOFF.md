@@ -17,7 +17,9 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ### 🟢 AAB DE LA v19 (1.6) — COMPILADO Y VERIFICADO, SIN SUBIR (2026-11-04)
 
-`app/build/outputs/bundle/release/app-release.aab`, 15,98 MB, `BUILD SUCCESSFUL in 5m`.
+`app/build/outputs/bundle/release/app-release.aab`, 15,98 MB. **Regenerado el 2026-11-04
+tras la revisión de abajo**, que encontró tres fallos más. El `versionCode` 19 sigue
+valiendo porque no se había subido nada a Play.
 **Esta es la versión comprometida ante Google** en la solicitud de acceso a producción:
 dije por escrito que el arreglo de los enlaces se sube antes de publicar. La v18 que llevan
 hoy los testers sigue repartiendo enlaces muertos.
@@ -34,7 +36,7 @@ Verificado sobre el binario, no sobre el fuente:
 
 | Comprobación | Cómo | Resultado |
 |---|---|---|
-| Tests unitarios | `testDebugUnitTest` | **49 tests, 0 fallos, 0 errores** |
+| Tests unitarios | `testDebugUnitTest` | **50 tests, 0 fallos, 0 errores** |
 | Versión | manifest fusionado | 19 / 1.6 |
 | Clave correcta | `keytool -printcert -jarfile` | SHA-256 `24:B8:7F:…:1A:81` |
 | Firma | `jarsigner -verify` | `jar verified` |
@@ -44,6 +46,10 @@ Verificado sobre el binario, no sobre el fuente:
 | Textos legales | cadenas en `base/resources.pb` | 9 marcadores, castellano **e** inglés |
 | Split por idioma | `BundleConfig.pb` en crudo | `08 03 10 01` = LANGUAGE negate:true, desactivado |
 | Lado web | `curl` + API de Digital Asset Links | HTTP 200, `application/json`, **5 statements, sin errores** |
+| **App Links de verdad** | `pm get-app-links` en el emulador | **`foodranker.web.app: verified`** |
+| **El enlace abre la app** | `am start -W` sobre la URL https | `Activity: com.app.foodranker/.MainActivity`, sin navegador |
+| `launchMode` | manifest fusionado | `singleTop` solo en MainActivity (los 3 `singleTask` son de Firebase Auth y AdMob) |
+| Opción muerta quitada | cadenas en `base/resources.pb` | `Ver ranking completo` / `See full ranking` ausentes |
 
 ⚠️ **El host muerto en el dex no es un fallo, y el `OK` de esa fila cuesta leerlo.**
 `DeepLinks.ACCEPTED_HOSTS` incluye `foodranker.app` **a propósito**: si algún día se
@@ -62,6 +68,70 @@ GitHub Pages, no en los recursos de la app.
 (es-ES 352, en-GB 320, en-US 320 caracteres — límite 500). Esta vez en-US es **idéntico** a
 en-GB porque no hay ninguna palabra que cambie de ortografía, pero hay que pegarlo igual:
 si en-US se queda vacío, Play le sirve el castellano.
+
+#### 🔍 LA REVISIÓN ANTES DE SUBIR ENCONTRÓ TRES FALLOS MÁS (2026-11-04)
+
+El primer AAB de la v19 estaba compilado y verificado, y aún así llevaba un fallo que se
+habría subido. **Los tres son del mismo tipo: código que nunca se había ejecutado porque
+los enlaces estaban muertos.** Arreglar los enlaces no solo arregla los enlaces: enciende
+caminos que llevaban años apagados y sin probar.
+
+**1. Un enlace con la app abierta duplicaba la app.** `MainActivity` no declaraba
+`launchMode`, así que era `standard`. Medido en el emulador, no deducido: tras dos enlaces
+seguidos la tarea `t14` tenía **dos `MainActivity`** (`Hist #0` y `Hist #1`). El usuario ve
+la app arrancar otra vez por el splash y "atrás" le devuelve a su copia anterior en vez de
+salir. Y `MainActivity` **ya sobrescribía `onNewIntent`**, que con `standard` no se ejecuta
+nunca: estaba escrito para un `launchMode` que no tenía. De paso, las notificaciones llevan
+`FLAG_ACTIVITY_CLEAR_TOP`, que sobre una actividad `standard` la **destruye y la recrea**
+perdiendo el estado. Arreglado con `android:launchMode="singleTop"`; vuelto a medir, **una
+sola instancia**, y `am start` responde *"intent has been delivered to currently running
+top-most instance"*, que es `onNewIntent` funcionando.
+
+**2. El respaldo de las invitaciones no existía.** El botón "Ya tengo la app" de
+`hosting/public/open.html` manda a `foodranker://<tipo>/<id>`. Había filtro para `plate` y
+`user`, **no para `invite`**, y `parseFoodRankerInviteCode` devolvía `null` para el esquema
+propio con un test afirmándolo. No estaba documentado en ningún sitio: no era una decisión,
+era el reflejo del fallo. Justo el único de los tres tipos de enlace que nunca ha
+funcionado. Antes `foodranker://invite/REF42` daba `unable to resolve Intent`; ahora entra.
+El test cambiado dice por qué.
+
+**3. "📊 Ver ranking completo" quitada del menú del plato.** Hacía `startActivity` sobre
+`https://foodranker.web.app/plate/{id}`, la URL del plato que ya estás viendo. Con el
+dominio muerto era un error de DNS en el navegador; **al arreglarlo pasa a ser peor**,
+porque ese enlace lo captura la propia app (App Links verificados) y te devuelve al mismo
+sitio. En la web no hay ningún ranking: `open.html` solo es una página de aterrizaje.
+Quitada la opción y las dos cadenas `det_full_ranking`.
+
+⚠️ **La huella del keystore de debug está en `assetlinks.json` a propósito, y eso permite
+probar los App Links sin pasar por Play.** `installDebug` en el emulador +
+`pm verify-app-links --re-verify` + `pm get-app-links` → `verified`. Es la forma de
+comprobar la cadena completa **antes** de subir nada. Lo que no se puede probar así es la
+build de Play, que va firmada con otra clave: eso hay que verlo en el Redmi con la app
+bajada de la tienda.
+
+⚠️ **`cmd package resolve-activity` MIENTE sobre los App Links.** Para los tres enlaces
+verificados devolvía `ResolverActivity` (el selector), como si no estuvieran verificados.
+No aplica la preferencia de dominio verificado. Lo que vale es lanzar el intent de verdad
+con `am start -W` y leer qué actividad queda delante.
+
+#### Tres cosas que quedan sueltas (ninguna bloquea subir)
+
+**La invitación falla en silencio.** `DiscoverViewModel.applyInviteCode` captura toda
+excepción y la manda a `Log.w`. Ni el usuario ve nada ni queda rastro en ningún sitio que
+alguien mire. Es el mismo patrón que dejó los enlaces muertos durante meses.
+
+**Una cuenta antigua no puede aplicar invitaciones.** Consultado en Firestore el 2026-11-04:
+de 12 usuarios, **1 no tiene el campo `referredByUserId`** — el de Sergio, el más antiguo,
+creado antes de que el campo existiera. La regla exige
+`resource.data.referredByUserId == ''`, y en las reglas de Firestore **leer un campo que no
+existe es un error de evaluación, no `null`**, así que deniega. Los otros 11 lo tienen a
+`""`. No bloquea nada en práctica (nadie se invita a sí mismo), pero es la trampa a
+recordar si alguna invitación falla sin motivo aparente.
+
+**Una invitación no sobrevive a la instalación.** No hay Play Install Referrer. Quien
+recibe una invitación **sin tener la app** aterriza en `open.html`, instala desde Play y el
+código se pierde — que es el caso principal de una invitación. La v19 arregla al que ya la
+tiene. Si alguna vez importan los referidos de verdad, esto es lo que falta.
 
 **Retomar aquí:** subir el AAB a prueba cerrada, pegar las notas en los tres idiomas, y
 **verificar los App Links en el Redmi con la build de Play** (no con la local: la

@@ -190,7 +190,6 @@
     <string name="det_reason_not_tasted">No ha probado el plato</string>
     <string name="det_share_text">📤 Compartir texto</string>
     <string name="det_share_image">🖼️ Compartir como imagen</string>
-    <string name="det_full_ranking">📊 Ver ranking completo</string>
     <string name="det_search_thefork">🍴 Buscar en TheFork</string>
     <string name="det_watch_ad">Ver anuncio y ganar +50 XP</string>
     <string name="det_rate_title">⭐ Valorar: %1$s</string>

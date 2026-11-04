@@ -61,7 +61,6 @@ import com.app.foodranker.ui.screens.addplate.FoodTextField
 import com.app.foodranker.ui.screens.addplate.ScoreSlider
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.ui.theme.categoryGradient
-import com.app.foodranker.utils.DeepLinks
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
@@ -215,15 +214,14 @@ fun PlateDetailScreen(
                                     showShareMenu = false
                                 }
                             )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.det_full_ranking)) },
-                                onClick = {
-                                    val url = DeepLinks.plate(plateId)
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                    context.startActivity(intent)
-                                    showShareMenu = false
-                                }
-                            )
+                            // Aqui habia un "Ver ranking completo" que abria
+                            // https://foodranker.web.app/plate/{id} con ACTION_VIEW. Nunca
+                            // hizo nada: con el dominio muerto era un error de DNS en el
+                            // navegador, y al arreglarlo pasa a ser peor, porque ese enlace
+                            // lo captura la propia app (App Links verificados) y te devuelve
+                            // al plato en el que ya estas. En la web no hay ningun ranking:
+                            // hosting/public/open.html solo es una pagina de aterrizaje para
+                            // quien no tiene la app. Quitada en la v19.
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.det_report_plate)) },
                                 onClick = {

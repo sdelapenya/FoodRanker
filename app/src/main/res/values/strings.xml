@@ -189,7 +189,6 @@
     <string name="det_reason_not_tasted">Has not tried the dish</string>
     <string name="det_share_text">📤 Share as text</string>
     <string name="det_share_image">🖼️ Share as image</string>
-    <string name="det_full_ranking">📊 See full ranking</string>
     <string name="det_search_thefork">🍴 Search on TheFork</string>
     <string name="det_watch_ad">Watch an ad and earn +50 XP</string>
     <string name="det_rate_title">⭐ Rate: %1$s</string>

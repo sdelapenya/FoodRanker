@@ -73,10 +73,22 @@
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_color" />
 
+        <!-- singleTop no es cosmetico: es la unica actividad de la app y recibe TODOS
+             los enlaces y TODAS las notificaciones. Con el "standard" de por defecto,
+             abrir un enlace compartido con la app ya abierta apilaba una SEGUNDA
+             MainActivity en la misma tarea (comprobado en el emulador: Hist #0 y
+             Hist #1 en la tarea t14): el usuario veia la app arrancar de nuevo por el
+             splash, y "atras" le devolvia a su copia anterior en vez de salir. Y las
+             notificaciones, que traen FLAG_ACTIVITY_CLEAR_TOP, destruian y recreaban
+             la actividad perdiendo el estado. Con singleTop se reutiliza la instancia
+             y entra por onNewIntent, que es justo lo que MainActivity ya sobrescribe.
+             Nada de esto se podia ver antes de la v19 porque los enlaces estaban
+             muertos y nadie llegaba a abrir uno. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.FoodRanker.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -101,6 +113,22 @@
                 <data
                     android:scheme="foodranker"
                     android:host="plate"
+                    android:pathPrefix="/" />
+            </intent-filter>
+            <!-- foodranker://invite/{code} — el respaldo de hosting/public/open.html.
+                 El botón "Ya tengo la app" de esa página manda a foodranker://<tipo>/<id>
+                 para los tres tipos de enlace, porque el esquema propio no necesita
+                 verificación de dominio y funciona aunque los App Links no estén
+                 verificados todavía. Faltaba este filtro: con plate y user el botón
+                 abría la app, y con una invitación no hacía nada. Justo el único de los
+                 tres que nunca ha funcionado (0 documentos en `referrals`). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="foodranker"
+                    android:host="invite"
                     android:pathPrefix="/" />
             </intent-filter>
             <intent-filter android:autoVerify="true">

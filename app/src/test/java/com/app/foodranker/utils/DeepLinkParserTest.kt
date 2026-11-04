@@ -64,9 +64,18 @@ class DeepLinkParserTest {
         assertEquals("REF42", uri.parseFoodRankerInviteCode())
     }
 
+    // Antes este test afirmaba lo contrario: que el esquema propio NO valia para las
+    // invitaciones. Era el reflejo de un fallo, no una decision — el boton "Ya tengo la app"
+    // de open.html manda aqui, y con invitaciones no hacia nada.
     @Test
-    fun `custom scheme does not match invite parser`() {
+    fun `custom scheme invite link returns the invite code`() {
         val uri = Uri.parse("foodranker://invite/REF42")
+        assertEquals("REF42", uri.parseFoodRankerInviteCode())
+    }
+
+    @Test
+    fun `custom scheme invite without code returns null`() {
+        val uri = Uri.parse("foodranker://invite/")
         assertNull(uri.parseFoodRankerInviteCode())
     }
 
