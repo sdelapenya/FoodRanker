@@ -15,6 +15,65 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🟢🟢 GOOGLE HA APROBADO EL ACCESO A PRODUCCIÓN (2026-11-04)
+
+Correo del 4 de noviembre a `sdelapenya1991@`: **acceso a producción aprobado para
+`com.app.foodranker`**. Se pidió el 3 de noviembre a las 9:42, así que tardaron un día.
+
+⚠️ **Esto NO publica la app.** Habilita el canal. Hay que crear la versión de producción y
+pasar **otra** revisión distinta.
+
+🚨 **Y no se puede sacar producción con la v18.** En el formulario que aprobaron se dijo
+por escrito: *"El último que encontré, los enlaces compartidos, ya está corregido y lo
+subiré antes de publicar en producción."* La v18 que llevan hoy los testers sigue
+repartiendo enlaces muertos. **La v19 es ahora lo único que separa la app de producción.**
+
+**Orden para publicar:** recompilar el AAB de la v19 (el que hay es anterior al arreglo de
+las notificaciones) → subir a prueba cerrada → verificar en el Redmi los App Links y las
+notificaciones (abajo) → crear la versión de producción con las notas ya redactadas en
+`docs/play-store-listing.md`.
+
+### 🔴 DECLARACIÓN DE "OPERADOR" EN PLAY — FECHA LÍMITE 1 DE FEBRERO DE 2027
+
+Correo del 4 de noviembre. Hay que declarar en Play Console si se es **operador**
+(*trader*): Gestionar cuenta → Información sobre ti → Estado de operador. **Si no se hace,
+no se pueden actualizar las apps y Google retira de Play el perfil y todas las apps.**
+
+⚠️ **No es un clic cualquiera, y no es opcional de facto.** Google considera operador a
+quien gana dinero con las apps, **también con anuncios** — y hay AdMob sirviendo. Si un
+particular se declara operador, **Google publica en Play su teléfono y su dirección**. Y
+mentir en esto incumple las condiciones de Google.
+
+Es la misma pelota que la cuenta de comercio y el alta censal: **va a la consulta con la
+gestoría**, no se decide a ojo. La dirección pública es exactamente el mismo problema que
+ya estaba anotado para el "Perfil público del comerciante".
+
+ℹ️ La revisión del correo sugirió anotarlo en un `GESTOR-PREGUNTAS.md`. **Ese fichero no
+existe en el repo** (comprobado el 2026-11-08). Si se crea, que recoja las tres: estado de
+operador, cuenta de comercio y alta censal/RETA/ROI-VIES.
+
+### ⏳ PENDIENTE DE VERIFICAR EN EL REDMI (no se puede hacer desde el PC)
+
+Dos cosas de la v19 están arregladas y sin comprobar en un móvil de verdad. **Las dos
+necesitan la build bajada de Play**, no una local.
+
+**1. Los App Links.** Compartir un plato por WhatsApp y abrir el enlace: debe **abrir la app
+directamente**, sin pasar por el navegador. Si no, `adb shell pm get-app-links
+com.app.foodranker`. Ojo: la verificación se hace contra la clave con la que está instalada
+la app, y la de Play no es la de debug ni la de subida — por eso hay que probarlo con la
+build de la tienda. En el emulador, con la clave de debug, ya dio `verified`.
+
+**2. Las notificaciones repetidas.** Provocar un aviso **con la app cerrada** (que otra
+cuenta dé un like o comente), recibir el push, y entonces entrar en la app:
+
+- **No debe sonar ni aparecer nada al entrar.** Ese era el fallo.
+- La campana debe seguir mostrando **el contador correcto**.
+- Provocar otro aviso **con la app abierta**: ese sí debe sonar, una sola vez.
+
+No se puede probar desde el PC: hace falta una sesión autenticada y un aviso real.
+
+---
+
 ### 🟢 LAS NOTIFICACIONES SE REPETÍAN AL ABRIR LA APP — ARREGLADO (2026-11-08)
 
 Sergio lo reportó así: *"la app notifica las cosas cuando estás fuera de la app y de nuevo
