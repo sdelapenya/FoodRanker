@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-04
+**Actualizado:** 2026-11-08
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,78 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🟢 LAS NOTIFICACIONES SE REPETÍAN AL ABRIR LA APP — ARREGLADO (2026-11-08)
+
+Sergio lo reportó así: *"la app notifica las cosas cuando estás fuera de la app y de nuevo
+vuelven a saltar cuando entras a la app"*. Es exacto, y pasaba **en cada arranque en frío**.
+
+**El diseño tiene dos caminos paralelos a propósito**: el push de FCM
+(`onNotificationCreated` en `functions/src/index.ts`) y un listener de Firestore
+(`NotificationRepository`). Los dos llaman a `NotificationHelper.show`, y el servidor
+dispara sobre **el mismo documento** que vigila el listener, así que todo aviso viaja por
+los dos caminos siempre. El anti-duplicados era que el id del aviso sale del **hash del
+texto**, de ahí que `check_notif_parity.py` exija que los dos lados redacten idéntico.
+
+#### ❌ 1. El flag `isFirstLoad` lo consumía la caché — ARREGLADO
+
+La caché persistente de Firestore está **encendida** (50 MB, `FirebaseModule`). Con caché,
+`addSnapshotListener` dispara **dos veces** al abrir la app:
+
+1. con la **caché** — documentos viejos. El flag se apagaba aquí.
+2. con el **servidor** — y todo lo creado mientras la app estaba cerrada llegaba como
+   `ADDED`, con el flag ya gastado → `NotificationHelper.show` por cada uno.
+
+Eran avisos que el usuario **ya había recibido por push estando fuera**, a veces ya leídos
+o descartados, y volvían a sonar al entrar.
+
+Arreglado sustituyendo el flag por `primerSnapshotDelServidorVisto`: se ignoran los
+snapshots de caché (`snapshot.metadata.isFromCache`) y **todo lo que venga en el primer
+snapshot del servidor es "lo que ya había"** y no avisa. Solo avisa lo que llegue después,
+es decir lo que ocurre de verdad mientras la app está abierta.
+
+⚠️ **El contador de la campana sí se sigue actualizando con la caché**, a propósito: tiene
+que ser correcto sin red. La línea de `_unreadCount` va **antes** de los dos `return`.
+
+#### ❌ 2. El doble sonido — ARREGLADO
+
+`setOnlyAlertOnce` no se ponía en ningún sitio. `notify()` con un id que ya existe
+reemplaza la tarjeta pero **vuelve a sonar y vibrar**, así que el hash del texto evitaba la
+tarjeta duplicada pero no el ruido. Y la **tarjeta de resumen del grupo** se republica con
+el mismo id en cada aviso nuevo, o sea que era un multiplicador: cinco likes sonaban cinco
+veces por las tarjetas y otras cuatro por el resumen. Puesto en las dos.
+
+#### ⚠️ 3. LO QUE NO SE HA ARREGLADO, Y POR QUÉ (decisión de Sergio, 2026-11-08)
+
+**El hash del texto no puede deduplicar donde hace falta.** El push lleva
+`notification: { title, body }`, y con *notification payload* y la app en segundo plano **la
+tarjeta la pone Android**, no nuestro código: `onMessageReceived` no se ejecuta y el id lo
+elige el SDK. Así que el hash solo deduplica cuando el push llega **en primer plano**, justo
+el caso en que no hace falta.
+
+Y el push **ya lleva `data.notifId`** con el id del documento de Firestore — la clave única
+perfecta, conocida por los dos caminos (`change.document.id` en el listener). **El cliente
+nunca la lee.**
+
+El arreglo de verdad sería **push data-only** (`priority: high`, sin `notification`): así
+`onMessageReceived` se ejecuta siempre, la app controla el id y se puede usar `notifId` en
+vez del hash. **Descartado a propósito**: MIUI mata procesos en segundo plano con ganas, y
+un data-only necesita que el proceso arranque para pintar algo. Si Android no lo deja, no
+sale **ningún** aviso — peor que un duplicado. El *notification payload* lo pinta Android
+aunque el proceso esté congelado. Se prefiere fiabilidad sobre elegancia.
+
+🚨 **Consecuencia: `check_notif_parity.py` importa MÁS que antes, no menos.** Con el
+arreglo de arriba, un tipo de aviso que el servidor no sepa redactar (cae en el `default`
+del switch y solo deja un `logger.warn`) ahora **solo avisaría si llega con la app
+abierta**. El listener ya no tapa los huecos del servidor al arrancar. Pasarlo al añadir
+cualquier tipo de aviso.
+
+**Sin verificar en dispositivo.** Compila y los 50 tests pasan, pero el camino completo
+necesita una sesión autenticada y un aviso real: hay que probarlo en el Redmi. La prueba es
+provocar un aviso con la app cerrada, recibir el push, y entrar en la app — **no debe sonar
+nada al entrar**, y la campana debe seguir mostrando el contador correcto.
+
+---
 
 ### 🟢 AAB DE LA v19 (1.6) — COMPILADO Y VERIFICADO, SIN SUBIR (2026-11-04)
 

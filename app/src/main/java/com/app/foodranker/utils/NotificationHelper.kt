@@ -81,6 +81,12 @@ object NotificationHelper {
             // Agrupar por canal: sin esto, cinco likes son cinco tarjetas sueltas
             // compitiendo con el resto de la bandeja.
             .setGroup(channelId)
+            // Un aviso que se reemplaza NO vuelve a sonar. Sin esto, el id derivado del
+            // texto evitaba la tarjeta duplicada pero no el ruido: `notify()` con un id que
+            // ya existe reemplaza la tarjeta y **vuelve a sonar y vibrar**, asi que el mismo
+            // hecho llegando por los dos caminos (push de FCM y listener de Firestore) se
+            // oia dos veces aunque solo se viera una.
+            .setOnlyAlertOnce(true)
             .build()
         manager(context).notify(notifId, notification)
         actualizarResumen(context, channelId)
@@ -116,6 +122,10 @@ object NotificationHelper {
             .setGroup(channelId)
             .setGroupSummary(true)
             .setAutoCancel(true)
+            // Este resumen se republica con el mismo id cada vez que entra un aviso nuevo
+            // del grupo, asi que era un multiplicador del ruido: cinco likes sonaban cinco
+            // veces por las tarjetas y otras cuatro por el resumen.
+            .setOnlyAlertOnce(true)
             .build()
         nm.notify(resumenId, resumen)
     }
