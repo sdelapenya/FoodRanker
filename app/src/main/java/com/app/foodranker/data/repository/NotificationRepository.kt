@@ -14,6 +14,45 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import com.app.foodranker.R
 
+/**
+ * Decide si un snapshot del listener de avisos puede disparar notificaciones.
+ *
+ * Está fuera de [NotificationRepository] a propósito: así se puede probar sin montar un
+ * Firestore. La regla cabe en cuatro líneas pero se equivocó durante meses, y el síntoma no
+ * se veía compilando sino usando la app.
+ *
+ * **El fallo que arregla.** Antes esto era un `isFirstLoad` que se apagaba en la primera
+ * llamada del listener. La caché persistente de Firestore está encendida (50 MB, ver
+ * `FirebaseModule`), así que al abrir la app el listener dispara **dos veces**: primero con
+ * la caché y después con el servidor. El flag se lo comía la llamada de la caché, y todo lo
+ * creado mientras la app estaba cerrada llegaba como `ADDED` en la segunda con el flag ya
+ * gastado — se volvía a notificar **lo que el usuario ya había recibido por push estando
+ * fuera**, a veces ya leído o descartado. Pasaba en cada arranque en frío.
+ *
+ * **La regla correcta.** Los snapshots de caché no avisan nunca, y lo que venga en el
+ * primer snapshot **del servidor** es "lo que ya había" y tampoco avisa. Solo avisa lo que
+ * llegue después, que es lo que ocurre de verdad mientras la app está abierta.
+ */
+internal class GuardiaDeAvisos {
+
+    private var primerSnapshotDelServidorVisto = false
+
+    /** Al (re)engancharse el listener: vuelve a hacer falta una línea base. */
+    fun reiniciar() {
+        primerSnapshotDelServidorVisto = false
+    }
+
+    /** `true` si los `ADDED` de este snapshot deben notificarse. */
+    fun debeNotificar(vieneDeLaCache: Boolean): Boolean {
+        if (vieneDeLaCache) return false
+        if (!primerSnapshotDelServidorVisto) {
+            primerSnapshotDelServidorVisto = true
+            return false
+        }
+        return true
+    }
+}
+
 @Singleton
 class NotificationRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -25,29 +64,14 @@ class NotificationRepository @Inject constructor(
     private var listener: ListenerRegistration? = null
     @Volatile private var activeUserId = ""
 
-    /**
-     * Si ya se ha visto el primer snapshot que viene **del servidor**.
-     *
-     * Antes esto era un `isFirstLoad` que se apagaba en la primera llamada del listener, y
-     * estaba mal: la caché persistente de Firestore está encendida (50 MB, ver
-     * `FirebaseModule`), así que al abrir la app el listener dispara **dos veces** — primero
-     * con la caché y después con el servidor. El flag se lo comía la llamada de la caché, y
-     * todo lo creado mientras la app estaba cerrada llegaba como `ADDED` en la segunda, con
-     * el flag ya gastado: se volvía a notificar **lo que el usuario ya había recibido por
-     * push estando fuera**, a veces ya leído o descartado. Pasaba en cada arranque en frío.
-     *
-     * Ahora la línea está donde tiene que estar: lo que venga en el primer snapshot del
-     * servidor es "lo que ya había" y no avisa. Solo avisa lo que llegue después, es decir
-     * lo que de verdad ocurre mientras la app está abierta.
-     */
-    private var primerSnapshotDelServidorVisto = false
+    private val guardia = GuardiaDeAvisos()
 
     fun startListening(userId: String) {
         if (userId.isEmpty()) return
         if (userId == activeUserId && listener != null) return
         activeUserId = userId
         listener?.remove()
-        primerSnapshotDelServidorVisto = false
+        guardia.reiniciar()
         listener = firestore.collection("notifications")
             .document(userId).collection("items")
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -57,9 +81,7 @@ class NotificationRepository @Inject constructor(
                 // El contador sí se actualiza con la caché: la campana tiene que ser correcta
                 // sin red. Lo que no puede dispararse con la caché son los avisos.
                 _unreadCount.value = snapshot.documents.count { it.get("isRead") != true }
-                if (snapshot.metadata.isFromCache) return@addSnapshotListener
-                if (!primerSnapshotDelServidorVisto) {
-                    primerSnapshotDelServidorVisto = true
+                if (!guardia.debeNotificar(snapshot.metadata.isFromCache)) {
                     return@addSnapshotListener
                 }
                 snapshot.documentChanges

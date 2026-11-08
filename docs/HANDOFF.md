@@ -139,18 +139,33 @@ del switch y solo deja un `logger.warn`) ahora **solo avisaría si llega con la 
 abierta**. El listener ya no tapa los huecos del servidor al arrancar. Pasarlo al añadir
 cualquier tipo de aviso.
 
-**Sin verificar en dispositivo.** Compila y los 50 tests pasan, pero el camino completo
-necesita una sesión autenticada y un aviso real: hay que probarlo en el Redmi. La prueba es
-provocar un aviso con la app cerrada, recibir el push, y entrar en la app — **no debe sonar
-nada al entrar**, y la campana debe seguir mostrando el contador correcto.
+#### ✅ Cubierto por tests (2026-11-08)
+
+La decisión se sacó del repositorio a una clase `GuardiaDeAvisos` **para poder probarla sin
+montar un Firestore**. 6 tests nuevos, 56 en total.
+
+⚠️ **Comprobado que los tests sirven**: se volvió a poner la lógica vieja a propósito y se
+pusieron rojos — falla `la cache no gasta la linea base del servidor`, que es exactamente
+el fallo. Un test de regresión que pasa con el código roto no vale nada, y esto se
+comprueba una vez, al escribirlo.
+
+**Lo que los tests NO cubren, y hay que probar en el Redmi.** La app solo tiene login de
+Google — no hay email/contraseña ni anónimo, comprobado — así que **no se puede crear una
+sesión autenticada en el emulador** y el camino completo (push real + listener real) no se
+puede ejercitar desde el PC. Ver la sección de verificaciones pendientes, arriba.
+
+🚨 **El paso 4 de esa prueba importa tanto como el 2**: un aviso con la app **abierta** sí
+tiene que sonar, una sola vez. Si el filtro se hubiera pasado de celoso, los avisos en
+primer plano habrían dejado de sonar — un fallo peor que el original.
 
 ---
 
 ### 🟢 AAB DE LA v19 (1.6) — COMPILADO Y VERIFICADO, SIN SUBIR (2026-11-04)
 
-`app/build/outputs/bundle/release/app-release.aab`, 15,98 MB. **Regenerado el 2026-11-04
-tras la revisión de abajo**, que encontró tres fallos más. El `versionCode` 19 sigue
-valiendo porque no se había subido nada a Play.
+`app/build/outputs/bundle/release/app-release.aab`, 15,98 MB. **Regenerado dos veces**: el
+2026-11-04 tras la revisión de abajo (tres fallos más) y el **2026-11-08 con el arreglo de
+las notificaciones repetidas**. El `versionCode` 19 sigue valiendo porque no se ha subido
+nada a Play todavía.
 **Esta es la versión comprometida ante Google** en la solicitud de acceso a producción:
 dije por escrito que el arreglo de los enlaces se sube antes de publicar. La v18 que llevan
 hoy los testers sigue repartiendo enlaces muertos.
@@ -167,7 +182,7 @@ Verificado sobre el binario, no sobre el fuente:
 
 | Comprobación | Cómo | Resultado |
 |---|---|---|
-| Tests unitarios | `testDebugUnitTest` | **50 tests, 0 fallos, 0 errores** |
+| Tests unitarios | `testDebugUnitTest` | **56 tests, 0 fallos, 0 errores** |
 | Versión | manifest fusionado | 19 / 1.6 |
 | Clave correcta | `keytool -printcert -jarfile` | SHA-256 `24:B8:7F:…:1A:81` |
 | Firma | `jarsigner -verify` | `jar verified` |
