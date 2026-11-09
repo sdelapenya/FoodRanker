@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-08
+**Actualizado:** 2026-11-09
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -28,10 +28,14 @@ por escrito: *"El último que encontré, los enlaces compartidos, ya está corre
 subiré antes de publicar en producción."* La v18 que llevan hoy los testers sigue
 repartiendo enlaces muertos. **La v19 es ahora lo único que separa la app de producción.**
 
-**Orden para publicar:** recompilar el AAB de la v19 (el que hay es anterior al arreglo de
-las notificaciones) → subir a prueba cerrada → verificar en el Redmi los App Links y las
-notificaciones (abajo) → crear la versión de producción con las notas ya redactadas en
-`docs/play-store-listing.md`.
+**Orden para publicar:** ~~recompilar el AAB de la v19~~ ✅ (`df53d5f`, 2026-11-08) →
+~~subir a prueba cerrada~~ ✅ (2026-11-09, con las notas en es-ES, en-GB y en-US) →
+**verificar en el Redmi los App Links y las notificaciones (abajo)** ← aquí estamos →
+crear la versión de producción con las notas de `docs/play-store-listing.md`.
+
+⚠️ Las notas de la v19 se reescribieron el 2026-11-09 (`44083e0`): el texto original era
+anterior al arreglo de las notificaciones y no lo contaba. **Las de producción tienen que
+ser estas, no las que había antes.**
 
 ### 🔴 DECLARACIÓN DE "OPERADOR" EN PLAY — FECHA LÍMITE 1 DE FEBRERO DE 2027
 
