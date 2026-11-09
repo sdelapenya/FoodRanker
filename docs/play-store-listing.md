@@ -148,18 +148,22 @@ dentro de cada una; si pegas el bloque con etiquetas se duplican y da error.
 ```
 Los enlaces que compartías de un plato, un perfil o una invitación no llevaban a ningún sitio. Ya funcionan: quien reciba uno abre la app directamente en lo que le mandaste, y si no la tiene instalada, una página le explica qué es FoodRanker.
 
+Los avisos que ya habías recibido con la app cerrada volvían a sonar al entrar en ella. Arreglado.
+
 Y el atajo para cambiar el idioma de la app ya no se lleva FoodRanker por delante en algunos móviles Xiaomi.
 ```
-*(352 caracteres)*
+*(452 caracteres)*
 
 ### Inglés (en-GB) — v19
 
 ```
 Links you shared to a dish, a profile or an invite led nowhere. They work now: whoever gets one opens the app straight on what you sent them, and if they do not have it installed, a page explains what FoodRanker is.
 
+Notifications you had already received with the app closed went off again when you opened it. Fixed.
+
 Also, the shortcut for changing the app language no longer takes FoodRanker down on some Xiaomi phones.
 ```
-*(320 caracteres)*
+*(422 caracteres)*
 
 ### Inglés (en-US) — v19
 
@@ -170,9 +174,11 @@ idioma por defecto, que es el castellano.
 ```
 Links you shared to a dish, a profile or an invite led nowhere. They work now: whoever gets one opens the app straight on what you sent them, and if they do not have it installed, a page explains what FoodRanker is.
 
+Notifications you had already received with the app closed went off again when you opened it. Fixed.
+
 Also, the shortcut for changing the app language no longer takes FoodRanker down on some Xiaomi phones.
 ```
-*(320 caracteres)*
+*(422 caracteres)*
 
 ---
 
