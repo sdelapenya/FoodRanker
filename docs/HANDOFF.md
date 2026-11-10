@@ -30,8 +30,8 @@ repartiendo enlaces muertos. **La v19 es ahora lo único que separa la app de pr
 
 **Orden para publicar:** ~~recompilar el AAB de la v19~~ ✅ (`df53d5f`, 2026-11-08) →
 ~~subir a prueba cerrada~~ ✅ (2026-11-09, con las notas en es-ES, en-GB y en-US) →
-**verificar en el Redmi los App Links y las notificaciones (abajo)** ← aquí estamos →
-crear la versión de producción con las notas de `docs/play-store-listing.md`.
+~~verificar en el Redmi los App Links y las notificaciones~~ ✅ (2026-11-10, las dos
+cosas probadas sobre la build de Play) → **crear la versión de producción** ← aquí estamos con las notas de `docs/play-store-listing.md`.
 
 ⚠️ Las notas de la v19 se reescribieron el 2026-11-09 (`44083e0`): el texto original era
 anterior al arreglo de las notificaciones y no lo contaba. **Las de producción tienen que
@@ -55,6 +55,50 @@ ya estaba anotado para el "Perfil público del comerciante".
 ℹ️ La revisión del correo sugirió anotarlo en un `GESTOR-PREGUNTAS.md`. **Ese fichero no
 existe en el repo** (comprobado el 2026-11-08). Si se crea, que recoja las tres: estado de
 operador, cuenta de comercio y alta censal/RETA/ROI-VIES.
+
+### ✅ LAS NOTIFICACIONES, VERIFICADAS EN EL MÓVIL (2026-11-10)
+
+Hecho sobre el **Redmi 14C con la build de Play (v19)**, provocando avisos de verdad:
+se crea un documento en `notifications/<uid>/items` con el Admin SDK y el resto del camino
+es el real (`onNotificationCreated` → FCM → móvil). uid de Sergio:
+`rNpwrHo3euaQSJjwsGFGX2vHr193`.
+
+| Paso | Qué se hizo | Resultado |
+|---|---|---|
+| 1 | App al fondo + `am kill` (proceso muerto, **sin** `force-stop`) | proceso muerto |
+| 2 | Aviso A creado | push recibido y **sonó** (08:46:53); tarjeta `tag=FCM-Notification:…`, puesta por Play Services; el proceso **no** arrancó |
+| 3 | Se abre la app | **la misma clave antes y después**, ninguna tarjeta nueva, y la app no encoló nada |
+| 4 | Campana | pasó de 3 a 4 — correcta |
+| 5 | Aviso B con la app **abierta** | sonó, **una sola vez** |
+
+⚠️ **`force-stop` invalida la prueba.** Deja la app en *stopped state* y FCM deja de
+entregarle nada, así que el push no llegaría y parecería otro fallo. Hay que usar `am kill`,
+que mata el proceso sin esa marca.
+
+#### Cómo se demostró lo de "una sola vez" (no es obvio)
+
+Con la app en primer plano el aviso se publica **dos veces**: una por `onMessageReceived`
+y otra por el listener de Firestore. Las dos con el mismo id (el hash del texto), así que
+se ve una sola tarjeta. Que además suene una sola vez lo hace `setOnlyAlertOnce(true)`,
+y se comprueba así:
+
+```
+flags=ONLY_ALERT_ONCE|AUTO_CANCEL|SILENT     <- el sistema añadió SILENT
+originalFlags=ONLY_ALERT_ONCE|AUTO_CANCEL    <- lo que pidió la app
+```
+
+⚠️ **`mLastAudiblyAlertedMs` engaña**: la segunda publicación, ya muda, lo resetea a `-1`,
+así que parece que el aviso no sonó nunca. El campo que **no** se borra es
+`mSoundNotificationKey` en `dumpsys notification`, que apuntaba a la tarjeta del aviso B.
+Ese es el que hay que mirar.
+
+ℹ️ La tarjeta de resumen no salió, y está bien: la de Play Services no lleva el `setGroup`
+de la app, así que solo había **una** en el grupo y `actualizarResumen` la retira por
+debajo de dos.
+
+**Los dos avisos de prueba se borraron** (`fromUserName` empezaba por "Prueba v19"), y el
+`adc_tmp.json` también. Las dos tarjetas que quedan en la bandeja del móvil se van solas al
+deslizarlas.
 
 ### ✅ APP LINKS VERIFICADOS EN EL MÓVIL CON LA BUILD DE PLAY (2026-11-10)
 
@@ -131,7 +175,12 @@ que rehacer en el móvil nuevo:
 ℹ️ `adb` no está en el PATH del bash. Ruta completa:
 `C:\Users\User\AppData\Local\Android\Sdk\platform-tools\adb.exe`
 
-### ⏳ PENDIENTE DE VERIFICAR EN EL REDMI (no se puede hacer desde el PC)
+### ✅ ~~PENDIENTE DE VERIFICAR EN EL REDMI~~ — HECHO EL 2026-11-10
+
+> Lo de abajo se escribió cuando estaba pendiente. **Ya está verificado**, ver las dos
+> secciones de arriba. Se deja porque describe bien qué se quería probar y por qué.
+
+#### (texto original)
 
 Dos cosas de la v19 están arregladas y sin comprobar en un móvil de verdad. **Las dos
 necesitan la build bajada de Play**, no una local.
