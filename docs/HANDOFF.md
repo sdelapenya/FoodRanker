@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-09
+**Actualizado:** 2026-11-10
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -55,6 +55,32 @@ ya estaba anotado para el "Perfil público del comerciante".
 ℹ️ La revisión del correo sugirió anotarlo en un `GESTOR-PREGUNTAS.md`. **Ese fichero no
 existe en el repo** (comprobado el 2026-11-08). Si se crea, que recoja las tres: estado de
 operador, cuenta de comercio y alta censal/RETA/ROI-VIES.
+
+### 📱 MÓVIL NUEVO: REDMI 14C (2026-11-10)
+
+El móvil de pruebas ya **no es el Redmi Note 10S (Android 13)** del que habla todo lo
+anterior en este fichero. Ahora es un **Redmi 14C**. Lo que daba por hecho el handoff y hay
+que rehacer en el móvil nuevo:
+
+- **No tiene nada instalado.** Hay que volver a entrar por el enlace de tester del canal
+  cerrado para que Play ofrezca la app.
+- **La cuenta de Google del móvil tiene que estar en la lista de testers**, o Play dirá que
+  la app no está disponible. El Note 10S tenía dos cuentas dadas de alta (ver más abajo);
+  en el 14C hay que comprobarlo.
+- **El token de FCM es uno solo por usuario** (`users/<uid>.fcmToken`). Al entrar en el
+  móvil nuevo se sobreescribe el del viejo, así que los push van al 14C — pero si se vuelve
+  a entrar en el Note 10S, se los lleva él. Para las pruebas de avisos: **un solo móvil con
+  sesión iniciada**.
+- **ADB pide autorización otra vez**: el 14C no tiene la llave de este PC. Ajustes →
+  Información del teléfono → pulsar 7 veces en la versión de HyperOS → Opciones de
+  desarrollador → **Depuración por USB**, y aceptar el diálogo con el móvil desbloqueado.
+  En Xiaomi el diálogo no sale hasta poner el USB en **transferencia de archivos (MTP)**.
+  Para instalar por cable hace falta además **"Depuración USB (ajustes de seguridad)"**,
+  que obliga a tener SIM y cuenta Xiaomi — para las pruebas de la v19 no hace falta,
+  la build se baja de Play.
+
+ℹ️ `adb` no está en el PATH del bash. Ruta completa:
+`C:\Users\User\AppData\Local\Android\Sdk\platform-tools\adb.exe`
 
 ### ⏳ PENDIENTE DE VERIFICAR EN EL REDMI (no se puede hacer desde el PC)
 
