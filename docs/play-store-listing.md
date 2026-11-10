@@ -141,7 +141,12 @@ dentro de cada una; si pegas el bloque con etiquetas se duplican y da error.
 
 ---
 
-## v19 (1.6) — los enlaces compartidos, y el idioma en Xiaomi
+## v19 y v20 (1.6) — los enlaces compartidos, y el idioma en Xiaomi
+
+⚠️ **Las mismas notas valen para la v20.** El `versionCode` 20 solo quita un permiso
+que sobraba (`READ_MEDIA_IMAGES`, ver `docs/HANDOFF.md`), no cambia nada que el usuario
+note, y el `versionName` sigue siendo `1.6`. No reescribir esto para la v20: pegar lo
+mismo.
 
 ### Castellano (es-ES) — v19
 

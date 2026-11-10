@@ -56,6 +56,63 @@ ya estaba anotado para el "Perfil público del comerciante".
 existe en el repo** (comprobado el 2026-11-08). Si se crea, que recoja las tres: estado de
 operador, cuenta de comercio y alta censal/RETA/ROI-VIES.
 
+### 🚧 v20 (1.6): UN PERMISO MUERTO BLOQUEÓ LA REVISIÓN DE PRODUCCIÓN (2026-11-10)
+
+La v19 **no llegó a enviarse** a revisión de producción. Al darle a "Enviar cambios a
+revisión", las comprobaciones previas de Play lo pararon en seco:
+
+> **Usar selectores de sistema alternativos para fotos o vídeos** — *Tu aplicación debe
+> usar el selector de fotos de Android u otros selectores del sistema, en lugar de
+> solicitar los permisos `READ_MEDIA_IMAGES` o `READ_MEDIA_VIDEO`.*
+
+⚠️ **No es una advertencia: es un bloqueo.** No deja ni mandarlo. Hay un "Continuar de
+todos modos", pero avisa de que te lo pueden rechazar, y con una promesa ya hecha por
+escrito a Google no era el momento de tentar a la suerte.
+
+**El permiso estaba declarado y no lo usaba nadie.** La foto se elige con
+`ActivityResultContracts.GetContent()` (`AddPlateScreen.kt`), que es un selector del
+sistema y devuelve un URI con permiso de lectura temporal. La prueba de que sobra: `minSdk`
+es 26, en Android 8–12 `READ_MEDIA_IMAGES` ni existe y la app **no declara ningún permiso
+de almacenamiento** — y el selector funciona igual desde siempre.
+
+Arreglado quitándolo del manifest con `tools:node="remove"`, para que ninguna dependencia
+lo reintroduzca al fusionar y vuelva a bloquear una publicación.
+
+ℹ️ `CAMERA` también está declarado **sin usarse** (no hay ni un `TakePicture` en el código).
+Se deja: ya lleva su `<uses-feature android:required="false">` al lado, así que no filtra
+dispositivos, y Play no se queja de él. Si algún día se limpia, que sea con su propia
+prueba.
+
+**AAB:** `app/build/outputs/bundle/release/app-release.aab`, 15 977 094 bytes,
+`BUILD SUCCESSFUL in 4m 21s`. `versionCode = 20`, **`versionName` sigue en `1.6`**: para el
+usuario no cambia absolutamente nada, así que no toca inventarse una versión. Las notas de
+la versión son **las mismas de la v19**.
+
+| Comprobación (sobre el binario) | Resultado |
+|---|---|
+| Firma | `jar verified` |
+| Versión | 20 / 1.6 |
+| `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` en el manifest del AAB | **ausentes** |
+| `singleTop` | sí |
+| `foodranker.web.app` sí / `foodranker.app` no | correcto |
+| Esquemas `plate`, `user`, `invite` | los tres |
+| UMP tras R8 | 4/4 marcas |
+| Split por idioma | desactivado |
+| Tests | **56, 0 fallos** |
+
+#### ⚠️ Lo que falta probar, y no es opcional
+
+Quitar el permiso **no debería** romper nada, pero lo que toca es el camino de subir un
+plato con foto, que es el corazón de la app. **Antes de promover a producción:**
+
+1. Subir el AAB de la v20 a **prueba cerrada**.
+2. Actualizar en el Redmi 14C desde Play y **publicar un plato con foto** en Android 16.
+3. Solo entonces promover a producción.
+
+En Play Console queda **una versión de producción en borrador con el bundle 19**. Hay que
+descartarla (`Descartar versión en borrador`) o sustituir el bundle por el 20: si se envía
+el 19, vuelve a bloquearse por lo mismo.
+
 ### ✅ LAS NOTIFICACIONES, VERIFICADAS EN EL MÓVIL (2026-11-10)
 
 Hecho sobre el **Redmi 14C con la build de Play (v19)**, provocando avisos de verdad:

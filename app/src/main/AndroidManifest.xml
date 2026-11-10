@@ -5,7 +5,21 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- NO declarar READ_MEDIA_IMAGES ni READ_MEDIA_VIDEO. La política de fotos y vídeos
+         de Play los prohíbe a las apps que apuntan a API 33+ salvo que los selectores del
+         sistema no sean suficientes, y esto bloqueó el envío de la v19 a revisión de
+         producción (2026-11-10): no es una advertencia, no deja ni enviar.
+
+         La app no los necesita. La foto se elige con ActivityResultContracts.GetContent()
+         (AddPlateScreen), que es un selector del sistema y devuelve un URI con permiso de
+         lectura temporal. La prueba está en que minSdk es 26 y en Android 8–12 no se
+         declara ningún permiso de almacenamiento: el selector funciona igual.
+
+         El tools:node="remove" no es decorativo — está para que ninguna dependencia lo
+         reintroduzca al fusionar el manifest y vuelva a bloquear una publicación. -->
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_IMAGES"
+        tools:node="remove" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Localización: para ofrecer los locales cercanos al publicar un plato (quien
