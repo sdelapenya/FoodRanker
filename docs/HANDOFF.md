@@ -56,6 +56,55 @@ ya estaba anotado para el "Perfil público del comerciante".
 existe en el repo** (comprobado el 2026-11-08). Si se crea, que recoja las tres: estado de
 operador, cuenta de comercio y alta censal/RETA/ROI-VIES.
 
+### ✅ APP LINKS VERIFICADOS EN EL MÓVIL CON LA BUILD DE PLAY (2026-11-10)
+
+La v19 está publicada en prueba cerrada (aviso de Play del 9 de noviembre) e instalada en el
+Redmi 14C desde la tienda. **La verificación que llevaba meses pendiente ya está hecha.**
+
+```
+adb shell pm get-app-links com.app.foodranker
+  Signatures: [DB:9A:33:74:...:FD:1D]      <- la firma de PLAY, no la de debug
+  Domain verification state:
+    foodranker.web.app: verified
+```
+
+Antes de actualizar, con la v18 instalada, decía `foodranker.app: 1024` — el dominio
+equivocado, que nunca existió, sin verificar. Es el fallo exacto que arregla la v19.
+
+**La pieza que faltaba por comprobar** era si la huella con la que Play firma la app está
+en el `assetlinks.json` que se sirve de verdad. Lo está: la firma que reporta el móvil
+(`DB:9A:33:74:…`) es la primera de las cinco del fichero servido en
+`https://foodranker.web.app/.well-known/assetlinks.json`.
+
+Comportamiento, con un plato real (`ChIJ17p_qV9HoBIRTRSfEBcZuhk__arroz-illa`):
+
+| Prueba | Resultado |
+|---|---|
+| `https://foodranker.web.app/plate/<id>` en frío | `Activity: com.app.foodranker/.MainActivity`, **sin navegador** |
+| `https://foodranker.web.app/user/<id>` con la app abierta | *delivered to currently running top-most instance* |
+| `foodranker://invite/REF42` con la app abierta | *delivered to currently running top-most instance* |
+| Instancias de `MainActivity` tras los tres | **1** (el `singleTop` funciona) |
+| `logcat -b crash` | ninguno |
+
+⚠️ **Xiaomi mete un selector de tienda**: `am start -d market://details?id=…` abre un
+diálogo "Google Play / Mi App Mall" en vez de ir a Play. Añadir `-p com.android.vending`
+para saltárselo.
+
+ℹ️ El formulario de consentimiento (UMP) **sale en castellano en el primer arranque de la
+v19**, lo que confirma en vivo lo que se había verificado buscando cadenas en el dex: R8 no
+se llevó el SDK por delante.
+
+ℹ️ `plates` se puede leer por la API REST de Firestore **sin autenticar**, solo con la
+`current_key` de `google-services.json` (así se sacó el id del plato de arriba). Encaja con
+que el ranking sea público, pero conviene mirarlo cuando se repasen las reglas.
+
+#### Lo que sigue pendiente, y por qué
+
+**La tanda de notificaciones.** El Redmi 14C estaba en **primer arranque**: la app se
+instaló el 7 de noviembre y no se había abierto nunca. Hace falta pasar el formulario de
+consentimiento y **entrar con Google**, y eso no se puede pilotar por ADB. El permiso
+`POST_NOTIFICATIONS` ya está concedido (`granted=true`).
+
 ### 📱 MÓVIL NUEVO: REDMI 14C (2026-11-10)
 
 El móvil de pruebas ya **no es el Redmi Note 10S (Android 13)** del que habla todo lo
