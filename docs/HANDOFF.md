@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-10
+**Actualizado:** 2026-11-11
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -99,6 +99,20 @@ la versión son **las mismas de la v19**.
 | UMP tras R8 | 4/4 marcas |
 | Split por idioma | desactivado |
 | Tests | **56, 0 fallos** |
+
+#### Estado (2026-11-11): la v20 está en revisión del canal cerrado
+
+Enviados dos cambios juntos: la v20 a **prueba cerrada** y, en **producción**, la
+segmentación de España y Reino Unido (sobrevivió al descarte del borrador, no hubo que
+rehacerla). Las comprobaciones previas pasaron limpias: solo quedó la advertencia de los
+símbolos de depuración, que no bloquea.
+
+Añadir países a producción **no publica nada**: ese canal sigue inactivo, sin ninguna
+versión. Solo deja la segmentación puesta para cuando se promueva.
+
+✅ Confirmación gratis de que quitar el permiso no tuvo efectos colaterales: en "Cambios en
+tus dispositivos admitidos", **0 dispositivos perdidos** (11 610 teléfonos y 6 509 tablets,
+los mismos que con la v19).
 
 #### ⚠️ Lo que falta probar, y no es opcional
 
