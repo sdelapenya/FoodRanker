@@ -100,12 +100,17 @@ la versión son **las mismas de la v19**.
 | Split por idioma | desactivado |
 | Tests | **56, 0 fallos** |
 
-#### Estado (2026-11-11): la v20 está en revisión del canal cerrado
+#### Estado (2026-11-11): la v20 ya está publicada en el canal cerrado
 
 Enviados dos cambios juntos: la v20 a **prueba cerrada** y, en **producción**, la
 segmentación de España y Reino Unido (sobrevivió al descarte del borrador, no hubo que
 rehacerla). Las comprobaciones previas pasaron limpias: solo quedó la advertencia de los
 símbolos de depuración, que no bloquea.
+
+**Google los aprobó el mismo día.** El *Resumen de publicación* quedó vacío —ni un cambio
+en revisión ni pendiente de enviar— con *"Última publicación el 11 de noviembre de 2026"*.
+La v20 está repartida a los testers y los dos países están puestos en producción. **El
+permiso de fotos no dio ningún problema en la revisión: era lo único que bloqueaba.**
 
 Añadir países a producción **no publica nada**: ese canal sigue inactivo, sin ninguna
 versión. Solo deja la segmentación puesta para cuando se promueva.
@@ -113,6 +118,28 @@ versión. Solo deja la segmentación puesta para cuando se promueva.
 ✅ Confirmación gratis de que quitar el permiso no tuvo efectos colaterales: en "Cambios en
 tus dispositivos admitidos", **0 dispositivos perdidos** (11 610 teléfonos y 6 509 tablets,
 los mismos que con la v19).
+
+#### Los símbolos de depuración, puestos para la próxima compilación (2026-11-11)
+
+En `app/build.gradle.kts`, dentro de `buildTypes { release { … } }`:
+
+```kotlin
+ndk {
+    debugSymbolLevel = "FULL"
+}
+```
+
+Es la advertencia que Play saca en cada versión. La app no tiene código nativo propio,
+pero sí `.so` de sus dependencias (Firebase, AdMob, soloader), y sin esto los fallos de
+esas librerías llegan a Crashlytics y a Play como direcciones de memoria en vez de nombres
+de función y números de línea.
+
+**No engorda lo que se instala**: Play guarda los símbolos aparte y no los reparte a los
+móviles, solo crece el AAB que se sube. **No se recompiló la v20 por esto** —ya estaba
+enviada y no cambia nada de lo que ve el usuario—, así que **la advertencia seguirá
+saliendo hasta que se compile una versión nueva**. Si los `.so` de las dependencias vienen
+ya sin símbolos (es lo normal en librerías precompiladas), puede que no desaparezca del
+todo: entonces no hay nada más que hacer desde aquí.
 
 #### ⚠️ Lo que falta probar, y no es opcional
 

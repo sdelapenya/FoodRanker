@@ -57,6 +57,16 @@ android {
             // Antes de volver a encenderlo: comprobar el APK con tools/i18n/check_apk.py.
             isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
+
+            // Los simbolos nativos que Play pide en cada version. La app no tiene codigo
+            // nativo propio, pero si .so de sus dependencias (Firebase, AdMob, soloader),
+            // y sin esto los fallos de esas librerias llegan a Crashlytics y a Play como
+            // direcciones de memoria en vez de nombres de funcion y numeros de linea.
+            // FULL no engorda lo que se instala: Play guarda los simbolos aparte y no los
+            // reparte a los moviles, solo crece el AAB que se sube.
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
