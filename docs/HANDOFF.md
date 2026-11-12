@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-11
+**Actualizado:** 2026-11-12
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -141,19 +141,49 @@ saliendo hasta que se compile una versión nueva**. Si los `.so` de las dependen
 ya sin símbolos (es lo normal en librerías precompiladas), puede que no desaparezca del
 todo: entonces no hay nada más que hacer desde aquí.
 
-#### ⚠️ Lo que falta probar, y no es opcional
+#### ✅ ~~Lo que falta probar~~ — HECHO EL 2026-11-12
 
 Quitar el permiso **no debería** romper nada, pero lo que toca es el camino de subir un
 plato con foto, que es el corazón de la app. **Antes de promover a producción:**
 
-1. Subir el AAB de la v20 a **prueba cerrada**.
-2. Actualizar en el Redmi 14C desde Play y **publicar un plato con foto** en Android 16.
-3. Solo entonces promover a producción.
+1. ~~Subir el AAB de la v20 a **prueba cerrada**~~ ✅ (2026-11-11, aprobado el mismo día).
+2. ~~Actualizar en el Redmi 14C y probar la foto~~ ✅ (2026-11-12, ver más abajo).
+3. **Promover a producción** ← aquí estamos, sin ningún bloqueante conocido.
 
 En Play Console queda **una versión de producción en borrador con el bundle 19**. Hay que
 descartarla (`Descartar versión en borrador`) o sustituir el bundle por el 20: si se envía
 el 19, vuelve a bloquearse por lo mismo.
 
+#### ✅ EL SELECTOR DE FOTOS, VERIFICADO SIN PERMISO (2026-11-12)
+
+Hecho sobre el **Redmi 14C con la build de Play de la v20**, la que ya no declara
+`READ_MEDIA_IMAGES`. Comprobado antes de tocar nada:
+
+- `versionCode=20`, `versionName=1.6`, `installerPackageName=com.android.vending`
+  (viene de Play, firmada con la clave de Play, no con la del PC).
+- En `dumpsys package` → `requested permissions`, **`READ_MEDIA_IMAGES` no aparece**.
+  El `tools:node="remove"` aguantó la fusión del manifest y ninguna dependencia lo
+  reinyectó. Eso solo se puede ver en el paquete instalado, no en el fuente.
+
+| Paso | Qué pasó |
+|---|---|
+| Subir → "Foto obligatoria" | abrió `com.google.android.photopicker.PhotopickerGetContentActivity`, el **selector del sistema**, con el aviso *"FoodRanker solo tendrá acceso a las fotos que selecciones"* |
+| Elegir una foto | **la previsualización se vio** en la pantalla de publicar |
+| Log de la app | `SkJpegCodec::onGetPixels + (1536, 2040)` y `SkJpegEncoder::Encode fQuality = 80` — decodificó el JPEG entero y lo recomprimió para subirlo |
+| Denegaciones | **ninguna**: ni un `SecurityException` ni un `Permission Denial` del proceso de FoodRanker en todo el logcat |
+
+**Eso zanja la cuestión**: la app lee los bytes del URI que devuelve el selector sin
+ningún permiso de almacenamiento, que es exactamente lo que decía el comentario del
+manifest y lo que la política de Play da por supuesto.
+
+**No se publicó nada.** Se descartó el borrador desde el diálogo de la app, y se
+comprobó en Firestore que no quedó rastro: `plates` sigue en 57 (8 de Sergio), `xp`
+en 490 y los mismos 4 logros. No se subió nada a Cloudinary ni se creó ningún `venue`.
+
+Por qué se hizo así y no publicando de verdad: publicar un plato **no notifica a nadie**
+—el único disparador sobre `plates` al crear es `moderatePlateImage`, que solo avisa al
+autor—, pero sí deja el plato visible en el feed y el ranking de todos. Y lo que había
+que probar era leer la foto, que ocurre entero antes de publicar.
 ### ✅ LAS NOTIFICACIONES, VERIFICADAS EN EL MÓVIL (2026-11-10)
 
 Hecho sobre el **Redmi 14C con la build de Play (v19)**, provocando avisos de verdad:
