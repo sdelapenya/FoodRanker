@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.FirebaseFunctionsException
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.User
 import com.app.foodranker.utils.InputLimits
@@ -321,6 +322,55 @@ class ProfileViewModel @Inject constructor(
                     }
                 )
             } catch (e: Exception) { /* silencioso */ }
+        }
+    }
+
+    /** Cómo acabó un intento de corregir el nombre de un plato. */
+    enum class ResultadoRenombrar { OK, SOLO_COSMETICO, ERROR }
+
+    /**
+     * Corrige CÓMO SE ESCRIBE el nombre de un plato: tildes, mayúsculas, puntuación.
+     *
+     * No es un renombrado: el id del documento es `{venueId}__{dishSlug}` y en Firestore
+     * los ids no se pueden cambiar, así que un nombre que normalice a otro slug exigiría
+     * crear otro documento y mover ratings, comments y saves. Eso se devuelve como
+     * [ResultadoRenombrar.SOLO_COSMETICO] y no se hace nada.
+     *
+     * Lo decide la Cloud Function, no esto: las reglas de Firestore no tienen
+     * normalización Unicode y no pueden saber que "Ñoquis" y "noquis" colapsan. Aquí no
+     * se comprueba el slug ni por adelantado, para que no haya dos criterios — manda el
+     * servidor, igual que con `getLeagueId`.
+     */
+    fun renamePlate(plateId: String, name: String, onResult: (ResultadoRenombrar) -> Unit = {}) {
+        if (auth.currentUser?.uid == null || plateId.isBlank()) {
+            onResult(ResultadoRenombrar.ERROR); return
+        }
+        val limpio = name.sanitized(InputLimits.PLATE_NAME)
+        if (limpio.isBlank()) { onResult(ResultadoRenombrar.ERROR); return }
+
+        viewModelScope.launch {
+            try {
+                functions.getHttpsCallable("renamePlate")
+                    .call(mapOf("plateId" to plateId, "name" to limpio))
+                    .await()
+                // La lista se actualiza aquí en vez de recargarla entera: el único campo
+                // que ha cambiado es este, y recargar haría parpadear el perfil.
+                _uiState.value = _uiState.value.copy(
+                    plates = _uiState.value.plates.map {
+                        if (it.id == plateId) it.copy(name = limpio) else it
+                    }
+                )
+                onResult(ResultadoRenombrar.OK)
+            } catch (e: Exception) {
+                // La función devuelve FAILED_PRECONDITION con el mensaje "slug-changed"
+                // cuando el nombre nuevo normalizaría a otro slug. Es el caso normal y
+                // esperable —el usuario intentó corregir una errata, no una tilde—, no un
+                // fallo, así que se distingue para poder explicárselo.
+                val esSlug = (e as? FirebaseFunctionsException)
+                    ?.let { it.code == FirebaseFunctionsException.Code.FAILED_PRECONDITION &&
+                            it.message?.contains("slug-changed") == true } ?: false
+                onResult(if (esSlug) ResultadoRenombrar.SOLO_COSMETICO else ResultadoRenombrar.ERROR)
+            }
         }
     }
 

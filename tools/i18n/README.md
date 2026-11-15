@@ -8,6 +8,7 @@ y no necesitan dependencias:
 python -I tools/i18n/check_strings.py      # paridad de claves y marcadores
 python -I tools/i18n/check_args.py         # argumentos suficientes en cada llamada
 python -I tools/i18n/check_notif_parity.py # app y servidor redactan igual los avisos
+python -I tools/i18n/check_slug_parity.py  # app y servidor calculan igual el slug de plato
 python -I tools/i18n/check_listing.py      # la ficha de Play cabe en los límites
 python -I tools/i18n/find_unused.py        # claves que no referencia nadie
 python -I tools/i18n/scan_es.py            # literales castellanos en el código
@@ -33,6 +34,14 @@ que ninguna otra herramienta ve.
 **`check_args.py`.** El compilador no comprueba que `getString`/`stringResource` pase
 tantos argumentos como marcadores tiene la cadena. Si faltan, salta
 `MissingFormatArgumentException` en cuanto se pinta esa pantalla.
+
+**`check_slug_parity.py`.** El slug de un plato se calcula en Kotlin (`DishSlug.kt`) y en
+TypeScript (`functions/src/dishSlug.ts`), y forma la segunda mitad del id de documento
+`{venueId}__{dishSlug}`, del que depende el deduplicado de la identidad canónica. Si las dos
+divergen, `renamePlate` rechaza correcciones legítimas o acepta nombres que no corresponden
+al slug. **Los casos no se mantienen en el script**: se extraen de `DishSlugTest.kt`, así que
+añadir uno al test lo mete solo en la comprobación. Hace falta compilar antes las functions
+(`npm --prefix functions run build`), porque ejecuta el JavaScript generado.
 
 **`check_notif_parity.py` — el no evidente.** Un aviso puede llegar por dos caminos: el
 push que redacta Cloud Functions y el escuchador de Firestore que redacta la app. El id de

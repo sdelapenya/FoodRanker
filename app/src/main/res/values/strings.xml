@@ -252,7 +252,6 @@
     <string name="lang_system">System default</string>
     <string name="lang_es">Español</string>
     <string name="lang_en">English</string>
-    <string name="lang_cancel">Cancel</string>
     <string name="prof_notifications">Notifications</string>
     <string name="prof_notifications_sub">Choose which alerts you get</string>
     <string name="prof_privacy">Privacy policy</string>
@@ -628,6 +627,10 @@
 
     <!-- Perfil: borrado de cuenta y descripcion de plato -->
     <string name="prof_plate_desc_hint">What makes it special?</string>
+    <string name="prof_plate_name">Dish name</string>
+    <string name="prof_plate_name_help">Only how it is written: accents and capital letters</string>
+    <string name="prof_plate_name_only_cosmetic">You can only fix how the name is written. If it is a different dish, add it as a new one.</string>
+    <string name="prof_plate_name_error">The name could not be saved. Please try again.</string>
     <string name="prof_plate_desc">Description</string>
     <string name="prof_bio_label">Bio</string>
 

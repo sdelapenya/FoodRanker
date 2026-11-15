@@ -105,6 +105,80 @@ que es lo que de verdad acaba en el AAB:
 ⚠️ No se recompiló el AAB a propósito: `app/build/outputs/bundle/release/app-release.aab`
 sigue siendo el **20 verificado y publicado**, y sobrescribirlo perdería esa correspondencia.
 
+#### ✏️ EDICIÓN DEL NOMBRE DE PLATO — solo cosmética, por diseño (2026-11-15)
+
+Llevaba meses pendiente y no era pereza: **el id del documento es `{venueId}__{dishSlug}`
+y los ids de Firestore son inmutables**, así que renombrar un plato no puede cambiar su id.
+Dejar editar el nombre a secas rompe el deduplicado — la siguiente persona que añada ese
+plato con el nombre nuevo calcula otro id y crea un duplicado, justo lo que la identidad
+canónica existe para evitar (`docs/VENUES.md`).
+
+**Decisión (Sergio, 2026-11-15): solo cosmética.** Tildes, mayúsculas y puntuación. El
+campo `dishSlug` **nunca se escribe**, así que el deduplicado no puede romperse pase lo
+que pase. Un renombrado de verdad —mover el documento y con él ratings, comments y
+saves— queda sin hacer y es otro trabajo.
+
+Efecto secundario bueno: la restricción hace la operación **resistente a abusos sin
+esfuerzo**. No se puede convertir "Paella" en otra cosa para secuestrar un plato que ya
+acumuló valoraciones, porque cambiaría el slug.
+
+#### Lo hace una Cloud Function, no las reglas
+
+`renamePlate` (`functions/src/index.ts`, región `europe-west1`). Comprueba que quien llama
+es el autor, que el plato está aprobado, y que `toDishSlug(nombreNuevo)` coincide con el
+`dishSlug` guardado. Si no, devuelve `FAILED_PRECONDITION` con `slug-changed`.
+
+**Por qué no las reglas de Firestore**: no tienen normalización Unicode. No pueden saber
+que "Ñoquis" colapsa con "noquis", así que rechazarían precisamente las correcciones
+útiles. Y abrir `name` en las reglas sin poder verificar nada dejaría a un cliente
+manipulado reescribir el nombre de cualquier plato suyo. Mismo criterio que `getLeagueId`:
+cuando un identificador lo entienden dos lados, manda el servidor.
+
+⚠️ **Las reglas NO se han tocado** y `name` sigue sin ser editable por el cliente. No hace
+falta: el Admin SDK se las salta.
+
+#### El slug vive ahora en dos sitios, y hay un guardián
+
+`functions/src/dishSlug.ts` es el gemelo de `app/.../utils/DishSlug.kt`. Si divergen,
+`renamePlate` empieza a rechazar correcciones legítimas o a aceptar nombres que no
+corresponden al slug. **No corrompe la identidad** —esa función nunca escribe `dishSlug`—
+pero deja la app mintiendo sobre cómo se llama un plato.
+
+`tools/i18n/check_slug_parity.py` lo vigila, y **no mantiene su propia lista de casos**:
+los extrae de `DishSlugTest.kt`, que ya define el comportamiento esperado. Añadir un caso
+al test lo mete solo en la comprobación. Hay que compilar antes las functions
+(`npm --prefix functions run build`), porque ejecuta el JS generado.
+
+Comprobado que el guardián sirve: rompiendo a propósito la eliminación de diacríticos en
+el JS, el script detecta 2 divergencias y devuelve 1.
+
+#### En la interfaz
+
+El campo nuevo está en `EditPlateSheet`, encima de la descripción, con un texto de ayuda
+que avisa **antes** de intentarlo: *"Solo cómo está escrito: tildes y mayúsculas"*. Si el
+servidor lo rechaza, la hoja **no se cierra** y el texto de ayuda se vuelve el error — si
+cerrara dejando el nombre igual, parecería que el cambio se perdió sin explicación.
+
+Si el nombre no cambia, no se llama al servidor.
+
+| Comprobación | Resultado |
+|---|---|
+| `check_strings.py` | OK (en=594, es=593) |
+| `check_slug_parity.py` | 10 casos, todos coinciden |
+| `scan_ui.py` / `scan_es.py` | mismos recuentos de siempre |
+| `tsc` y `compileReleaseKotlin` | limpios |
+| Tests | **56, 0 fallos** |
+
+🔴 **LA CLOUD FUNCTION NO ESTÁ DESPLEGADA.** Hasta que se haga
+(`npx firebase deploy --only functions:renamePlate`) la pantalla existe pero el guardado
+falla. Desplegarla no afecta a nadie hoy: ninguna versión publicada la llama.
+
+🔴 **SIN PROBAR EN DISPOSITIVO**, igual que el selector de idioma. Va a la misma lista de
+la v21.
+
+De paso: el diálogo de idioma usaba un `lang_cancel` propio cuando ya existía
+`action_cancel`. Corregido y borrada la clave duplicada.
+
 #### ✈️ Lista de comprobación para cuando se compile la v21
 
 Decidido el 2026-11-15: el selector de idioma **no** se prueba hasta entonces. Habría hecho
@@ -113,7 +187,8 @@ falta arrancar el emulador e iniciar sesión a mano, y no compensaba con la v20 
 1. **Subir `versionCode` a 21** en `app/build.gradle.kts`. Hoy sigue en 20 para que el árbol
    no finja ser lo que está publicado. Decidir el `versionName`: si entra el selector de
    idioma, ya **no** es solo un cambio invisible como fue el 19 → 20.
-2. **Probar el selector de idioma en un dispositivo.** Es lo único de la v21 sin verificar.
+2. **Probar en un dispositivo el selector de idioma Y la corrección del nombre de plato.**
+   Son las dos cosas de la v21 sin verificar.
    Cuatro cosas: que el diálogo salga; que al elegir un idioma la app se recree en él; que
    el subtítulo de la fila lo refleje; y que "Predeterminado del sistema" devuelva el
    control al idioma del móvil. Mejor en el emulador `FoodRanker_Test` (API 35) que en el

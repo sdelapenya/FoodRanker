@@ -1,6 +1,7 @@
 import { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { toDishSlug } from "./dishSlug";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions";
@@ -2377,5 +2378,76 @@ export const deleteUserAccount = onCall(
       logger.error(`deleteUserAccount error for ${uid}:`, err);
       throw new HttpsError("internal", "Failed to delete account");
     }
+  }
+);
+
+// ── renamePlate ──────────────────────────────────────────────────────────
+
+/**
+ * renamePlate — callable
+ *
+ * Deja al autor de un plato corregir CÓMO SE ESCRIBE su nombre: tildes, mayúsculas,
+ * puntuación. "noquis" → "Ñoquis", "PIZZA 4 quesos" → "Pizza 4 Quesos".
+ *
+ * NO es un renombrado de verdad. El id del documento es `{venueId}__{dishSlug}` y los ids
+ * de Firestore son inmutables, así que un nombre que normalice a otro slug exigiría crear
+ * otro documento y mover ratings, comments y saves. Eso es otro trabajo (ver docs/VENUES.md).
+ * Aquí se rechaza y punto: el campo `dishSlug` NUNCA se toca, y por eso el deduplicado no
+ * puede romperse pase lo que pase.
+ *
+ * Esa restricción además hace la operación resistente a abusos sin esfuerzo: no se puede
+ * convertir "Paella" en cualquier otra cosa para secuestrar un plato que ya acumuló
+ * valoraciones, porque cambiaría el slug. Solo caben variantes que normalizan igual.
+ *
+ * Por qué una función y no las reglas de Firestore: las reglas no tienen normalización
+ * Unicode. No pueden saber que "Ñoquis" colapsa con "noquis", así que rechazarían
+ * precisamente las correcciones útiles. Abrir `name` en las reglas sin poder verificar
+ * nada sería dejar que un cliente manipulado reescriba el nombre de cualquier plato suyo.
+ */
+export const renamePlate = onCall(
+  { region: "europe-west1" },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Must be authenticated");
+
+    const plateId = (request.data?.plateId as string | undefined)?.trim();
+    const rawName = request.data?.name as string | undefined;
+    if (!plateId || typeof rawName !== "string") {
+      throw new HttpsError("invalid-argument", "plateId and name are required");
+    }
+
+    // Mismo saneado que el cliente (InputLimits.PLATE_NAME = 80) para que el límite no
+    // dependa de quién llame.
+    const name = rawName.trim().slice(0, 80);
+    if (name.length === 0) {
+      throw new HttpsError("invalid-argument", "empty-name");
+    }
+
+    const plateRef = db.collection("plates").doc(plateId);
+    const snap = await plateRef.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Plate not found");
+
+    if ((snap.get("addedByUserId") as string | undefined) !== uid) {
+      throw new HttpsError("permission-denied", "Not the author");
+    }
+    // Mismo criterio que la edición de descripción en firestore.rules: nada se toca
+    // mientras la moderación no haya aprobado el plato.
+    if ((snap.get("status") as string | undefined) !== "approved") {
+      throw new HttpsError("failed-precondition", "Plate not approved");
+    }
+
+    const slugActual = snap.get("dishSlug") as string | undefined;
+    const slugNuevo = toDishSlug(name);
+    if (!slugActual || slugNuevo !== slugActual) {
+      // El cliente distingue este código para enseñar el mensaje bueno: "solo puedes
+      // corregir tildes y mayúsculas". Cualquier otro error es un fallo de verdad.
+      throw new HttpsError("failed-precondition", "slug-changed");
+    }
+
+    // Solo `name`. `dishSlug` ni se menciona: si un día alguien añade más campos aquí,
+    // que tenga que pensárselo.
+    await plateRef.update({ name });
+    logger.info(`renamePlate ${plateId} por ${uid}: "${name}"`);
+    return { renamed: true, name };
   }
 );

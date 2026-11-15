@@ -123,6 +123,9 @@ fun ProfileScreen(
     var showEditSheet by remember { mutableStateOf(false) }
     var showEditPlateId by remember { mutableStateOf<String?>(null) }
     var deleteError by remember { mutableStateOf<String?>(null) }
+    // Id de texto del error al corregir el nombre de un plato, o null. Vive aqui y no
+    // en la hoja porque quien conoce el veredicto es el ViewModel, no la hoja.
+    var renameError by remember { mutableStateOf<Int?>(null) }
     var adPrivacyError by remember { mutableStateOf(false) }
 
     // ON_RESUME carga el perfil tanto en la primera apertura como al volver.
@@ -492,10 +495,32 @@ fun ProfileScreen(
         if (plate != null) {
             EditPlateSheet(
                 plate = plate,
-                onDismiss = { showEditPlateId = null },
-                onSave = { desc ->
+                nameError = renameError,
+                onDismiss = { showEditPlateId = null; renameError = null },
+                onSave = { nombre, desc ->
                     viewModel.updatePlateDescription(plateId, desc)
-                    showEditPlateId = null
+                    if (nombre.trim() == plate.name.trim()) {
+                        // Nombre intacto: no se molesta al servidor.
+                        showEditPlateId = null
+                        renameError = null
+                    } else {
+                        // La hoja NO se cierra hasta saber si el servidor lo aceptó: si
+                        // cerrara y el nombre se quedara igual, parecería que se ha
+                        // perdido el cambio sin decir por qué.
+                        renameError = null
+                        viewModel.renamePlate(plateId, nombre) { resultado ->
+                            when (resultado) {
+                                ProfileViewModel.ResultadoRenombrar.OK -> {
+                                    showEditPlateId = null
+                                    renameError = null
+                                }
+                                ProfileViewModel.ResultadoRenombrar.SOLO_COSMETICO ->
+                                    renameError = R.string.prof_plate_name_only_cosmetic
+                                ProfileViewModel.ResultadoRenombrar.ERROR ->
+                                    renameError = R.string.prof_plate_name_error
+                            }
+                        }
+                    }
                 },
                 onDelete = {
                     viewModel.deletePlate(plateId)
@@ -823,7 +848,7 @@ private fun ProfileAccountDangerZone(
                         },
                         confirmButton = {
                             TextButton(onClick = { mostrarDialogoIdioma = false }) {
-                                Text(stringResource(R.string.lang_cancel))
+                                Text(stringResource(R.string.action_cancel))
                             }
                         }
                     )
@@ -1579,10 +1604,14 @@ private fun CollectionsSection(
 private fun EditPlateSheet(
     plate: Plate,
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit,
-    onDelete: () -> Unit
+    onSave: (String, String) -> Unit,
+    onDelete: () -> Unit,
+    /** Id de texto del error del nombre, o null. Lo decide el servidor, no esta hoja. */
+    nameError: Int? = null
 ) {
     val maxLen = com.app.foodranker.utils.InputLimits.PLATE_DESCRIPTION
+    val maxLenNombre = com.app.foodranker.utils.InputLimits.PLATE_NAME
+    var name by remember { mutableStateOf(plate.name) }
     var description by remember { mutableStateOf(plate.description) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -1626,6 +1655,27 @@ private fun EditPlateSheet(
                     maxLines = 2
                 )
             }
+            // El nombre solo se puede corregir, no cambiar: el id del documento lleva
+            // dentro su slug y en Firestore los ids no se tocan. El texto de ayuda lo dice
+            // ANTES de que lo intente, porque descubrirlo con un error después de escribir
+            // es peor. El servidor vuelve a comprobarlo de todas formas (renamePlate).
+            OutlinedTextField(
+                value = name,
+                onValueChange = { if (it.length <= maxLenNombre) name = it },
+                label = { Text(stringResource(R.string.prof_plate_name)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = nameError != null,
+                shape = MaterialTheme.shapes.small,
+                supportingText = {
+                    Text(
+                        stringResource(nameError ?: R.string.prof_plate_name_help),
+                        color = if (nameError != null) ErrorRed else TextSecondary,
+                        fontSize = 11.sp
+                    )
+                },
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, focusedLabelColor = OrangePrimary)
+            )
             OutlinedTextField(
                 value = description,
                 onValueChange = { if (it.length <= maxLen) description = it },
@@ -1638,7 +1688,8 @@ private fun EditPlateSheet(
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, focusedLabelColor = OrangePrimary)
             )
             Button(
-                onClick = { onSave(description) },
+                onClick = { onSave(name, description) },
+                enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
