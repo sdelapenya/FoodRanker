@@ -15,9 +15,9 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-### 🔴 LA CUENTA DE REVISIÓN SE BLOQUEÓ SOLA — BLOQUEA PRODUCCIÓN (2026-11-15)
+### 🟢 LA CUENTA DE REVISIÓN SE BLOQUEÓ SOLA — RESUELTA CON UNA NUEVA (2026-11-15)
 
-**Esto es lo único que separa la app de producción.** El bundle 20 está aprobado en Alpha,
+**Esto fue lo último que separaba la app de producción.** El bundle 20 está aprobado en Alpha,
 las notas escritas, los países puestos y las nueve declaraciones completadas.
 
 #### Por qué una cuenta de revisión no es opcional
@@ -104,6 +104,45 @@ y, si falla por lo que sea (móvil sin cuentas, sin Play Services, error interno
 `signInWithBrowser` con `prompt=select_account`. **Ese es el único camino donde un revisor
 puede teclear correo y contraseña**, porque la hoja nativa solo muestra cuentas ya añadidas
 al dispositivo.
+
+#### ✅ RESUELTO: cuenta nueva `foodrankerreview2@gmail.com` (2026-11-15)
+
+La cuenta vieja se abandona — no se puede arreglar y no guarda nada. **La cuenta de
+revisión vigente es `foodrankerreview2@gmail.com`.** La contraseña **no se guarda aquí**
+(el repo es público): vive en Play Console y en quien la creó.
+
+Creada **desde el Redmi** (Ajustes → Cuentas → Añadir cuenta → Google → Crear cuenta, uso
+personal), no desde el navegador: así el móvil es dispositivo de confianza desde el primer
+momento, que es lo que permitió tocar los ajustes de seguridad. Desde el PC no dejaba —
+*"inicia sesión desde el mismo navegador"*.
+
+Configuración verificada en pantalla, y es la que hay que repetir si algún día hace falta
+otra:
+
+| Ajuste | Valor |
+|---|---|
+| Verificación en dos pasos | **desactivada** |
+| Llaves de acceso | **ninguna** ("Empezar a usar llaves de acceso") |
+| Saltar contraseña cuando sea posible | **Desactivado** |
+| Teléfono y correo de recuperación | sin poner (opcional, no bloquea) |
+
+⚠️ Se reutilizó la contraseña de la cuenta vieja, la que tenía cuatro avisos de *"intento
+sospechoso de inicio de sesión con tu contraseña"*. Casi seguro eran los revisores, pero
+conviene cambiarla cuando haya un rato.
+
+**La declaración de Play quedó así** (se editó la entrada existente, no se creó una
+segunda, así que no hay duplicados):
+
+- Nombre: `Google Play review account` (en inglés, lo exige el formulario)
+- Usuario: `foodrankerreview2@gmail.com`
+- Instrucciones: el texto en inglés de más abajo, 467/500
+- Casilla de "acceso completo a todo el contenido, incluido premium o de pago": **marcada**
+
+⏳ **Pendiente de las dos pruebas** antes de enviar producción:
+
+1. Entrar desde el navegador del PC con **solo correo y contraseña**, sin que pida el móvil
+2. Entrar en **FoodRanker en el Redmi** con esa cuenta — el único camino que recorre el
+   respaldo por navegador, que es por donde entra un revisor sin la cuenta en su dispositivo
 
 #### Regla para el futuro
 
@@ -2872,7 +2911,7 @@ confirmado comprobando el estado real en los pasos 3/4, que sí la reflejan.
   Play el 2026-08-23 (domingo) o después** — detalle completo en memoria
   `project_play_signing_sha1.md`. Mientras tanto, el Redmi tiene instalada la build firmada
   con el keystore local (funciona bien), no la de Play.
-- **Cuenta de revisión de Google Play creada**: `foodrankerreview@gmail.com`, dada de alta en
+- **Cuenta de revisión de Google Play creada**: ~~`foodrankerreview@gmail.com`~~ — ⚠️ **SUPERADA el 2026-11-15**: esa cuenta se bloqueó sola y la vigente es `foodrankerreview2@gmail.com` (ver arriba, "LA CUENTA DE REVISIÓN SE BLOQUEÓ SOLA"). Lo de abajo queda como registro de lo que se hizo en agosto. Dada de alta en
   la declaración "Datos de inicio de sesión" de Play Console (la contraseña **no se guarda
   aquí** — el repo es público — solo vive en Play Console y en quien la creó). Sirve para que
   el equipo de revisión de Google entre en la app; no tiene Premium contratado.
