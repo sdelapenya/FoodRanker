@@ -15,6 +15,56 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🚀 LA v20 (1.6), ENVIADA A REVISIÓN DE PRODUCCIÓN (2026-11-15)
+
+**Primera versión de producción de FoodRanker.** Hasta hoy la app solo había existido en
+prueba interna y cerrada.
+
+| | |
+|---|---|
+| Bundle | **20 (1.6)**, añadido *desde la biblioteca* — el mismo que Google aprobó en Alpha el 11 nov, sin recompilar |
+| Lanzamiento | completo, **100 %** |
+| Países | España y Reino Unido (ya aprobados el 11 nov) |
+| Notas | es-ES, en-GB y en-US — *"3 de 3 idiomas"* |
+| Junto con | la declaración de **Datos de inicio de sesión** con la cuenta nueva |
+
+⚠️ **Publicación gestionada desactivada**: cuando Google apruebe, la app **sale sola**. No
+hay un segundo botón de confirmación.
+
+#### Dos trampas de la propia consola, por si se repiten
+
+**"Subir" no es "Añadir de la biblioteca".** Al arrastrar el `app-release.aab` local, Play
+contesta *"El código de versión 20 ya se ha usado"*. No es un problema del bundle: es que
+ya está subido. Hay que usar **Añadir de la biblioteca** y elegir el 20, que además
+garantiza que va exactamente el binario ya revisado.
+
+**Guardar la versión no la envía.** Los cambios salen desde **Resumen de publicación**, y
+conviene mirar la lista desplegada antes de darle: si solo aparece la declaración, es que
+la versión de producción todavía no se ha creado y se gastaría una ronda de revisión
+entera en un cambio de texto.
+
+#### Lo que NO bloqueó y queda para después
+
+- **`app-ads.txt`**: el fichero está en `hosting/public/app-ads.txt` **sin desplegar**.
+  Para que sirva hay que (1) desplegar el hosting y (2) **cambiar el "Sitio web" de la
+  ficha a `https://foodranker.web.app`** — el camino que documenta AdMob para sitios que no
+  dejan publicar en la raíz, como el *project site* de GitHub Pages actual. Conviene
+  añadir antes un `index.html` a `hosting/public/`, porque hoy esa raíz sirve `open.html`
+  (*"Ábrelo en FoodRanker"*). ⚠️ El campo **"Política de privacidad"** es otro y **se queda
+  apuntando a github.io**: ahí viven las páginas que genera `tools/legal/build_pages.py`.
+- **Permiso `CAMERA`**: sigue en el binario y está **muerto** (cero usos en el código,
+  comprobado el 2026-11-15). Quitarlo en la v21, junto con `debugSymbolLevel`, que ya está
+  puesto en `app/build.gradle.kts` y entra en la próxima compilación.
+- **Declaración de "Permisos de fotos y vídeos"**: sigue existiendo porque el único bundle
+  que Play ve pidiendo `READ_MEDIA_IMAGES` es la **17 (1.4), en Prueba interna**, del 10 de
+  octubre. Ni la 18, ni la 19, ni la 20. Subir la 20 también a prueba interna la retiraría
+  y la declaración desaparecería sola. Su texto además afirma que *"se usa la cámara para
+  tomar la foto en el momento"*, que nunca fue cierto.
+- **Estado de operador**: tope **1 de febrero de 2027**. Va con la gestoría.
+- **Seguridad de los datos**: el borrado parcial sigue declarado como **No** cuando la app
+  sí lo permite. Declara menos control del usuario del que hay, que no es lo que hunde una
+  revisión, pero es falso. Arreglarlo exige una segunda URL que explique el borrado parcial.
+
 ### 🟢 LA CUENTA DE REVISIÓN SE BLOQUEÓ SOLA — RESUELTA CON UNA NUEVA (2026-11-15)
 
 **Esto fue lo último que separaba la app de producción.** El bundle 20 está aprobado en Alpha,
