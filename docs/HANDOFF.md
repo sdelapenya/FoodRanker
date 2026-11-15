@@ -105,6 +105,27 @@ que es lo que de verdad acaba en el AAB:
 ⚠️ No se recompiló el AAB a propósito: `app/build/outputs/bundle/release/app-release.aab`
 sigue siendo el **20 verificado y publicado**, y sobrescribirlo perdería esa correspondencia.
 
+#### ✈️ Lista de comprobación para cuando se compile la v21
+
+Decidido el 2026-11-15: el selector de idioma **no** se prueba hasta entonces. Habría hecho
+falta arrancar el emulador e iniciar sesión a mano, y no compensaba con la v20 en revisión.
+
+1. **Subir `versionCode` a 21** en `app/build.gradle.kts`. Hoy sigue en 20 para que el árbol
+   no finja ser lo que está publicado. Decidir el `versionName`: si entra el selector de
+   idioma, ya **no** es solo un cambio invisible como fue el 19 → 20.
+2. **Probar el selector de idioma en un dispositivo.** Es lo único de la v21 sin verificar.
+   Cuatro cosas: que el diálogo salga; que al elegir un idioma la app se recree en él; que
+   el subtítulo de la fila lo refleje; y que "Predeterminado del sistema" devuelva el
+   control al idioma del móvil. Mejor en el emulador `FoodRanker_Test` (API 35) que en el
+   Redmi: en el móvil haría falta desinstalar el build de Play y se pierde la sesión.
+3. **Sobre el AAB, no sobre el fuente**: `CAMERA` ausente, `READ_MEDIA_IMAGES` ausente, y
+   los símbolos de depuración presentes (que Play deje de dar la advertencia).
+4. **Las comprobaciones de `tools/i18n/`**, sobre todo `check_strings.py`.
+5. **Las verificaciones binarias de siempre**: `jarsigner -verify`, versionCode y
+   versionName en el manifest fusionado, los 4 marcadores de UMP en `base/dex/*.dex` (R8
+   puede llevarse el SDK de consentimiento sin avisar) y `08 03 10 01` en `BundleConfig.pb`
+   para el split de idiomas.
+
 ### 🚀 LA v20 (1.6), ENVIADA A REVISIÓN DE PRODUCCIÓN (2026-11-15)
 
 **Primera versión de producción de FoodRanker.** Hasta hoy la app solo había existido en
