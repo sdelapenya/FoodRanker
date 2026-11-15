@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoodRanker</title>
+<meta name="description" content="Rankings de platos hechos por quien se los come.">
+<meta property="og:title" content="FoodRanker">
+<meta property="og:description" content="Rankings de platos hechos por quien se los come.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://foodranker.web.app/">
+<!--
+  Portada de foodranker.web.app.
+
+  POR QUÉ EXISTE ESTE FICHERO
+  Hasta ahora la raíz la servía `open.html`, por el rewrite catch-all de firebase.json
+  (`** -> /open.html`). Esa página es el abridor de enlaces compartidos: funciona, porque
+  su JavaScript detecta la ruta vacía y pinta el nombre y la descripción, pero es una
+  página pensada para otra cosa y depende de JS para no verse rara.
+
+  Firebase Hosting sirve ficheros estáticos ANTES que los rewrites, así que con solo
+  existir este index.html la raíz deja de pasar por el catch-all. Los deep links
+  (/plate/**, /user/**, /invite/**) siguen yendo a open.html porque tienen sus propios
+  rewrites, que son más específicos. No hay que tocar firebase.json.
+
+  PARA QUÉ HACE FALTA
+  Para poder apuntar el campo "Sitio web" de la ficha de Play a https://foodranker.web.app
+  sin que el visitante aterrice en un abridor de enlaces. Y eso hay que hacerlo porque
+  AdMob rastrea `app-ads.txt` en la RAÍZ del dominio que figure en ese campo, y el sitio
+  actual (sdelapenya.github.io/FoodRanker) es un *project site* de GitHub Pages: no se
+  puede publicar nada en la raíz de sdelapenya.github.io sin crear otro repositorio.
+  Usar Firebase Hosting es el camino que documenta el propio AdMob para ese caso.
+
+  ⚠️ EL CAMPO "POLÍTICA DE PRIVACIDAD" DE LA FICHA ES OTRO Y NO SE TOCA.
+  Sigue apuntando a sdelapenya.github.io/FoodRanker/privacy.html, que es donde viven las
+  páginas legales que genera `tools/legal/build_pages.py` a partir de los strings de la
+  app. Aquí solo se enlazan: duplicarlas sería garantizar que un día digan cosas distintas.
+-->
+<style>
+  :root{
+    --orange:#FF6B35; --orange-dark:#E85520;
+    --bg:#FFFFFF; --text:#1A1A2E; --muted:#6B6B7B; --card:#FFFFFF; --border:#ECECF1;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#121218; --text:#F2F2F7; --muted:#9A9AA8; --card:#1C1C25; --border:#2A2A36;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:48px 16px;
+  }
+  main{width:100%; max-width:480px}
+  .mark{
+    width:88px; height:88px; margin:0 auto 24px; border-radius:24px;
+    background:linear-gradient(160deg,var(--orange),var(--orange-dark));
+    display:flex; align-items:center; justify-content:center; font-size:44px;
+  }
+  h1{font-size:30px; margin:0 0 10px; letter-spacing:-.02em; text-align:center}
+  .tagline{
+    color:var(--text); font-size:17px; line-height:1.5; margin:0 0 28px;
+    text-align:center; font-weight:600;
+  }
+  .about{
+    color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 32px;
+    text-align:center;
+  }
+  .btn{
+    display:block; padding:15px 20px; border-radius:14px; text-decoration:none;
+    font-weight:700; font-size:15px; text-align:center;
+    background:var(--orange); color:#fff; margin-bottom:36px;
+  }
+  .links{
+    border-top:1px solid var(--border); padding-top:24px;
+    display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:center;
+  }
+  .links a{color:var(--muted); text-decoration:none; font-size:14px}
+  .links a:hover{color:var(--orange); text-decoration:underline}
+  footer{margin-top:28px; text-align:center; font-size:12px; color:var(--muted)}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+  <main>
+    <div class="mark">🍽️</div>
+    <h1>FoodRanker</h1>
+    <p class="tagline" id="tagline">Rankings de platos hechos por quien se los come.</p>
+    <p class="about" id="about">
+      Google Maps ya te dice si un restaurante es bueno. FoodRanker responde la otra
+      pregunta: qué pedir cuando ya estás sentado. Cada plato se puntúa por separado,
+      con su foto y el sitio donde te lo sirvieron.
+    </p>
+
+    <a class="btn" id="store"
+       href="https://play.google.com/store/apps/details?id=com.app.foodranker">Descargar en Google Play</a>
+
+    <nav class="links">
+      <a href="https://sdelapenya.github.io/FoodRanker/privacy.html" id="privacy">Privacidad</a>
+      <a href="https://sdelapenya.github.io/FoodRanker/terms.html" id="terms">Términos</a>
+      <a href="https://sdelapenya.github.io/FoodRanker/delete-account.html" id="del">Eliminar cuenta</a>
+      <a href="mailto:foodranker.app@gmail.com" id="contact">Contacto</a>
+    </nav>
+
+    <footer id="foot">FoodRanker · <a href="mailto:foodranker.app@gmail.com">foodranker.app@gmail.com</a></footer>
+  </main>
+
+<script>
+// Mismo criterio que open.html: el castellano va en el HTML para que la página se lea
+// bien aunque el JS no llegue a ejecutarse, y aquí solo se cambia a inglés. La app se
+// publica en España y Reino Unido, así que son los dos idiomas que importan.
+if ((navigator.language || 'es').toLowerCase().indexOf('es') !== 0) {
+  document.documentElement.lang = 'en';
+  document.getElementById('tagline').textContent =
+    'Dish rankings made by the people who eat them.';
+  document.getElementById('about').textContent =
+    'Google Maps already tells you whether a restaurant is good. FoodRanker answers the ' +
+    'other question: what to order once you are sitting down. Every dish is rated on its ' +
+    'own, with its photo and the place that served it.';
+  document.getElementById('store').textContent = 'Get it on Google Play';
+  document.getElementById('privacy').textContent = 'Privacy';
+  document.getElementById('terms').textContent   = 'Terms';
+  document.getElementById('del').textContent     = 'Delete account';
+  document.getElementById('privacy').href = 'https://sdelapenya.github.io/FoodRanker/privacy-en.html';
+  document.getElementById('terms').href   = 'https://sdelapenya.github.io/FoodRanker/terms-en.html';
+}
+</script>
+</body>
+</html>
