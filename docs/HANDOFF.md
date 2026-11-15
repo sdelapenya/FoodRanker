@@ -26,6 +26,52 @@ sigue en 20 a propósito, para que el árbol no finja ser lo que está publicado
 | `debugSymbolLevel = "FULL"` | `app/build.gradle.kts`, en `buildTypes { release }` |
 | Permiso `CAMERA` y su `uses-feature`, **eliminados** | `app/src/main/AndroidManifest.xml` |
 
+#### 🔵 SELECTOR DE IDIOMA PROPIO — hecho, SIN probar en un móvil (2026-11-15)
+
+Era el "arreglo bueno" que este handoff llevaba pidiendo desde el 2026-11-02. La fila de
+idioma del perfil ya **no** abre Ajustes: abre un diálogo de la app y llama directamente a
+`LocaleManager.setApplicationLocales()`.
+
+**Por qué.** Esa pantalla de Ajustes la pone cada fabricante y MIUI la tiene rota: su
+`AppLocalePickerActivity` se estrella en su propio `onCreate` (NPE, ActionBar nulo). El
+`FLAG_ACTIVITY_NEW_TASK` que se puso el 2026-11-02 evitaba que se llevara FoodRanker por
+delante, pero no arreglaba lo de fondo — el usuario seguía sin poder cambiar de idioma.
+Llamando a `LocaleManager` no hay pantalla ajena de por medio.
+
+**No duplica estado.** Es la misma API que usa Ajustes, así que la elección la guarda el
+sistema, persiste entre arranques y se sigue viendo en Ajustes → Idioma de la aplicación.
+`applicationLocales` vacío = "sigue al móvil", y se traduce a `null` en el código.
+
+**Sigue siendo solo Android 13+**, porque `LocaleManager` es de API 33 y `minSdk` es 26. En
+8–12 no hay fila, igual que antes. Extenderlo a esas versiones exigiría AppCompat o manejar
+la configuración a mano, y es otra decisión.
+
+De propina, el subtítulo de la fila ya no es un texto fijo: dice en qué idioma está la app
+ahora mismo. Eso dejó `prof_language_sub` sin usar y se ha borrado — lo cazó
+`tools/i18n/find_unused.py`.
+
+| Comprobación | Resultado |
+|---|---|
+| `check_strings.py` | OK, paridad correcta (en=591, es=590) |
+| `check_args.py` | 0 usos con argumentos insuficientes |
+| `scan_ui.py` / `scan_es.py` | mismos recuentos que antes, **ninguna** mención a ProfileScreen |
+| `find_unused.py` | ninguna clave de idioma sin usar |
+| `compileReleaseKotlin` | limpio |
+| Tests | **56, 0 fallos** |
+
+⚠️ La diferencia de una clave entre `en` y `es` es `default_web_client_id`, el id de Google
+Sign-In. Es técnico, no se traduce, y ya estaba así antes. El script lo da por bueno.
+
+🔴 **FALTA PROBARLO EN UN DISPOSITIVO.** Compila y no tiene texto clavado, pero nadie ha
+pulsado todavía el diálogo. Lo que hay que ver: que el diálogo salga, que al elegir un
+idioma la app se recree en ese idioma, que el subtítulo lo refleje, y que
+"Predeterminado del sistema" devuelva el control al móvil.
+
+El emulador `FoodRanker_Test` (API 35, Pixel 6, imagen con Play Store) sirve, pero **la app
+es un muro de login**: hace falta iniciar sesión a mano una vez. En el Redmi no se puede
+instalar un debug encima del build de Play — firma distinta, habría que desinstalar y se
+pierde la sesión.
+
 #### Por qué se pudo borrar `CAMERA` a secas
 
 La app **nunca** ha usado la cámara: cero referencias a CameraX, `ACTION_IMAGE_CAPTURE` o

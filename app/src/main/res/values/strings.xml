@@ -245,7 +245,14 @@
     <string name="prof_invite">Invite friends</string>
     <string name="prof_invite_sub">Share your code and earn XP</string>
     <string name="prof_language">Language</string>
-    <string name="prof_language_sub">Choose the language you see the app in</string>
+    <!-- Selector de idioma propio (ProfileScreen). Los nombres de los idiomas son
+         IGUALES en los dos ficheros a propósito: una lista de idiomas se escribe cada uno
+         en el suyo, no traducida. "Español" en la versión inglesa no es un olvido. -->
+    <string name="lang_dialog_title">App language</string>
+    <string name="lang_system">System default</string>
+    <string name="lang_es">Español</string>
+    <string name="lang_en">English</string>
+    <string name="lang_cancel">Cancel</string>
     <string name="prof_notifications">Notifications</string>
     <string name="prof_notifications_sub">Choose which alerts you get</string>
     <string name="prof_privacy">Privacy policy</string>

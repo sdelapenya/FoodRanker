@@ -3,6 +3,10 @@ package com.app.foodranker.ui.screens.profile
 import androidx.compose.ui.res.stringResource
 import com.app.foodranker.R
 import android.os.Build
+import android.app.LocaleManager
+import android.content.Context
+import android.os.LocaleList
+import androidx.annotation.RequiresApi
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.*
@@ -736,35 +740,94 @@ private fun ProfileAccountDangerZone(
 
             Spacer(Modifier.height(6.dp))
 
-            // Solo desde Android 13: antes no existe el selector de idioma por aplicación, y
-            // una fila que no lleva a ninguna parte es peor que no tenerla. En versiones
-            // anteriores la app sigue el idioma del móvil, que es el comportamiento de siempre.
+            // Solo desde Android 13: LocaleManager es de API 33 y antes no existe el idioma
+            // por aplicación. Una fila que no lleva a ninguna parte es peor que no tenerla,
+            // así que en 8–12 la app sigue el idioma del móvil, como siempre.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Esta fila abría Ajustes → Idioma de la aplicación con un Intent. Se cambió
+                // por un selector propio el 2026-11-15, porque esa pantalla la pone cada
+                // fabricante y MIUI la tiene rota: su AppLocalePickerActivity se estrella en
+                // su propio onCreate (NPE, ActionBar nulo, línea 82) y, si entraba en NUESTRA
+                // tarea, Android terminaba toda la pila con ella y el usuario veía desaparecer
+                // FoodRanker creyendo que había petado la app.
+                //
+                // El FLAG_ACTIVITY_NEW_TASK que había aquí evitaba que se nos llevara por
+                // delante, pero no arreglaba lo de fondo: Ajustes seguía cayéndose y el
+                // usuario seguía sin poder cambiar de idioma. Un runCatching tampoco servía
+                // de nada — la excepción ocurre en otro proceso, no hay nada que capturar.
+                //
+                // Llamando a LocaleManager no hay pantalla ajena de por medio. Es la misma API
+                // que usa Ajustes, así que la elección se guarda en el sistema igual y sigue
+                // viéndose ahí: no duplicamos estado ni tenemos que persistir nada.
+                var mostrarDialogoIdioma by remember { mutableStateOf(false) }
+
+                // Se lee en cada recomposición a propósito, sin cachear: al aplicar un idioma
+                // el sistema recrea la Activity, así que el valor siempre llega fresco.
+                val idiomaActual = idiomaDeLaApp(ctxAjustes)
+
+                // Las opciones viven aquí y no en locales_config.xml porque son dos listas
+                // distintas: la del XML se la lee Android, esta la pinta la app. Al añadir un
+                // idioma hay que tocar las dos, y además la carpeta values-xx.
+                val opcionesIdioma = listOf(
+                    null to R.string.lang_system,
+                    "es" to R.string.lang_es,
+                    "en" to R.string.lang_en
+                )
+
                 ProfileMenuRow(
                     icon = Icons.Outlined.Language,
                     title = stringResource(R.string.prof_language),
-                    subtitle = stringResource(R.string.prof_language_sub),
+                    // El subtítulo deja de ser un texto fijo y dice en qué idioma está la app
+                    // ahora mismo. Es gratis teniendo ya el dato y ahorra abrir el diálogo
+                    // solo para mirar.
+                    subtitle = stringResource(
+                        opcionesIdioma.firstOrNull { it.first == idiomaActual }?.second
+                            ?: R.string.lang_system
+                    ),
                     iconTint = OrangePrimary.copy(alpha = 0.85f),
-                    onClick = {
-                        runCatching {
-                            ctxAjustes.startActivity(
-                                Intent(Settings.ACTION_APP_LOCALE_SETTINGS)
-                                    .setData(android.net.Uri.fromParts("package", ctxAjustes.packageName, null))
-                                    // FLAG_ACTIVITY_NEW_TASK no es cosmético. En MIUI (Redmi
-                                    // Note 10S, Android 13) el selector de idioma del sistema
-                                    // se estrella solo al abrirse —NPE en su propio onCreate,
-                                    // AppLocalePickerActivity:82, ActionBar nulo— y si entra
-                                    // en NUESTRA tarea, Android termina toda la pila con él:
-                                    // "Force finishing activity com.app.foodranker/.MainActivity".
-                                    // El usuario ve desaparecer FoodRanker y cree que ha
-                                    // petado la app. En su propia tarea, Ajustes se cae igual
-                                    // (eso no lo arreglamos desde aquí) pero nosotros seguimos
-                                    // vivos. El runCatching no basta: la excepción no es nuestra.
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            )
-                        }
-                    }
+                    onClick = { mostrarDialogoIdioma = true }
                 )
+
+                if (mostrarDialogoIdioma) {
+                    AlertDialog(
+                        onDismissRequest = { mostrarDialogoIdioma = false },
+                        title = {
+                            Text(stringResource(R.string.lang_dialog_title), fontWeight = FontWeight.Bold)
+                        },
+                        text = {
+                            Column {
+                                opcionesIdioma.forEach { (etiqueta, texto) ->
+                                    val elegir = {
+                                        mostrarDialogoIdioma = false
+                                        aplicarIdiomaDeLaApp(ctxAjustes, etiqueta)
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            // El clic va en toda la fila, no solo en el
+                                            // círculo: un RadioButton suelto es un objetivo
+                                            // de 20 dp y se falla.
+                                            .clickable(onClick = elegir)
+                                            .padding(vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = etiqueta == idiomaActual,
+                                            onClick = elegir
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(texto))
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { mostrarDialogoIdioma = false }) {
+                                Text(stringResource(R.string.lang_cancel))
+                            }
+                        }
+                    )
+                }
                 Spacer(Modifier.height(6.dp))
             }
 
@@ -1728,3 +1791,38 @@ private fun RivalCard(rivalName: String, rivalXp: Int, gap: Int) {
     }
 }
 
+/**
+ * El idioma que el usuario ha elegido para la app, o `null` si la deja seguir al del móvil.
+ *
+ * Un `applicationLocales` **vacío** no es un error ni un "no se sabe": es exactamente lo que
+ * deja Ajustes → Idioma de la aplicación → Predeterminado del sistema. Por eso aquí se
+ * traduce a `null` y no hace falta guardar la preferencia por nuestra cuenta: la única
+ * fuente de verdad es el sistema, y así la app y Ajustes nunca pueden discrepar.
+ *
+ * Se devuelve solo `language` ("es", "en") y no la etiqueta completa porque la app tiene
+ * `values-es` y `values`, sin variantes regionales: un móvil en `es-419` o en `en-GB` tiene
+ * que encajar igual en su opción.
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun idiomaDeLaApp(context: Context): String? =
+    context.getSystemService(LocaleManager::class.java)
+        ?.applicationLocales
+        ?.takeIf { !it.isEmpty }
+        ?.get(0)
+        ?.language
+
+/**
+ * Aplica el idioma de la app. Con `etiqueta` a `null` devuelve el control al idioma del móvil.
+ *
+ * No hay que reiniciar nada a mano ni avisar a nadie: el sistema recrea la Activity por su
+ * cuenta en cuanto esto cambia, y persiste la elección entre arranques y actualizaciones.
+ *
+ * Los idiomas admitidos los decide `res/xml/locales_config.xml`, que es lo que Android lee.
+ * Pedir aquí uno que no esté declarado allí no da error — simplemente no se aplica.
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun aplicarIdiomaDeLaApp(context: Context, etiqueta: String?) {
+    context.getSystemService(LocaleManager::class.java)?.applicationLocales =
+        if (etiqueta == null) LocaleList.getEmptyLocaleList()
+        else LocaleList.forLanguageTags(etiqueta)
+}
