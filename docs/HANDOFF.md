@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-12
+**Actualizado:** 2026-11-15
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -15,6 +15,102 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔴 LA CUENTA DE REVISIÓN SE BLOQUEÓ SOLA — BLOQUEA PRODUCCIÓN (2026-11-15)
+
+**Esto es lo único que separa la app de producción.** El bundle 20 está aprobado en Alpha,
+las notas escritas, los países puestos y las nueve declaraciones completadas.
+
+#### Por qué una cuenta de revisión no es opcional
+
+El formulario de **Datos de inicio de sesión** (Contenido de la aplicación) dice literal:
+*"Los revisores no pueden crear cuentas, usar sus propias cuentas que ya tengan ni utilizar
+pruebas sin coste para acceder a tu aplicación."*
+
+Y FoodRanker es un muro de login: `AuthRepository` solo expone `signInWithGoogle`, no hay
+modo invitado ni registro con correo (comprobado, 2026-11-15). Tampoco vale declarar "No":
+esa opción exige que **no sea necesario iniciar sesión**, y lo es. Así que **sin una cuenta
+que funcione, la revisión de producción se rechaza.**
+
+⚠️ **"Datos de inicio de sesión" es el nombre nuevo de "Acceso a la aplicación".** Lo dice
+un aviso en la propia pantalla. Buscarla por el nombre viejo hace pensar que falta.
+
+#### Qué pasó con `foodrankerreview@gmail.com`
+
+Creada el 21 de agosto. El 15 de noviembre, al intentar comprobar que seguía funcionando:
+**"No hemos podido verificar que eres tú"**. No está suspendida —es un desafío de identidad,
+no una inhabilitación— pero el resultado práctico es el mismo.
+
+La causa está en sus ajustes de seguridad:
+
+| Ajuste | Estado | Efecto |
+|---|---|---|
+| Verificación en dos pasos | desactivada ✅ | no era esto |
+| **Saltar contraseña cuando sea posible** | **activada** ❌ | Google prefiere la llave/el aviso al móvil antes que la contraseña |
+| **Llaves de acceso** | **1 registrada** ❌ | refuerza lo anterior |
+| Notificación de Google | 1 dispositivo | el aviso va a un móvil que el revisor no tiene |
+
+Con eso, quien entre con correo y contraseña desde un sitio desconocido —un revisor de
+Google, repartidos por medio mundo— no basta con la contraseña: Google intenta el camino
+sin contraseña y pide **el dispositivo del dueño**. De ahí el bloqueo. La cuenta tenía
+además 4 avisos de *"intento sospechoso de inicio de sesión"*, casi seguro los propios
+revisores.
+
+🔒 **Y no se puede arreglar.** Cambiar cualquiera de esos ajustes es una acción sensible y
+Google exige reverificarte para tocarla — la misma verificación que falla. Se entra en la
+cuenta pero no se puede modificar nada. Callejón sin salida.
+
+#### La salida: cuenta nueva, configurada desde el minuto cero
+
+Crearla **desde el Redmi** (Ajustes → Cuentas → Añadir cuenta → Google → Crear cuenta), no
+desde el navegador: así el móvil queda como dispositivo de confianza desde el principio,
+que es lo que le faltaba a la otra.
+
+1. **Rechazar la llave de acceso** — Google la ofrece varias veces durante la creación
+2. **No activar la verificación en dos pasos**
+3. **Desactivar "Saltar contraseña cuando sea posible"** nada más crearla, mientras Google
+   aún no sospecha. Este es el paso que no se pudo dar en la cuenta vieja
+4. Entrar con ella desde el navegador del PC, **solo correo y contraseña**: si pasa limpio,
+   el camino del revisor funciona
+5. Entrar en **FoodRanker con ella en el Redmi**: recorre lo que hará el revisor, respaldo
+   por navegador incluido, y le deja su documento de usuario creado
+
+⚠️ Google limita cuántas cuentas admite por número de teléfono, y el de Sergio ya tiene al
+menos tres. Si rechaza la creación, es por ahí.
+
+#### Lo que hay que corregir en la declaración al cambiarla
+
+El texto de instrucciones que había (en castellano, del 21 de agosto) **se contradecía con
+la propia declaración**: decía *"esta cuenta no tiene la suscripción Premium contratada"*
+mientras la casilla de abajo —marcada— afirma que las credenciales dan *"acceso completo a
+todas las funciones y todo el contenido, incluido contenido premium o de pago"*.
+
+La nota es la que sobra: con `SUSCRIPCION_A_LA_VENTA = false` **no hay suscripción que
+contratar**, el botón está oculto y la lista de beneficios va vacía. La casilla es correcta.
+
+Y el formulario **exige inglés**. Texto de recambio (466/500), ya con el botón real de la
+app (`auth_continue_google` → "Continue with Google"):
+
+```
+The app uses Google Sign-In only. On the first screen, tap "Continue with Google". On a
+device with no Google account, the app falls back to a Google web sign-in page where you
+can enter the email and password above directly. If the account picker appears instead,
+choose "Use another account" and sign in there. Nothing needs to be added to the device
+beforehand. All features and content are available after signing in; this version has no
+paid or premium content.
+```
+
+El respaldo por navegador no es un detalle: `signInWithGoogle` intenta Credential Manager
+y, si falla por lo que sea (móvil sin cuentas, sin Play Services, error interno), cae a
+`signInWithBrowser` con `prompt=select_account`. **Ese es el único camino donde un revisor
+puede teclear correo y contraseña**, porque la hoja nativa solo muestra cuentas ya añadidas
+al dispositivo.
+
+#### Regla para el futuro
+
+Una cuenta de revisión con llave de acceso o "saltar contraseña" activados **se bloquea
+sola** en cuanto la usan revisores desde medio mundo, y después no se puede arreglar.
+Revisar sus ajustes antes de cada envío a producción, no solo que la contraseña siga siendo
+la misma.
 ### 🟢🟢 GOOGLE HA APROBADO EL ACCESO A PRODUCCIÓN (2026-11-04)
 
 Correo del 4 de noviembre a `sdelapenya1991@`: **acceso a producción aprobado para
