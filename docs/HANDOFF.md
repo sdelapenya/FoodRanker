@@ -15,6 +15,50 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🧹 PREPARATIVOS DE LA v21 — ya en `main`, SIN compilar (2026-11-15)
+
+Nada de esto está en Play. Son cambios de código que entran solos en la próxima vez que se
+compile un AAB. **El primer paso de esa compilación es subir `versionCode` a 21** — hoy
+sigue en 20 a propósito, para que el árbol no finja ser lo que está publicado.
+
+| Cambio | Dónde |
+|---|---|
+| `debugSymbolLevel = "FULL"` | `app/build.gradle.kts`, en `buildTypes { release }` |
+| Permiso `CAMERA` y su `uses-feature`, **eliminados** | `app/src/main/AndroidManifest.xml` |
+
+#### Por qué se pudo borrar `CAMERA` a secas
+
+La app **nunca** ha usado la cámara: cero referencias a CameraX, `ACTION_IMAGE_CAPTURE` o
+`TakePicture`, ninguna dependencia de cámara ni de escáner, y el único lanzador de permisos
+(`MainActivity`) pide `POST_NOTIFICATIONS` y nada más.
+
+Y, a diferencia de `READ_MEDIA_IMAGES`, **no hacía falta `tools:node="remove"`**: el informe
+del fusionador (`app/build/outputs/logs/manifest-merger-release-report.txt`) decía que
+`CAMERA` venía *ADDED from* el propio `app/src/main/AndroidManifest.xml`. Ninguna dependencia
+lo reintroduce. El de fotos sí lo lleva porque ese lo inyectan librerías de medios.
+
+El `uses-feature android:required="false"` se fue con él y no deja hueco: estaba para que
+Play no dedujera que la cámara es obligatoria, deducción que **solo** ocurre cuando el
+permiso está declarado. ⚠️ Si algún día entra una dependencia que declare `CAMERA`, hay que
+volver a poner el `uses-feature` o Play empezará a esconder la app a los móviles sin cámara,
+**en silencio**.
+
+#### Verificado sobre el manifest fusionado, no sobre el fuente
+
+`./gradlew :app:processReleaseManifest` y después mirar
+`app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml`,
+que es lo que de verdad acaba en el AAB:
+
+- `android.permission.CAMERA` → **ausente**
+- `android.hardware.camera` → **ausente**
+- `android.permission.READ_MEDIA_IMAGES` → **ausente** (el `tools:node="remove"` sigue haciendo su trabajo)
+- El único `uses-feature` que queda es `glEsVersion 0x00020000 required=true`, inyectado por
+  una dependencia (Play Services). Es estándar y lo cumple cualquier móvil moderno.
+- **56 tests, 0 fallos.**
+
+⚠️ No se recompiló el AAB a propósito: `app/build/outputs/bundle/release/app-release.aab`
+sigue siendo el **20 verificado y publicado**, y sobrescribirlo perdería esa correspondencia.
+
 ### 🚀 LA v20 (1.6), ENVIADA A REVISIÓN DE PRODUCCIÓN (2026-11-15)
 
 **Primera versión de producción de FoodRanker.** Hasta hoy la app solo había existido en

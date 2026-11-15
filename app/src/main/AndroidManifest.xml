@@ -3,8 +3,29 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Aquí había un `android.permission.CAMERA` y su `uses-feature` de acompañamiento.
+         Los dos se quitaron el 2026-11-15 porque la app NUNCA ha usado la cámara: cero
+         referencias a CameraX, a ACTION_IMAGE_CAPTURE o a TakePicture en todo el código,
+         ninguna dependencia de cámara, y el único lanzador de permisos que hay
+         (MainActivity) pide POST_NOTIFICATIONS y nada más. La foto de un plato se elige
+         siempre con el selector del sistema, igual que explica el comentario de abajo.
+
+         Se podía borrar a secas, sin `tools:node="remove"`: el informe del fusionador
+         (app/build/outputs/logs/manifest-merger-release-report.txt) decía que CAMERA
+         venía ADDED desde este mismo fichero, así que no hay ninguna dependencia que lo
+         reintroduzca. El de READ_MEDIA_IMAGES sí lo lleva porque ese sí lo inyectan
+         librerías de medios.
+
+         El `uses-feature android:required="false"` se va con él y no deja ningún hueco:
+         estaba para que Play no dedujera que la cámara es obligatoria —algo que solo
+         hace cuando el permiso está declarado— y filtrara dispositivos. Sin el permiso
+         no hay nada que deducir. ⚠️ Si algún día se añade una dependencia que declare
+         CAMERA, hay que volver a poner el uses-feature o Play empezará a esconder la app
+         a los móviles sin cámara, en silencio.
+
+         Qué se gana: el permiso salía en la ficha bajo "puede solicitar acceso a:
+         Cámara", y alguna instalación se pierde por eso. No bloqueaba nada. -->
+
     <!-- NO declarar READ_MEDIA_IMAGES ni READ_MEDIA_VIDEO. La política de fotos y vídeos
          de Play los prohíbe a las apps que apuntan a API 33+ salvo que los selectores del
          sistema no sean suficientes, y esto bloqueó el envío de la v19 a revisión de
