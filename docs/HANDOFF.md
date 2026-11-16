@@ -84,6 +84,25 @@ bundle). Es decir: **la advertencia de Play es cosmética para este caso**.
 👉 La línea se queda en `build.gradle.kts` de todas formas: no estorba, y el día que entre
 una dependencia con `.so` sin stripear, empezará a funcionar sola.
 
+#### 📤 Enviada a los dos canales de prueba (2026-11-16)
+
+Subida el mismo día a **Prueba cerrada - Alpha** (lanzamiento completo) y a **Prueba
+interna**. Las notas, en los tres idiomas de una vez con `Ctrl+A` sobre la caja: Play
+confirmó *"Has incluido notas de la versión en 3 de 3 idiomas"* sin duplicar etiquetas.
+
+⚠️ **Despiste de la pantalla de crear versión, para la próxima:** al bajar, debajo de la
+tabla de App bundles hay una sección **"Versión anterior"** que lista el bundle ya publicado
+(el `20 (1.6)`). Si se llega ahí con la página a medio desplazar, parece que la versión
+nueva lleva adjunto el bundle viejo. No es así: el de la versión es el que sale arriba, bajo
+"Subir app bundles".
+
+👀 **Qué mirar cuando aprueben la de prueba interna:** que desaparezca sola la declaración
+de **"Permisos de fotos y vídeos"**. Existía solo porque el único bundle que Play veía
+pidiendo `READ_MEDIA_IMAGES` era el **17 (1.4)**, parado ahí desde el 10 de octubre; el 21
+no lo pide (verificado sobre el AAB). Si no se va sola al cabo de unos días, habrá que
+retirarla a mano. Su texto afirmaba además que *"se usa la cámara para tomar la foto en el
+momento"*, que nunca fue cierto.
+
 #### Lo que queda de la v21, todo de pantalla
 
 El binario está listo; lo que falta **no se arregla compilando**:
