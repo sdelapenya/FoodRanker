@@ -169,9 +169,15 @@ Si el nombre no cambia, no se llama al servidor.
 | `tsc` y `compileReleaseKotlin` | limpios |
 | Tests | **56, 0 fallos** |
 
-🔴 **LA CLOUD FUNCTION NO ESTÁ DESPLEGADA.** Hasta que se haga
-(`npx firebase deploy --only functions:renamePlate`) la pantalla existe pero el guardado
-falla. Desplegarla no afecta a nadie hoy: ninguna versión publicada la llama.
+✅ **DESPLEGADA el 2026-11-16**, `renamePlate(europe-west1)`, Node 22, 2ª generación.
+Comprobado después con `firebase functions:list`: 18 funciones, las 17 anteriores
+intactas. No afecta a nadie todavía, porque ninguna versión publicada la llama.
+
+⚠️ **El primer intento falló** con *"User code failed to load. Cannot determine backend
+specification. Timeout after 10000"*. **No era el código**: `require('./lib/index.js')`
+carga en 771 ms. Es el descubrimiento del CLI, que levanta un servidor local y se rinde
+a los 10 s. Se arregla con `FUNCTIONS_DISCOVERY_TIMEOUT=120` delante del comando — ver
+"Trampas conocidas".
 
 🔴 **SIN PROBAR EN DISPOSITIVO**, igual que el selector de idioma. Va a la misma lista de
 la v21.
@@ -3602,6 +3608,13 @@ vuelven, hay algo. No retrasarlo puliendo más funcionalidad; lo que falta no es
 ---
 
 ## Trampas conocidas (ahorran tiempo)
+
+- **Desplegar functions falla con "Timeout after 10000" sin que el código tenga nada mal.**
+  El CLI levanta un servidor local para descubrir qué funciones hay y se rinde a los 10
+  segundos; en este PC no llega. Antes de tocar nada, comprobar que el módulo carga
+  (`node -e "require('./lib/index.js')"` dentro de `functions/`) y, si carga, reintentar
+  con **`FUNCTIONS_DISCOVERY_TIMEOUT=120`** delante del `firebase deploy`. Con eso pasa a
+  la primera.
 
 - **El asistente de "Seguridad de los datos" en Play Console NO autoguarda entre pasos.**
   Un F5 a media tarea borra todo lo tecleado desde el último "Guardar" o "Guardar como
