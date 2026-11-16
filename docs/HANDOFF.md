@@ -15,6 +15,61 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔔 ALERTAS DE CRASHLYTICS: ESTABAN A MEDIAS, Y POR ESO NO NOS ENTERAMOS (2026-11-16)
+
+**Dónde están**, que no es donde uno busca: Firebase Console → **Configuración de proyecto
+→ pestaña "Alertas"**. (La campana de la barra superior lleva al mismo sitio.) Son **por
+usuario, no por proyecto**: cada persona con acceso configura las suyas.
+
+Arriba del todo hay un interruptor maestro, *"Recibir alertas por correo electrónico y en
+la consola sobre este proyecto"*. Ya estaba encendido; sin él, lo de abajo no sirve.
+
+#### Lo que estaba mal
+
+| Alerta | Antes | Ahora |
+|---|---|---|
+| **Nuevos problemas irrecuperables** (crashes nuevos) | ❌ **ningún canal** | ✅ correo |
+| **Nuevos problemas de ANR** | ❌ ninguno | ✅ correo |
+| Errores recuperables nuevos (no fatales) | ❌ ninguno | ✅ correo |
+| Problemas frecuentes | ✅ correo | ✅ correo |
+| Regresiones | ✅ correo + consola | ✅ correo + consola |
+
+**La que avisa de un crash NUEVO estaba apagada.** Estaban puestas las dos que hablan de
+problemas ya conocidos —que se repiten mucho, o que vuelven— pero no la que dice "ha
+aparecido uno que no existía". Por eso el fallo de `MainActivity.kt:197` vivió desde la 1.2
+hasta que alguien entró a mirar por casualidad.
+
+⏳ Queda la pestaña **"Alertas de velocidad"**, que es otra pantalla dentro de la misma
+sección.
+
+#### 🔇 Lo que las alertas dejaron a la vista: nadie registra los no fatales
+
+"Errores recuperables nuevos" no saltaría nunca hoy, porque **la app no llama a
+`recordException` ni una sola vez**. Lo único que hace con Crashlytics es
+`setCrashlyticsCollectionEnabled` en `FoodRankerApp`.
+
+Y errores haberlos, haylos. Hay **61 `catch (e: Exception)`** repartidos, y varios se lo
+tragan todo sin dejar rastro:
+
+| Fichero | `catch` | Ejemplo |
+|---|---|---|
+| `PlateDetailViewModel.kt` | 18 | |
+| `ProfileViewModel.kt` | 15 | línea 324: `catch (e: Exception) { /* silencioso */ }` |
+| `DiscoverViewModel.kt` | 11 | línea 388, igual |
+| `AddPlateViewModel.kt` | 4 | |
+
+Si a un usuario le falla guardar la descripción de un plato, **no se entera él ni se entera
+nadie**. Nunca.
+
+**Pendiente (sin fecha, no bloquea nada):** sustituir esos `catch` mudos por
+`FirebaseCrashlytics.getInstance().recordException(e)`. No cambia nada para el usuario —se
+sigue fallando en silencio para él— pero el fallo pasa a ser visible. Es la diferencia
+entre "la app va bien" y "la app va bien **que yo sepa**".
+
+⚠️ No vale hacerlo a lo bruto en los 61: algunos son legítimos y ruidosos (cancelaciones,
+`AuthRepository:223` ignora un fallo de red al cerrar sesión **a propósito**, para no
+bloquear el logout). Hay que ir uno a uno.
+
 ### 🐛 TOCAR UN AVISO QUE NO ES DE UN PLATO CERRABA LA APP (2026-11-16)
 
 Encontrado por casualidad al entrar en Crashlytics a configurar las alertas. **No lo había
