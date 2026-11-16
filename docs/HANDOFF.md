@@ -102,7 +102,23 @@ Las versiones de prueba interna no se revisan, así que **no aparecen en "Cambio
 revisión"** — no hay que esperarlas ahí. Con eso, el bundle 17 deja de ser la versión activa
 de ese canal.
 
-👀 **Qué mirar ahora:** que desaparezca sola la declaración
+📍 **Resultado, comprobado el mismo día:** la mitad que importaba ya está. En **Política →
+Contenido de la aplicación → Permisos de fotos y vídeos**, el aviso *"Tu aplicación usa los
+siguientes permisos de fotos y vídeos sin declarar"* sale con **la lista vacía**: ningún
+bundle activo pide ya `READ_MEDIA_IMAGES`.
+
+Pero la **declaración sigue archivada** (la fila desplegada muestra *"Permisos declarados:
+android.permission.READ_MEDIA_IMAGES"*), con su texto falso de la cámara. Y **esa página no
+tiene botón de Guardar**: termina en el cuadro de texto y el pie, así que desde ahí no se
+puede ni editar ni retirar.
+
+**Decisión: dejarla quieta de momento.** No se aplica a nada (sin permiso detectado no
+afecta a usuarios, ficha ni revisiones), no hay nada que pulsar, y había una revisión en
+curso. **Volver a mirarla cuando aprueben la v21**: lo más probable es que Play recalcule la
+sección sola, como ya vació la lista de detectados. Si para entonces sigue igual, probar a
+editar el texto a ver si aparece el Guardar, con la cola de revisión vacía.
+
+👀 Lo que se esperaba al subirla y por qué: que desapareciera la declaración
 de **"Permisos de fotos y vídeos"**. Existía solo porque el único bundle que Play veía
 pidiendo `READ_MEDIA_IMAGES` era el **17 (1.4)**, parado ahí desde el 10 de octubre; el 21
 no lo pide (verificado sobre el AAB). Si no se va sola al cabo de unos días, habrá que
