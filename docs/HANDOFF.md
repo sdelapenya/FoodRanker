@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-15
+**Actualizado:** 2026-11-16
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,62 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🐛 TOCAR UN AVISO QUE NO ES DE UN PLATO CERRABA LA APP (2026-11-16)
+
+Encontrado por casualidad al entrar en Crashlytics a configurar las alertas. **No lo había
+reportado nadie.**
+
+```
+java.lang.IllegalArgumentException
+Navigation destination that matches request NavDeepLinkRequest... cannot be found
+MainActivityKt$FoodRankerNavigation$7$1$3$2$1.invokeSuspend  (MainActivity.kt:197)
+```
+
+**Versiones 1.2 – 1.6.** No lo trajo la v20 ni nada de esta semana: lleva ahí desde marzo.
+2 eventos, 2 usuarios, porque la base son 13 personas y esos avisos son poco frecuentes.
+En proporción, sin embargo, se cargó el "usuarios sin bloqueos" del 100 % al **84,62 %**.
+
+#### La cadena
+
+`onNotificationCreated` mandaba **siempre** la clave `plateId` en el `data` del push,
+vacía para los cuatro tipos que no cuelgan de un plato: **`level_up`, `badge`, `follow` y
+`league_result`**.
+
+Con la app en segundo plano o cerrada —el caso normal de una notificación— el push **no
+pasa por `FoodRankerMessagingService`**: lo pinta Play Services, y al tocar la tarjeta
+lanza `MainActivity` con ese `data` como extras del intent. Allí:
+
+```kotlin
+val notifPlateId = activity.intent?.getStringExtra("plateId") ?: return@…
+```
+
+`getStringExtra` devuelve `""`, que **no es null**, así que el guard no saltaba.
+`pendingPlateId = ""` → `navigate("plate/")` → ruta inexistente → excepción → la app se cierra.
+
+Traducido: **subir de nivel, ganar un logro, que te sigan o terminar la liga y tocar el
+aviso = la app se cierra.** Justo los avisos de retención, y justo antes de salir a
+producción.
+
+#### Arreglado en tres capas, y el orden importa
+
+| Dónde | Qué |
+|---|---|
+| **`functions/src/index.ts`** | la clave `plateId` solo viaja si hay un plato de verdad |
+| **`MainActivity`** | `takeIf { it.isNotBlank() }`, no solo `?:` |
+| **`NotificationHelper`** | no adjunta un extra vacío (camino de primer plano) |
+
+**El del servidor es el que vale ya.** Omitir la clave arregla el fallo en **todas las
+versiones instaladas sin publicar una app nueva**, porque todo el que la lee tolera null:
+`message.data["plateId"]`, `as? String`, `getStringExtra`. Comprobado uno por uno antes de
+quitarla.
+
+Los del cliente se quedan igualmente: protegen de las notificaciones que sigan en la
+bandeja desde antes del arreglo, y de que alguien vuelva a meter un extra vacío.
+
+⚠️ `DeepLinkParser` **no** tenía el fallo: ya filtraba con `takeIf { it.isNotBlank() }`
+tanto en `webPathId` como en el esquema propio. El agujero era solo el de las
+notificaciones.
 
 ### 🧹 PREPARATIVOS DE LA v21 — ya en `main`, SIN compilar (2026-11-15)
 

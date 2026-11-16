@@ -1280,7 +1280,27 @@ export const onNotificationCreated = onDocumentCreated(
         token: fcmToken,
         notification: { title, body },
         data: {
-          plateId: (notif.plateId as string) ?? "",
+          // ⚠️ `plateId` SOLO si hay uno de verdad. Mandarlo vacío tumbaba la app.
+          //
+          // Con la app en segundo plano o cerrada el push no pasa por
+          // FoodRankerMessagingService: lo pinta Play Services, y al tocar la tarjeta
+          // lanza MainActivity con este `data` como extras del intent. Allí
+          // `getStringExtra("plateId")` devolvía "" —que NO es null, así que el guard
+          // de MainActivity no saltaba—, se navegaba a la ruta "plate/" y Navigation
+          // lanzaba IllegalArgumentException: "Navigation destination that matches
+          // request NavDeepLinkRequest... cannot be found".
+          //
+          // Afectaba a los cuatro tipos que no cuelgan de un plato: level_up, badge,
+          // follow y league_result. Es decir: subir de nivel, ganar un logro, que te
+          // sigan o terminar la liga y tocar el aviso = la app se cierra. Visto en
+          // Crashlytics el 2026-11-16, presente desde la 1.2.
+          //
+          // Se arregla aquí ADEMÁS de en el cliente a propósito: así deja de pasar en
+          // todas las versiones ya instaladas, sin esperar a que nadie actualice.
+          // Omitir la clave es seguro para cualquier versión: todo el que la lee lo
+          // hace tolerando null (`message.data["plateId"]`, `as? String`,
+          // `getStringExtra`).
+          ...(notif.plateId ? { plateId: notif.plateId as string } : {}),
           type,
           notifId: event.params.itemId,
         },

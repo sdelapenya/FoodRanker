@@ -55,7 +55,11 @@ object NotificationHelper {
         createChannels(context)
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            plateId?.let { putExtra("plateId", it) }
+            // `takeIf` además del `?.`: un plateId vacío no es "no hay plato" para
+            // getStringExtra —devuelve "" y no null—, y en MainActivity eso acababa
+            // navegando a la ruta "plate/", que no existe, tumbando la app. Mejor no
+            // llegar a adjuntarlo. Ver el comentario de MainActivity.
+            plateId?.takeIf { it.isNotBlank() }?.let { putExtra("plateId", it) }
         }
         // Id derivado del contenido, no un contador. El contador arrancaba de cero en cada
         // arranque del proceso, así que tras reiniciar la app el primer aviso nuevo se

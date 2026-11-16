@@ -117,7 +117,17 @@ fun FoodRankerNavigation() {
                 activity.intent.setData(null)
             }
 
-            val notifPlateId = activity.intent?.getStringExtra("plateId") ?: return@LifecycleEventObserver
+            // `isNotBlank`, no solo `!= null`. El extra llegaba como cadena VACÍA en los
+            // avisos que no cuelgan de ningún plato (level_up, badge, follow,
+            // league_result): el `?:` no saltaba, se navegaba a la ruta "plate/" y
+            // Navigation lanzaba IllegalArgumentException llevándose la app por delante.
+            // Visto en Crashlytics el 2026-11-16, presente desde la 1.2.
+            //
+            // El servidor ya no manda la clave vacía, pero este guard se queda: protege
+            // de las notificaciones que sigan en la bandeja desde antes del arreglo, y de
+            // cualquiera que vuelva a meter un extra vacío sin darse cuenta.
+            val notifPlateId = activity.intent?.getStringExtra("plateId")
+                ?.takeIf { it.isNotBlank() } ?: return@LifecycleEventObserver
             pendingPlateId = notifPlateId
             activity.intent.removeExtra("plateId")
         }
