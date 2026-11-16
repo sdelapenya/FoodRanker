@@ -136,8 +136,17 @@ Food is better when it gets talked about. Start with the last dish that surprise
 Límite de Play: 500 caracteres por idioma. Un texto por cada uno; si solo pones el del
 idioma por defecto, a quien tenga el móvil en inglés le llega en castellano.
 
-⚠️ La caja de Play **ya trae las etiquetas** `<es-ES>`, `<en-GB>` y `<en-US>`. Pega
-dentro de cada una; si pegas el bloque con etiquetas se duplican y da error.
+⚠️ La caja de Play **ya trae las etiquetas** `<es-ES>`, `<en-GB>` y `<en-US>`. Hay dos
+formas de rellenarla y la diferencia importa, porque mezclarlas es lo que da el error de
+etiquetas duplicadas:
+
+- **Idioma por idioma**: pegar el texto **dentro** de cada etiqueta, sin las etiquetas.
+- **De una vez** (más cómodo): clic en la caja → **`Ctrl+A`** → pegar el bloque completo
+  **con** las etiquetas, reemplazando todo lo que había. Por eso cada versión de aquí abajo
+  tiene también su bloque entero listo para esto.
+
+Lo que **no** se puede hacer es pegar un bloque con etiquetas dentro de una etiqueta que ya
+está: ahí es donde se duplican.
 
 ---
 
@@ -188,6 +197,34 @@ If you mistyped the name of a dish you added, you can now correct it.
 And a malformed link no longer closes the app when you open it.
 ```
 *(284 caracteres)*
+
+### Los tres de una vez — v21
+
+Para el camino de `Ctrl+A` + pegar encima, reemplazando todo lo que haya en la caja:
+
+```
+<es-ES>
+Ya puedes elegir el idioma de FoodRanker desde tu perfil, en castellano o en inglés, sin tocar el idioma del móvil. (Necesita Android 13 o posterior.)
+
+Si te equivocaste al escribir el nombre de un plato que añadiste, ahora puedes corregirlo.
+
+Y un enlace mal formado ya no cierra la app al abrirlo.
+</es-ES>
+<en-GB>
+You can now choose FoodRanker's language from your profile, Spanish or English, without changing your phone's language. (Needs Android 13 or later.)
+
+If you mistyped the name of a dish you added, you can now correct it.
+
+And a malformed link no longer closes the app when you open it.
+</en-GB>
+<en-US>
+You can now choose FoodRanker's language from your profile, Spanish or English, without changing your phone's language. (Needs Android 13 or later.)
+
+If you mistyped the name of a dish you added, you can now correct it.
+
+And a malformed link no longer closes the app when you open it.
+</en-US>
+```
 
 ---
 
