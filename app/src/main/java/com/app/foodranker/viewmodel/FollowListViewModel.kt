@@ -16,6 +16,7 @@ import javax.inject.Inject
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.app.foodranker.R
+import com.app.foodranker.utils.Fallos
 import androidx.annotation.StringRes
 
 data class FollowListRow(
@@ -103,6 +104,7 @@ class FollowListViewModel @Inject constructor(
                     users = rows
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "seguidores: cargar lista")
                 _uiState.value = FollowListUiState(
                     isLoading = false,
                     titleRes = titleFor(listType),

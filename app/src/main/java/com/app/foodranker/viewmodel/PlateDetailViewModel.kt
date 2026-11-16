@@ -12,6 +12,7 @@ import com.app.foodranker.data.model.PlateCategory
 import com.app.foodranker.data.model.Rating
 import com.app.foodranker.data.model.User
 import com.app.foodranker.data.repository.PlateRepository
+import com.app.foodranker.utils.Fallos
 import com.app.foodranker.utils.InputLimits
 import com.google.firebase.functions.FirebaseFunctions
 import com.app.foodranker.utils.InputLimits.sanitized
@@ -84,6 +85,7 @@ class PlateDetailViewModel @Inject constructor(
             val photo = snap.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: fallbackPhoto
             name.sanitized(InputLimits.USER_NAME) to photo
         } catch (e: Exception) {
+            Fallos.reportar(e, "plato: nombre y foto del autor")
             // Sin red u otro fallo: mejor un nombre de respaldo que bloquear el envío.
             (user?.displayName?.takeIf { it.isNotBlank() } ?: appContext.getString(R.string.user_fallback_name)).sanitized(InputLimits.USER_NAME) to fallbackPhoto
         }
@@ -128,7 +130,10 @@ class PlateDetailViewModel @Inject constructor(
                             try {
                                 firestore.collection("ratings").document("${plateId}_$userId")
                                     .get().await().toObject(Rating::class.java)
-                            } catch (e: Exception) { null }
+                            } catch (e: Exception) {
+                                Fallos.reportar(e, "plato: leer mi valoración")
+                                null
+                            }
                         } else null
                     }
                     val commentsDeferred = async {
@@ -141,7 +146,10 @@ class PlateDetailViewModel @Inject constructor(
                             try {
                                 firestore.collection("saves").document("${userId}_${plateId}")
                                     .get().await().exists()
-                            } catch (e: Exception) { false }
+                            } catch (e: Exception) {
+                                Fallos.reportar(e, "plato: ¿está guardado?")
+                                false
+                            }
                         } else false
                     }
 
@@ -185,7 +193,10 @@ class PlateDetailViewModel @Inject constructor(
                                     .whereEqualTo("city", plate.city)
                                     .whereGreaterThan("rankingScore", plate.rankingScore)
                                     .limit(100).get().await().size() + 1
-                            } catch (e: Exception) { 0 }
+                            } catch (e: Exception) {
+                                Fallos.reportar(e, "plato: rango en la ciudad")
+                                0
+                            }
                         }
                     } else null
 
@@ -218,6 +229,7 @@ class PlateDetailViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: carga principal")
                 android.util.Log.e("PlateDetail", "Error: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(isLoading = false, error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
@@ -271,6 +283,7 @@ class PlateDetailViewModel @Inject constructor(
                     "createdAt" to System.currentTimeMillis()
                 )).await()
         } catch (e: Exception) {
+            Fallos.reportar(e, "plato: aviso de like")
             android.util.Log.e("PlateDetail", "Error enviando notif like: ${e.message}")
         }
     }
@@ -286,6 +299,7 @@ class PlateDetailViewModel @Inject constructor(
                 }
                 _uiState.value = _uiState.value.copy(collections = cols)
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: cargar mis colecciones")
                 android.util.Log.e("PlateDetail", "loadUserCollections: ${e.message}")
             }
         }
@@ -302,6 +316,7 @@ class PlateDetailViewModel @Inject constructor(
                     }
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: añadir a colección")
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
@@ -321,6 +336,7 @@ class PlateDetailViewModel @Inject constructor(
                     "createdAt" to System.currentTimeMillis()
                 )).await()
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: guardar o quitar de guardados")
                 _uiState.value = _uiState.value.copy(isSaved = isSaved)
             }
         }
@@ -350,6 +366,7 @@ class PlateDetailViewModel @Inject constructor(
                 )
                 onSuccess()
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: publicar comentario")
                 _uiState.value = _uiState.value.copy(isSubmittingComment = false)
             }
         }
@@ -364,6 +381,7 @@ class PlateDetailViewModel @Inject constructor(
                     comments = _uiState.value.comments.filter { it.id != commentId }
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: borrar comentario")
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
@@ -399,6 +417,7 @@ class PlateDetailViewModel @Inject constructor(
                         appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: reportar plato")
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
@@ -445,6 +464,7 @@ class PlateDetailViewModel @Inject constructor(
                         appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: reportar valoración")
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
@@ -490,6 +510,7 @@ class PlateDetailViewModel @Inject constructor(
                         appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: reportar comentario")
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
@@ -526,6 +547,7 @@ class PlateDetailViewModel @Inject constructor(
                     )
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: cargar quién dio like")
                 _uiState.value = _uiState.value.copy(
                     engagement = PlateEngagement(),
                     error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
@@ -599,6 +621,7 @@ class PlateDetailViewModel @Inject constructor(
                     plate = plate.copy(averageScore = newAvg, totalRatings = newCount)
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: enviar valoración")
                 _uiState.value = _uiState.value.copy(isSubmittingRating = false, error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }
@@ -651,6 +674,7 @@ class PlateDetailViewModel @Inject constructor(
                     successMessage = appContext.getString(R.string.vm_rating_updated)
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: editar valoración")
                 _uiState.value = _uiState.value.copy(
                     isSubmittingRating = false,
                     error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
@@ -683,6 +707,7 @@ class PlateDetailViewModel @Inject constructor(
                     }
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "plato: XP por anuncio")
                 _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }

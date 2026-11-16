@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.atomic.AtomicInteger
 import com.app.foodranker.BuildConfig
+import com.app.foodranker.utils.Fallos
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
@@ -72,6 +73,7 @@ object AdManager {
                     }
                 }
             } catch (e: Exception) {
+                Fallos.reportar(e, "anuncios: inicializar MobileAds")
                 android.util.Log.e("AdManager", "Error inicializando MobileAds", e)
             }
         }.start()

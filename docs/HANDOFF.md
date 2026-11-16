@@ -15,6 +15,151 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔭 LOS FALLOS SILENCIOSOS YA SE VEN: 68 `catch` REPORTAN A CRASHLYTICS (2026-11-16)
+
+Era el pendiente que dejó a la vista la revisión de alertas de esta misma mañana: la alerta
+de **"errores recuperables nuevos"** se acababa de configurar y estaba **conectada a nada**,
+porque la app no llamaba a `recordException` ni una sola vez. Había 78 `catch` repartidos y
+de ninguno se enteraba nadie.
+
+Ya no cambia nada para el usuario —se le sigue fallando igual de silenciosamente— pero sí
+para nosotros. Es la diferencia entre *"la app va bien"* y *"la app va bien **que yo sepa**"*.
+
+#### La pieza nueva: `utils/Fallos.kt`
+
+```kotlin
+Fallos.reportar(e, "perfil: borrar cuenta")
+```
+
+Un `object` con un solo método, al estilo del resto de `utils/`. Hace `log(donde)` +
+`recordException(e)`. La etiqueta es un breadcrumb para poder leer el informe: Crashlytics
+agrupa los no fatales **por traza, no por ese texto**.
+
+#### ⚠️ Lo importante no es lo que reporta, es lo que NO reporta
+
+Un no fatal por cada fallo sería peor que ninguno: quien se meta en el metro sin cobertura
+genera uno por cada carga, la alerta suena todas las mañanas y acaba apagada. Así que
+`Fallos` filtra por **`ErrorMapper.esDelEntorno(e)`** (nuevo, en el mapper que ya sabía
+clasificar) y se calla ante red, timeouts y cancelaciones.
+
+Lo que sí pasa el filtro, que es lo que interesa:
+
+| Llega | Por qué |
+|---|---|
+| `PERMISSION_DENIED` | Casi siempre una regla de Firestore mal puesta. **El usuario nunca la va a reportar**, porque no sabe que ha pasado nada |
+| `NOT_FOUND` | Datos incoherentes, algo que apunta a un documento que ya no está |
+| Fallos de subida | Problema nuestro, y el usuario pierde su foto |
+| Lo inesperado | Justo lo que no se puede prever desde aquí |
+
+**6 tests nuevos** en `ErrorMapperTest` (15 en total) fijan ese filtro por los dos lados: de
+menos y la alerta se vuelve ruido, de más y volvemos a la ceguera de partida.
+
+#### Dónde quedaron los 68
+
+`PlateDetailViewModel` 18 · `ProfileViewModel` 15 · `DiscoverViewModel` 11 ·
+`AddPlateViewModel` 5 · `ImageCompressor` 3 · `ExploreViewModel`, `NotificationsViewModel`,
+`FoodImageValidator` 2 · y 1 en `Trending`, `Referral`, `NearbyDishes`, `League`,
+`FollowList`, `Challenge`, `NotificationRepository`, `AdManager`, `ShareManager`,
+`FirebaseModule`.
+
+Tres que valen más que el resto:
+
+1. **Las consultas compuestas con fallback silencioso.** `catch { null }`, `catch { false }`,
+   `catch { 0 }` dentro de los `async` de perfil y de plato (rival, rango en la ciudad, mi
+   valoración, ¿está guardado?). Son consultas con `whereEqualTo` + `whereGreaterThan` +
+   `orderBy`: **las que fallan enteras si falta el índice compuesto**, y así no se notaba
+   nunca. Ya pasó una vez con un índice roto desde siempre. Peor aún, el `catch { 0 }` del
+   rango se confunde con "eres el primero de tu ciudad".
+2. **`AddPlateViewModel`, el límite diario.** El `catch` de `FAILED_PRECONDITION` hace
+   fail-open a propósito, pero eso significa que **mientras falte el índice el límite diario
+   no existe para nadie**. Se reporta solo esa rama: el `throw e` del `else` ya acaba en el
+   `catch` exterior, que reporta por su cuenta, y si no saldría el informe dos veces.
+3. **`FirebaseModule`.** Era un `catch (_: IllegalStateException)`, una carrera con
+   `FoodRankerMessagingService`. Cuando salta, la app se queda **sin caché offline entera** —
+   justo lo que no se nota mirándola en el sofá con wifi.
+
+#### 🙅 Lo que se dejó SIN reportar, a propósito
+
+No es un descuido, es la mitad del trabajo. Si algún día se añade aquí, que sea con un motivo:
+
+| Sitio | Por qué no |
+|---|---|
+| `PlateRepository` (4) y `AuthRepository:167` | Devuelven `Result.failure(e)`: **no se tragan nada**, propagan. Quien llama ya reporta, y reportar aquí duplicaría el informe |
+| `AuthRepository:119` | El fallback al navegador funciona, no es un fallo. Cuántas veces entra por ahí es **analítica, no Crashlytics** |
+| `AuthRepository:223` | Ignora un fallo de red al cerrar sesión **a propósito**, para no bloquear el logout. Decisión vieja, sigue en pie |
+| `ReferralManager:65` | `already_referred` → `false`, el resto hace `throw`. No traga nada |
+| `ConnectivityObserver:40` | `unregisterNetworkCallback` revienta si ya estaba desregistrado. Inofensivo |
+| `NotificationHelper:110` | Algunos fabricantes restringen `activeNotifications`. Es una peculiaridad de vendor que no podemos arreglar |
+| `VenueRepository:94` | Que no haya ubicación es lo normal (permiso denegado, GPS apagado) |
+| `MealDBSeeder` (4) | No se usa en producción por decisión de producto (`plates` vacío a propósito) |
+
+#### ⏳ Pendiente que sale de aquí: el tragado de cancelaciones
+
+`catch (e: Exception)` **también captura `CancellationException`**, así que ahora mismo los
+ViewModels se tragan las cancelaciones y rompen la concurrencia estructurada. Lo correcto es
+relanzarla.
+
+`Fallos.reportar` solo evita **reportarla** (una cancelación no es un fallo); deliberadamente
+**no** la relanza, porque eso cambia el flujo de control en 68 sitios de una app que ya está
+en producción y que no se puede probar entera a mano. Va aparte, con su propia prueba.
+
+✅ Compila y los tests pasan (`:app:testDebugUnitTest`, 15 en `ErrorMapperTest`, 0 fallos).
+⚠️ Nada de esto se ha visto en un móvil: el primer no fatal no aparecerá en Crashlytics
+hasta que haya una build con esto instalada. **Va en la v21.**
+
+---
+
+### 🚫 LAS DOS RECOMENDACIONES DE EDGE-TO-EDGE NO SON NUESTRAS (2026-11-16)
+
+Revisadas a fondo antes de tocar nada, y la conclusión es que **no hay nada que arreglar**.
+Queda escrito para no volver a investigarlo dentro de tres meses.
+
+Lo que Play marca es que el binario llama a APIs obsoletas en Android 15+. Es verdad que las
+llama. **Pero ni una desde nuestro código**, que tiene cero apariciones de `setStatusBarColor`,
+`setNavigationBarColor`, `setSystemUiVisibility`, `setDecorFitsSystemWindows`,
+`SYSTEM_UI_FLAG_*` ni `windowOptOutEdgeToEdgeEnforcement`.
+
+**Cómo se comprueba** (sirve para la próxima, es el mismo método que con el permiso CAMERA:
+preguntar al binario, que no opina). `strings` no existe en el shell de este PC, así que con
+`grep -o -a` directamente sobre el dex, y para los puntos de llamada:
+
+```bash
+unzip -o -q app/build/outputs/bundle/release/app-release.aab 'base/dex/*'
+"$SDK/build-tools/36.0.0/dexdump.exe" -d base/dex/classes.dex | awk '
+  /Class descriptor/ { cls=$0; sub(/.*: /,"",cls) }
+  /^      name          :/ { m=$0; sub(/.*: /,"",m) }
+  /setStatusBarColor|setSystemUiVisibility|setDecorFitsSystemWindows/ { print cls " -> " m }'
+```
+
+Los 24 puntos de llamada salen todos de dependencias, y los nombres ofuscados se resuelven
+con `app/build/outputs/mapping/release/mapping.txt`:
+
+| En el dex | Quién es de verdad |
+|---|---|
+| `Ld/o;` `Ld/r;` `Ld/t;` | **`androidx.activity.EdgeToEdgeApi26/29/35`** |
+| `AutocompleteImplFragment` | SDK de **Places** |
+| `PlayCoreDialogWrapperActivity` | **Play Core** |
+| `CoordinatorLayout` | androidx |
+
+O sea: **lo marca la propia librería que implementa el edge-to-edge**. `EdgeToEdgeApi26/29`
+son el backport para Android 8–14, y `minSdk` es 26, así que quitarlos significaría romper
+el edge-to-edge en todo lo anterior a Android 15 — bastante peor que el aviso.
+
+Tampoco hay versión que subir: **`activity-compose` ya está en 1.12.1**, lo último.
+
+Y lo nuestro está bien hecho: `enableEdgeToEdge()` en `MainActivity:68`, `Theme.kt` pone solo
+el tono de los iconos con `WindowCompat` (y tiene el comentario de por qué nada de
+`statusBarColor`), y **los 14 `Scaffold` consumen su `padding`** — comprobado uno a uno, que
+es el fallo clásico.
+
+⚠️ Lo que sí queda sin verificar es el aspecto real en un Android 15/16: con `targetSdk 36` el
+edge-to-edge **ya está forzado en producción**. Nadie se ha quejado, pero son 14 usuarios.
+Mirarlo en el emulador API 36 (`FoodRanker_Test.avd`) cuando se pruebe la v21.
+
+📌 La tercera recomendación, la de **R8**, sigue sin tocar y hay que leerla con cuidado:
+`isShrinkResources` está en **false a propósito** (ver más abajo).
+
+
 
 ### 🎉 FOODRANKER ESTÁ PUBLICADA EN PRODUCCIÓN (2026-11-16)
 
@@ -448,6 +593,18 @@ falta arrancar el emulador e iniciar sesión a mano, y no compensaba con la v20 
    versionName en el manifest fusionado, los 4 marcadores de UMP en `base/dex/*.dex` (R8
    puede llevarse el SDK de consentimiento sin avisar) y `08 03 10 01` en `BundleConfig.pb`
    para el split de idiomas.
+6. **Que `recordException` llegue de verdad** (nuevo el 2026-11-16, ver la sección de los 68
+   `catch` arriba). Vale con provocar un fallo que NO sea de red —el filtro de
+   `esDelEntorno` se come la red a propósito— y ver si aparece en Crashlytics como no fatal:
+   lo más fácil es cortarle los permisos a una colección en las reglas un momento, o abrir un
+   plato borrado. ⚠️ Los no fatales tardan en subir: no se ven al instante.
+   Y comprobar que **no** sale nada raro con solo abrir y navegar la app: si en un paseo
+   normal por las pantallas ya se registran no fatales, o el filtro está mal o hay un fallo
+   de verdad que llevaba tiempo escondido.
+7. **Mirar el edge-to-edge en el emulador API 36.** No es un pendiente de código (ver la
+   sección de edge-to-edge arriba: las APIs obsoletas son de las dependencias), pero con
+   `targetSdk 36` el modo ya está forzado en producción y nunca se ha visto en una pantalla
+   de Android 15/16. Que no haya texto debajo de la barra de estado ni de la de navegación.
 
 ### 🚀 LA v20 (1.6), ENVIADA A REVISIÓN DE PRODUCCIÓN (2026-11-15)
 

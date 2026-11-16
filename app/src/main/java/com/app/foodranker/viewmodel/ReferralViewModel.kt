@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.app.foodranker.utils.Fallos
 import com.app.foodranker.utils.ReferralManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +55,7 @@ class ReferralViewModel @Inject constructor(
                     isLoading = false
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "invitaciones: cargar")
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
         }

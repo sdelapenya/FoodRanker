@@ -9,6 +9,7 @@ import android.net.Uri
 import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
+import com.app.foodranker.utils.Fallos
 
 /**
  * Reduce la foto antes de subirla a Cloudinary.
@@ -64,9 +65,11 @@ object ImageCompressor {
             Log.d(TAG, "Comprimida a ${output.length() / 1024} KB (${scaled.width}x${scaled.height})")
             output
         } catch (e: Exception) {
+            Fallos.reportar(e, "imagen: comprimir")
             Log.w(TAG, "No se pudo comprimir, se subirá el original: ${e.message}")
             null
         } catch (e: OutOfMemoryError) {
+            Fallos.reportar(e, "imagen: sin memoria al comprimir")
             // Una foto enorme en un móvil justo de memoria: mejor subir el original que morir.
             Log.w(TAG, "Sin memoria al comprimir, se subirá el original")
             null
@@ -96,6 +99,7 @@ object ImageCompressor {
                 }
             } ?: 0f
         } catch (e: Exception) {
+            Fallos.reportar(e, "imagen: leer orientación EXIF")
             0f
         }
         if (degrees == 0f) return bitmap

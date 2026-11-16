@@ -16,6 +16,7 @@ import com.app.foodranker.utils.InputLimits
 import com.app.foodranker.utils.InputLimits.sanitized
 import com.app.foodranker.utils.ConnectivityObserver
 import com.app.foodranker.utils.DailyMissionManager
+import com.app.foodranker.utils.Fallos
 import com.app.foodranker.utils.MealDBSeeder
 import com.app.foodranker.utils.ReferralManager
 import com.app.foodranker.utils.RemoteConfigManager
@@ -86,6 +87,7 @@ class DiscoverViewModel @Inject constructor(
             val photo = snap.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: fallbackPhoto
             name.sanitized(InputLimits.USER_NAME) to photo
         } catch (e: Exception) {
+            Fallos.reportar(e, "descubrir: nombre y foto del autor")
             (user?.displayName?.takeIf { it.isNotBlank() } ?: appContext.getString(R.string.user_fallback_name)).sanitized(InputLimits.USER_NAME) to fallbackPhoto
         }
     }
@@ -106,6 +108,7 @@ class DiscoverViewModel @Inject constructor(
         viewModelScope.launch {
             try { referralManager.applyReferralCode(code) }
             catch (e: Exception) {
+                Fallos.reportar(e, "descubrir: aplicar código de invitación")
                 android.util.Log.w("DiscoverVM", "applyInviteCode error: ${e.message}")
             }
         }
@@ -133,6 +136,7 @@ class DiscoverViewModel @Inject constructor(
                     .filter { it.reportCount < 3 }
                 _uiState.value = _uiState.value.copy(nearbyPlates = plates)
             } catch (e: Exception) {
+                Fallos.reportar(e, "descubrir: platos cercanos")
                 android.util.Log.e("DiscoverVM", "Error loadNearbyPlates: ${e.message}")
             }
         }
@@ -169,6 +173,7 @@ class DiscoverViewModel @Inject constructor(
                     .take(90)
                 _uiState.value = _uiState.value.copy(followingPlates = plates, isLoadingFollowing = false)
             } catch (e: Exception) {
+                Fallos.reportar(e, "descubrir: platos de a quien sigo")
                 _uiState.value = _uiState.value.copy(isLoadingFollowing = false)
             }
         }
@@ -198,6 +203,7 @@ class DiscoverViewModel @Inject constructor(
                     hasMorePlates = hasMore
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "descubrir: cargar más platos")
                 _uiState.value = _uiState.value.copy(isLoadingMore = false)
             }
         }
@@ -266,6 +272,7 @@ class DiscoverViewModel @Inject constructor(
                                     .whereEqualTo("userId", userId).limit(500).get().await()
                                     .documents.mapNotNull { it.getString("plateId") }.toSet()
                             } catch (e: Exception) {
+                                Fallos.reportar(e, "descubrir: cargar guardados")
                                 android.util.Log.w("DiscoverVM", "No se pudieron cargar saves: ${e.message}")
                                 null
                             }
@@ -275,6 +282,7 @@ class DiscoverViewModel @Inject constructor(
                                 firestore.collection("users").document(userId)
                                     .get().await().getString("city") ?: ""
                             } catch (e: Exception) {
+                                Fallos.reportar(e, "descubrir: cargar ciudad")
                                 android.util.Log.w("DiscoverVM", "No se pudo cargar ciudad: ${e.message}")
                                 ""
                             }
@@ -289,6 +297,7 @@ class DiscoverViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Fallos.reportar(e, "descubrir: cargar platos")
                 android.util.Log.e("DiscoverVM", "Error cargando platos: ${e.message}")
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
@@ -323,6 +332,7 @@ class DiscoverViewModel @Inject constructor(
                     "createdAt" to System.currentTimeMillis()
                 )).await()
             } catch (e: Exception) {
+                Fallos.reportar(e, "descubrir: guardar o quitar de guardados")
                 // Revertir
                 _uiState.value = _uiState.value.copy(
                     savedPlateIds = if (!isSaved)
@@ -385,7 +395,11 @@ class DiscoverViewModel @Inject constructor(
                     "plateId" to plateId, "plateName" to plate.name,
                     "isRead" to false, "createdAt" to System.currentTimeMillis()
                 )).await()
-        } catch (e: Exception) { /* silencioso */ }
+        } catch (e: Exception) {
+            // Silencioso para el usuario a propósito: que no le llegue el aviso a quien
+            // recibió el like no es motivo para estropearle el like a quien lo dio.
+            Fallos.reportar(e, "descubrir: aviso de like")
+        }
     }
 
     private fun applyPlateUpdate(plateId: String, updated: Plate) {
@@ -431,6 +445,7 @@ class DiscoverViewModel @Inject constructor(
                         appContext.getString(R.string.vm_report_sent)
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "descubrir: reportar plato")
                 android.util.Log.e("DiscoverVM", "Error al reportar: ${e.message}")
             }
         }

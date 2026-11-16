@@ -46,6 +46,21 @@ object ErrorMapper {
     fun toUserMessage(e: Exception): String =
         appContext?.getString(toUserMessageRes(e)) ?: "Error"
 
+    /**
+     * Si el fallo es del entorno del usuario y no un bug nuestro.
+     *
+     * Lo usa [Fallos] para no llenar Crashlytics de no fatales que no se pueden arreglar
+     * desde el código: quien se meta en el metro sin cobertura genera uno por cada carga.
+     * Cuentan como del entorno la red, los timeouts —que en la práctica son red lenta: un
+     * DEADLINE_EXCEEDED por una consulta pesada de verdad acabaría saliendo igual en las
+     * métricas de Firestore— y las cancelaciones.
+     *
+     * Lo que NO es del entorno sí se reporta: permisos (una regla mal puesta), no
+     * encontrado (datos incoherentes), subidas fallidas y cualquier cosa inesperada.
+     */
+    fun esDelEntorno(e: Exception): Boolean =
+        isNetworkError(e) || isTimeoutError(e) || isCancelledError(e)
+
     // Comprueba el código, no el mensaje (a diferencia del resto de este mapper): el
     // mensaje de FirebaseAuthException varía por locale, el errorCode no.
     private fun isDisabledAccountError(e: Exception) =

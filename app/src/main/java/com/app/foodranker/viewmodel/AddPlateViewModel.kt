@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.app.foodranker.data.model.Venue
 import com.app.foodranker.data.repository.VenueRepository
 import com.app.foodranker.data.repository.VenueSuggestion
+import com.app.foodranker.utils.Fallos
 import com.app.foodranker.utils.plateDocId
 import com.app.foodranker.utils.toDishSlug
 import com.google.firebase.auth.FirebaseAuth
@@ -79,6 +80,7 @@ class AddPlateViewModel @Inject constructor(
             val photo = snap.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: fallbackPhoto
             name.sanitized(InputLimits.USER_NAME) to photo
         } catch (e: Exception) {
+            Fallos.reportar(e, "añadir: nombre y foto del autor")
             (user?.displayName?.takeIf { it.isNotBlank() } ?: appContext.getString(R.string.user_fallback_name)).sanitized(InputLimits.USER_NAME) to fallbackPhoto
         }
     }
@@ -172,6 +174,7 @@ class AddPlateViewModel @Inject constructor(
                     .documents.mapNotNull { it.toObject(Plate::class.java) }
                     .sortedByDescending { it.totalRatings }
             } catch (e: Exception) {
+                Fallos.reportar(e, "añadir: platos del local")
                 android.util.Log.w("AddPlateVM", "No se pudieron cargar los platos del local: ${e.message}")
                 venueDishes = emptyList()
             }
@@ -278,8 +281,16 @@ class AddPlateViewModel @Inject constructor(
                             .limit((maxDaily + 1).toLong())
                             .get().await().size()
                     } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
-                        if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION) 0
-                        else throw e
+                        if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION) {
+                            // El fail-open es deliberado, pero tiene una consecuencia que no
+                            // se ve: mientras falte el índice, el límite diario NO existe
+                            // para nadie. Un 0 silencioso aquí es un límite desactivado en
+                            // producción sin que nadie lo sepa, así que se reporta.
+                            // Solo esta rama: el `throw e` ya acaba en el catch exterior,
+                            // que reporta por su cuenta, y si no se repetiría el informe.
+                            Fallos.reportar(e, "añadir: falta el índice del límite diario")
+                            0
+                        } else throw e
                     }
                     if (todayCount >= maxDaily) {
                         _state.value = AddPlateState.Error(
@@ -378,6 +389,7 @@ class AddPlateViewModel @Inject constructor(
 
                 _state.value = AddPlateState.Success
             } catch (e: Exception) {
+                Fallos.reportar(e, "añadir: publicar plato")
                 uploadedImageUrl?.let { android.util.Log.w("AddPlateVM", "Imagen Cloudinary huérfana: $it — ${e.message}") }
                 _state.value = AddPlateState.Error(com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
@@ -425,6 +437,7 @@ class AddPlateViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            Fallos.reportar(e, "añadir: verificar reto")
             android.util.Log.w("Challenge", "No se pudo verificar challenge: ${e.message}")
         }
     }

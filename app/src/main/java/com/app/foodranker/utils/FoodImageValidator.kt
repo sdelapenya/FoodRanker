@@ -12,6 +12,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import com.app.foodranker.R
+import com.app.foodranker.utils.Fallos
 
 object FoodImageValidator {
 
@@ -66,6 +67,7 @@ object FoodImageValidator {
                     else -> Pair(true, "")
                 }
             } catch (e: Exception) {
+                Fallos.reportar(e, "imagen: validar contenido")
                 android.util.Log.e("FoodValidator", "Error validando imagen: ${e.message}")
                 Pair(true, "") // No bloquear al usuario; modera moderatePlateImage
             }
@@ -91,6 +93,7 @@ object FoodImageValidator {
             bitmap.recycle()
             Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
         } catch (e: Exception) {
+            Fallos.reportar(e, "imagen: codificar a base64")
             null
         }
     }

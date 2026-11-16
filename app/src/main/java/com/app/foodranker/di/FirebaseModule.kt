@@ -12,6 +12,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.app.foodranker.utils.Fallos
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -37,9 +38,14 @@ object FirebaseModule {
                     }
                 )
                 .build()
-        } catch (_: IllegalStateException) {
+        } catch (e: IllegalStateException) {
             // Firestore ya arrancó antes de que Hilt aplicara los settings (race con
             // FoodRankerMessagingService). La caché persistente no pudo configurarse.
+            //
+            // Se reporta porque es una carrera: no falla siempre, y cuando pasa la app se
+            // queda SIN caché offline entera, que es justo lo que no se nota mirándola en
+            // el sofá con wifi. Sin esto no había forma de saber a cuánta gente le ocurre.
+            Fallos.reportar(e, "firestore: settings no aplicados, sin caché persistente")
             Log.w("FirebaseModule", "Firestore settings skipped — already initialized (persistent cache inactive)")
         }
     }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.app.foodranker.utils.ErrorMapper
+import com.app.foodranker.utils.Fallos
 import javax.inject.Inject
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -153,7 +154,15 @@ class ProfileViewModel @Inject constructor(
                                     .orderBy("xp", com.google.firebase.firestore.Query.Direction.ASCENDING)
                                     .limit(1).get().await()
                                     .documents.firstOrNull()?.toObject(User::class.java)
-                            } catch (e: Exception) { null }
+                            } catch (e: Exception) {
+                                // Devolver null deja la tarjeta de rival sin pintar, que es
+                                // un apaño razonable. Pero esta consulta lleva whereEqualTo
+                                // + whereGreaterThan + orderBy, o sea que es de las que
+                                // fallan enteras si falta el índice compuesto, y así no se
+                                // notaría nunca (ya pasó con un índice roto desde siempre).
+                                Fallos.reportar(e, "perfil: consulta de rival")
+                                null
+                            }
                         }
                     } else null
 
@@ -166,7 +175,12 @@ class ProfileViewModel @Inject constructor(
                                     .orderBy("xp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                                     .whereGreaterThan("xp", user.xp)
                                     .limit(200).get().await().size() + 1
-                            } catch (e: Exception) { 0 }
+                            } catch (e: Exception) {
+                                // Igual que la de rival: índice compuesto, y un 0 silencioso
+                                // se confunde con "eres el primero de tu ciudad".
+                                Fallos.reportar(e, "perfil: rango en la ciudad")
+                                0
+                            }
                         }
                     } else null
 
@@ -198,6 +212,7 @@ class ProfileViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Fallos.reportar(e, "perfil: carga principal")
                 _uiState.value = _uiState.value.copy(isLoading = false, error = ErrorMapper.toUserMessage(e))
             }
         }
@@ -223,6 +238,7 @@ class ProfileViewModel @Inject constructor(
                 }.sortedByDescending { it.createdAt }
                 _uiState.value = _uiState.value.copy(collections = cols)
             } catch (e: Exception) {
+                Fallos.reportar(e, "perfil: cargar colecciones")
                 android.util.Log.e("Profile", "Error cargando colecciones: ${e.message}")
             }
         }
@@ -241,7 +257,10 @@ class ProfileViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     collections = listOf(col) + _uiState.value.collections
                 )
-            } catch (e: Exception) { android.util.Log.e("Profile", "Error creando colección: ${e.message}") }
+            } catch (e: Exception) {
+                Fallos.reportar(e, "perfil: crear colección")
+                android.util.Log.e("Profile", "Error creando colección: ${e.message}")
+            }
         }
     }
 
@@ -256,6 +275,7 @@ class ProfileViewModel @Inject constructor(
                     }
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "perfil: añadir plato a colección")
                 android.util.Log.e("Profile", "addPlateToCollection: ${e.message}")
             }
         }
@@ -269,6 +289,7 @@ class ProfileViewModel @Inject constructor(
                     collections = _uiState.value.collections.filter { it.id != collectionId }
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "perfil: borrar colección")
                 android.util.Log.e("Profile", "deleteCollection: ${e.message}")
             }
         }
@@ -299,6 +320,7 @@ class ProfileViewModel @Inject constructor(
                     savedPlates = saved.sortedByDescending { it.createdAt }
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "perfil: cargar guardados")
                 android.util.Log.e("Profile", "Error cargando guardados: ${e.message}")
             }
         }
@@ -321,7 +343,11 @@ class ProfileViewModel @Inject constructor(
                         if (it.id == plateId) it.copy(description = clean) else it
                     }
                 )
-            } catch (e: Exception) { /* silencioso */ }
+            } catch (e: Exception) {
+                // Al usuario se le sigue fallando en silencio (no hay sitio en la UI donde
+                // contárselo), pero al menos ahora nos enteramos nosotros.
+                Fallos.reportar(e, "perfil: guardar descripción de plato")
+            }
         }
     }
 
@@ -369,6 +395,10 @@ class ProfileViewModel @Inject constructor(
                 val esSlug = (e as? FirebaseFunctionsException)
                     ?.let { it.code == FirebaseFunctionsException.Code.FAILED_PRECONDITION &&
                             it.message?.contains("slug-changed") == true } ?: false
+                // Solo se reporta lo que NO es el caso esperable: "slug-changed" es la
+                // respuesta normal de la función, no un fallo, y reportarlo convertiría
+                // cada errata corregida en un no fatal.
+                if (!esSlug) Fallos.reportar(e, "perfil: renombrar plato")
                 onResult(if (esSlug) ResultadoRenombrar.SOLO_COSMETICO else ResultadoRenombrar.ERROR)
             }
         }
@@ -406,6 +436,7 @@ class ProfileViewModel @Inject constructor(
             } catch (e: Exception) {
                 // El diálogo de confirmación avisa de que borrar es irreversible, así que
                 // un fallo silencioso aquí dejaría al usuario creyendo que sí se borró.
+                Fallos.reportar(e, "perfil: borrar plato")
                 android.util.Log.e("Profile", "Error borrando plato: ${e.message}")
                 _uiState.value = _uiState.value.copy(
                     error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
@@ -457,6 +488,7 @@ class ProfileViewModel @Inject constructor(
                 )
                 onSuccess()
             } catch (e: Exception) {
+                Fallos.reportar(e, "perfil: guardar bio/ciudad/web")
                 _uiState.value = _uiState.value.copy(isSavingProfile = false)
                 onError(ErrorMapper.toUserMessage(e))
             }
@@ -489,6 +521,10 @@ class ProfileViewModel @Inject constructor(
                     com.app.foodranker.utils.AnalyticsManager.logUserFollowed()
                 }
             } catch (e: Exception) {
+                // Importa más que la media: el contador local ya se puede haber movido,
+                // así que un fallo aquí deja al usuario viendo un "siguiendo" que el
+                // servidor no tiene.
+                Fallos.reportar(e, "perfil: seguir/dejar de seguir")
                 android.util.Log.e("Profile", "Error toggleFollow: ${e.message}")
             } finally {
                 isTogglingFollow = false
@@ -516,6 +552,9 @@ class ProfileViewModel @Inject constructor(
                     isLoadingCollectionPlates = false
                 )
             } catch (e: Exception) {
+                // Sin esto la colección se queda vacía sin explicación: el spinner se apaga
+                // y parece que no tiene platos.
+                Fallos.reportar(e, "perfil: cargar platos de colección")
                 _uiState.value = _uiState.value.copy(isLoadingCollectionPlates = false)
             }
         }
@@ -538,6 +577,9 @@ class ProfileViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isDeletingAccount = false)
                 onSuccess()
             } catch (e: Exception) {
+                // Borrar la cuenta es irreversible y obligatorio por política de Play: si
+                // falla, el usuario se queda sin poder irse y hay que saberlo ya.
+                Fallos.reportar(e, "perfil: borrar cuenta")
                 _uiState.value = _uiState.value.copy(isDeletingAccount = false)
                 onError(e.message ?: appContext.getString(R.string.vm_delete_account_fail))
             }

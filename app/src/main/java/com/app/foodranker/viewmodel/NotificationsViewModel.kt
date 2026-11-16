@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.app.foodranker.data.model.FoodNotification
+import com.app.foodranker.utils.Fallos
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +43,7 @@ class NotificationsViewModel @Inject constructor(
                 batch.commit().await()
                 _uiState.value = NotificationsUiState(notifications = emptyList(), isLoading = false)
             } catch (e: Exception) {
+                Fallos.reportar(e, "avisos: borrar todos")
                 android.util.Log.e("NotificationsVM", "Error clearAll: ${e.message}")
             }
         }
@@ -92,6 +94,7 @@ class NotificationsViewModel @Inject constructor(
                     batch.commit().await()
                 }
             } catch (e: Exception) {
+                Fallos.reportar(e, "avisos: cargar")
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
         }

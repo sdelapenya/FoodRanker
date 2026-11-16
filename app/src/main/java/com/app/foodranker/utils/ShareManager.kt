@@ -12,6 +12,7 @@ import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.app.foodranker.R
+import com.app.foodranker.utils.Fallos
 
 object ShareManager {
 
@@ -103,6 +104,7 @@ object ShareManager {
             canvas.drawText("★ ${"%.1f".format(plate.averageScore)}  •  FoodRanker", w * 0.05f, h * 0.94f, textPaint)
             sharePlateWithImage(context, plate, mutable)
         } catch (e: Exception) {
+            Fallos.reportar(e, "compartir: imagen del plato")
             sharePlateText(context, plate)
         }
     }

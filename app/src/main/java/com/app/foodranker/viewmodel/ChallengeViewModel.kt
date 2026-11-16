@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.WeeklyChallenge
+import com.app.foodranker.utils.Fallos
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +53,7 @@ class ChallengeViewModel @Inject constructor(
                     isLoading = false
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "retos: cargar reto actual")
                 android.util.Log.e("Challenge", "loadCurrentChallenge: ${e.message}")
                 _uiState.value = _uiState.value.copy(isLoading = false)
                 // Los challenges se crean desde Firebase Console, no desde la app

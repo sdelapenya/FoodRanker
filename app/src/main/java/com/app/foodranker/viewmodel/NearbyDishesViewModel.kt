@@ -8,6 +8,7 @@ import com.app.foodranker.data.model.Venue
 import com.app.foodranker.data.repository.VenueRepository
 import com.app.foodranker.data.repository.VenueSuggestion
 import com.app.foodranker.utils.BillingManager
+import com.app.foodranker.utils.Fallos
 import com.app.foodranker.utils.GeoUtils
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -120,6 +121,7 @@ class NearbyDishesViewModel @Inject constructor(
 
                 _uiState.value = NearbyDishesUiState(results = results)
             } catch (e: Exception) {
+                Fallos.reportar(e, "cerca: cargar platos")
                 _uiState.value = NearbyDishesUiState(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
             }
         }

@@ -17,6 +17,7 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import androidx.annotation.StringRes
 import com.app.foodranker.R
+import com.app.foodranker.utils.Fallos
 
 data class UserResult(
     val id: String = "",
@@ -135,6 +136,7 @@ class ExploreViewModel @Inject constructor(
                 }.filter { it.name.isNotEmpty() }
                 _uiState.value = _uiState.value.copy(userResults = users, isLoading = false)
             } catch (e: Exception) {
+                Fallos.reportar(e, "explorar: buscar usuarios")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)
@@ -167,6 +169,7 @@ class ExploreViewModel @Inject constructor(
 
             applyLocalFilters()
         } catch (e: Exception) {
+            Fallos.reportar(e, "explorar: buscar platos")
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)

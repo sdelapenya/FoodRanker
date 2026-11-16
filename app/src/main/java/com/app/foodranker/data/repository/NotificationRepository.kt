@@ -5,6 +5,7 @@ import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.app.foodranker.utils.Fallos
 import com.app.foodranker.utils.NotificationHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -167,6 +168,7 @@ class NotificationRepository @Inject constructor(
             snapshot.documents.forEach { batch.update(it.reference, "isRead", true) }
             batch.commit().await()
         } catch (e: Exception) {
+            Fallos.reportar(e, "avisos: marcar todos como leídos")
             android.util.Log.e("NotifRepo", "Error markAllRead: ${e.message}")
         }
     }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.app.foodranker.data.model.Plate
+import com.app.foodranker.utils.Fallos
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -82,6 +83,7 @@ class TrendingViewModel @Inject constructor(
                     isLoading = false
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "tendencias: cargar")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e)

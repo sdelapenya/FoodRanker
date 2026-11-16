@@ -8,6 +8,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.functions.FirebaseFunctions
 import com.app.foodranker.data.model.LeagueEntry
 import com.app.foodranker.utils.ErrorMapper
+import com.app.foodranker.utils.Fallos
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -91,6 +92,7 @@ class LeagueViewModel @Inject constructor(
                     isLoading = false
                 )
             } catch (e: Exception) {
+                Fallos.reportar(e, "liga: cargar")
                 // Sin este log, cualquier fallo aquí sale como "Algo salió mal" y además
                 // deja city vacío, así que la pantalla dice "añade tu ciudad" aunque la
                 // tengas: dos síntomas que despistan sobre la causa real.
