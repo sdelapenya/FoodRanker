@@ -71,6 +71,49 @@ bandeja desde antes del arreglo, y de que alguien vuelva a meter un extra vacío
 tanto en `webPathId` como en el esquema propio. El agujero era solo el de las
 notificaciones.
 
+#### 🛡️ Y el mismo fallo por el otro camino: enlaces con ids raros (2026-11-16)
+
+Al arreglar lo de los avisos quedó la duda de si había más formas de construir una ruta
+inválida. **La hay**, y por una puerta que está abierta a cualquiera.
+
+`Screen.PlateDetail.createRoute` interpola **sin codificar**:
+
+```kotlin
+fun createRoute(plateId: String) = "plate/$plateId"
+```
+
+Parecía que `Uri.pathSegments` protegía, porque parte por `/`. **No protege**: devuelve los
+segmentos **decodificados**. Así que `…/plate/abc%2Fdef` da el segmento `abc/def`, la ruta
+sale `plate/abc/def`, no casa con `plate/{plateId}` y `navigate()` tumba la app. Igual con
+`%20`, `%23`, saltos de línea.
+
+Y los **App Links están verificados**, así que cualquiera puede repartir un enlace de esos
+y cerrarle la app a quien lo toque. No roba nada, pero es una primera impresión pésima.
+
+**Arreglado en el parser**, que es la frontera donde entra lo de fuera. Lista blanca
+`^[A-Za-z0-9_-]{1,256}$` aplicada a los tres caminos (plato, perfil, invitación) y tanto
+al esquema `https` como a `foodranker://`.
+
+Lista blanca y no lista negra a propósito: enumerar lo que rompe una ruta es una carrera
+que se pierde. Los tres identificadores caben de sobra:
+
+| Qué | Forma | ¿Pasa? |
+|---|---|---|
+| Plato | `{placeId}__{dishSlug}`, ambos `[A-Za-z0-9_-]` | sí |
+| Perfil | uid de Firebase, alfanumérico | sí |
+| Invitación | UUID sin guiones en mayúsculas, `[A-F0-9]{10}` | sí |
+
+Si algún día un id legítimo no pasara, el enlace abre la app por su pantalla normal en vez
+de ir al contenido: molesto, pero no un cierre. Es el modo de fallo que queremos.
+
+**5 tests nuevos** en `DeepLinkParserTest` (61 en total). Uno deja constancia del motivo:
+`assertEquals("abc/def", uri.pathSegments[1])` — pasa, y es la prueba de que `%2F`
+reaparece como barra. Otro fija que los ids **reales** siguen funcionando, que es lo que
+no se puede romper.
+
+⚠️ Esto va en la v21. A diferencia del de los avisos, **no se puede arreglar desde el
+servidor**: el enlace lo fabrica quien quiera, no pasa por nuestra infraestructura.
+
 ### 🧹 PREPARATIVOS DE LA v21 — ya en `main`, SIN compilar (2026-11-15)
 
 Nada de esto está en Play. Son cambios de código que entran solos en la próxima vez que se

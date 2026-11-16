@@ -110,4 +110,58 @@ class DeepLinkParserTest {
         assertNull(uri.parseFoodRankerPlateId())
         assertNull(uri.parseFoodRankerInviteCode())
     }
+
+    // --- ids que romperian la ruta de Navigation (2026-11-16) ---
+    //
+    // `createRoute` interpola sin codificar ("plate/$plateId"), asi que un id con
+    // caracteres raros produce una ruta que no casa con "plate/{plateId}" y navigate()
+    // lanza IllegalArgumentException, cerrando la app. Con los App Links verificados,
+    // cualquiera puede repartir uno de estos enlaces.
+
+    @Test
+    fun `una barra codificada no se cuela como id de plato`() {
+        // El caso peligroso: pathSegments DECODIFICA, asi que %2F reaparece como "/".
+        val uri = Uri.parse("https://foodranker.app/plate/abc%2Fdef")
+        assertEquals("abc/def", uri.pathSegments[1])   // deja constancia de por que hace falta
+        assertNull(uri.parseFoodRankerPlateId())
+    }
+
+    @Test
+    fun `un espacio no se cuela como id de plato`() {
+        assertNull(Uri.parse("https://foodranker.app/plate/abc%20def").parseFoodRankerPlateId())
+    }
+
+    @Test
+    fun `los ids raros tampoco pasan por el esquema propio`() {
+        assertNull(Uri.parse("foodranker://plate/abc%2Fdef").parseFoodRankerPlateId())
+        assertNull(Uri.parse("foodranker://user/a%20b").parseFoodRankerProfileUserId())
+        assertNull(Uri.parse("foodranker://invite/a%23b").parseFoodRankerInviteCode())
+    }
+
+    @Test
+    fun `un id absurdamente largo se rechaza`() {
+        val largo = "a".repeat(300)
+        assertNull(Uri.parse("https://foodranker.app/plate/$largo").parseFoodRankerPlateId())
+    }
+
+    @Test
+    fun `los ids REALES siguen pasando — esto es lo que no se puede romper`() {
+        // Plato: {placeId}__{dishSlug}, tal y como lo compone plateDocId().
+        assertEquals(
+            "ChIJ17p_qV9HoBIRTRSfEBcZuhk__arroz-illa",
+            Uri.parse("https://foodranker.app/plate/ChIJ17p_qV9HoBIRTRSfEBcZuhk__arroz-illa")
+                .parseFoodRankerPlateId()
+        )
+        // Perfil: uid de Firebase.
+        assertEquals(
+            "rNpwrHo3euaQSJjwsGFGX2vHr193",
+            Uri.parse("https://foodranker.app/user/rNpwrHo3euaQSJjwsGFGX2vHr193")
+                .parseFoodRankerProfileUserId()
+        )
+        // Invitacion: UUID sin guiones, en mayusculas (ReferralManager.generateCode).
+        assertEquals(
+            "A1B2C3D4E5",
+            Uri.parse("foodranker://invite/A1B2C3D4E5").parseFoodRankerInviteCode()
+        )
+    }
 }
