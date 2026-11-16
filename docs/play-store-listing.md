@@ -141,6 +141,56 @@ dentro de cada una; si pegas el bloque con etiquetas se duplican y da error.
 
 ---
 
+## v21 (1.7) — selector de idioma, nombres de plato y enlaces raros
+
+Lo que el usuario nota de la v21. **No se menciona** el arreglo de los avisos que cerraban
+la app: ese se hizo del lado del servidor el 2026-11-16 y ya lo tiene todo el mundo sin
+actualizar nada, así que anunciarlo ahora confundiría. Tampoco se menciona que ahora se
+registran los fallos en Crashlytics, que es invisible para quien usa la app.
+
+⚠️ El selector de idioma **solo existe en Android 13 o posterior** (`LocaleManager` es de
+API 33). Las notas lo dicen a propósito: sin ese paréntesis, quien tenga Android 12 lo
+buscaría en su perfil y no lo encontraría.
+
+### Castellano (es-ES) — v21
+
+```
+Ya puedes elegir el idioma de FoodRanker desde tu perfil, en castellano o en inglés, sin tocar el idioma del móvil. (Necesita Android 13 o posterior.)
+
+Si te equivocaste al escribir el nombre de un plato que añadiste, ahora puedes corregirlo.
+
+Y un enlace mal formado ya no cierra la app al abrirlo.
+```
+*(299 caracteres)*
+
+### Inglés (en-GB) — v21
+
+```
+You can now choose FoodRanker's language from your profile, Spanish or English, without changing your phone's language. (Needs Android 13 or later.)
+
+If you mistyped the name of a dish you added, you can now correct it.
+
+And a malformed link no longer closes the app when you open it.
+```
+*(284 caracteres)*
+
+### Inglés (en-US) — v21
+
+Otra vez **idéntico** al de en-GB: no hay ninguna palabra que se escriba distinto. Hay que
+pegarlo igual, porque si en-US se queda vacío Play le sirve el del idioma por defecto, que
+es el castellano.
+
+```
+You can now choose FoodRanker's language from your profile, Spanish or English, without changing your phone's language. (Needs Android 13 or later.)
+
+If you mistyped the name of a dish you added, you can now correct it.
+
+And a malformed link no longer closes the app when you open it.
+```
+*(284 caracteres)*
+
+---
+
 ## v19 y v20 (1.6) — los enlaces compartidos, y el idioma en Xiaomi
 
 ⚠️ **Las mismas notas valen para la v20.** El `versionCode` 20 solo quita un permiso
