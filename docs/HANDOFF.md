@@ -15,6 +15,86 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 📦 LA v21 (1.7) COMPILADA Y VERIFICADA SOBRE EL BINARIO (2026-11-16)
+
+`versionCode 21`, `versionName 1.7`. El salto de nombre (1.6 → 1.7, y no otro invisible como
+el 19 → 20) es porque esta trae **selector de idioma**, que se ve.
+
+Lo que lleva dentro, todo de los últimos dos días y nada de ello probado en pantalla:
+selector de idioma, corrección del nombre de plato, lista blanca de ids en los enlaces, y los
+68 `catch` que ahora reportan a Crashlytics.
+
+#### ✅ Lo que se comprobó sobre el AAB
+
+| Qué | Cómo | Resultado |
+|---|---|---|
+| `CAMERA` y `hardware.camera` | strings del manifest proto del AAB | **ausentes** (0 apariciones) |
+| `READ_MEDIA_IMAGES` | igual | **ausente** |
+| Versión | `bundle_manifest/.../AndroidManifest.xml` | `versionCode="21"` `versionName="1.7"` |
+| Firma | `jarsigner -verify` | **`jar verified`**, firmado por `O=sdelapenya.dev, CN=Sergio de la Peña` |
+| UMP tras R8 | 4 cadenas en `base/dex/*.dex` | **4/4** |
+| Split de idiomas | `08 03 10 01` en `BundleConfig.pb` | presente |
+| Paridad de textos | `check_strings.py` | OK (594/593, ver abajo) |
+| Resto de `tools/i18n/` | `check_args`, `check_notif_parity`, `check_slug_parity` | OK |
+
+Dos sustos que no lo eran, anotados para no volver a investigarlos:
+
+- **`check_strings.py` dice `en=594 es=593`.** La que sobra en inglés es
+  **`default_web_client_id`**, el id de OAuth: no es texto de interfaz y **no debe
+  traducirse**, así que la asimetría es correcta y por eso el script da OK igualmente.
+- **`scan_ui.py` marca 20 literales.** Todos falsos positivos: 16 son etiquetas de animación
+  (`cardScale`, `heartColor`, `shimmer`…), 2 son el logo (`Food` / `Ranker`, que es la marca)
+  y 2 son castellano clavado en `AuthRepository` que **nunca llega a la pantalla**:
+  `SignInCancelledException` la intercepta `AuthViewModel:64` antes de mostrar nada, y la de
+  "usuario nulo" pasa por `ErrorMapper`, que siempre devuelve un recurso traducido. Importa
+  comprobarlo ahora que hay usuarios en Reino Unido.
+
+#### ❌ Los símbolos de depuración: `debugSymbolLevel` NO hace nada en esta app
+
+Esto no salió como se esperaba y conviene dejarlo escrito, porque la lista de comprobación
+decía *"los símbolos de depuración presentes (que Play deje de dar la advertencia)"* y **eso
+no va a pasar**.
+
+El `ndk { debugSymbolLevel = "FULL" }` que se añadió está puesto y Gradle ejecuta su tarea,
+pero **extrae cero**:
+
+```
+app/build/intermediates/native_debug_metadata/release/.../out   -> VACÍA
+app/build/intermediates/native_symbol_tables/                   -> VACÍA
+```
+
+y el AAB no trae ninguna entrada `BUNDLE-METADATA/com.android.tools.build.debugsymbols/`.
+
+**Por qué**, comprobado y no deducido. La app no tiene código nativo propio; los únicos 8
+`.so` del bundle vienen de dos dependencias de androidx (`libandroidx.graphics.path.so` y
+`libdatastore_shared_counter.so`, en los 4 ABIs). Pasándoles `llvm-readelf -S`:
+
+```
+sin .symtab ni .debug_* -> YA VIENEN STRIPEADAS
+```
+
+Vienen ya sin símbolos desde sus AAR, así que no hay nada que extraer. **No se puede
+arreglar desde aquí** mientras androidx las publique así.
+
+**Qué significa de verdad:** si alguna vez peta *dentro* de una de esas dos librerías, esos
+marcos saldrían sin simbolizar en Crashlytics. Son dos librerías diminutas y muy rodadas, y
+todo el código de la app es Kotlin, cuyo mapeo sí sube (`proguard.map`, 108 MB, está en el
+bundle). Es decir: **la advertencia de Play es cosmética para este caso**.
+
+👉 La línea se queda en `build.gradle.kts` de todas formas: no estorba, y el día que entre
+una dependencia con `.so` sin stripear, empezará a funcionar sola.
+
+#### Lo que queda de la v21, todo de pantalla
+
+El binario está listo; lo que falta **no se arregla compilando**:
+
+1. Selector de idioma y corrección del nombre de plato → emulador `FoodRanker_Test` (API 35).
+2. Que los no fatales lleguen a Crashlytics → provocar un fallo que NO sea de red.
+3. El aspecto edge-to-edge en Android 15.
+
+Ver la tabla "Dónde se prueba cada cosa" más abajo: en el Redmi **no** entra una build local
+encima de la de Play, el camino es subirla al canal de pruebas.
+
 ### 🔭 LOS FALLOS SILENCIOSOS YA SE VEN: 68 `catch` REPORTAN A CRASHLYTICS (2026-11-16)
 
 Era el pendiente que dejó a la vista la revisión de alertas de esta misma mañana: la alerta
@@ -596,19 +676,19 @@ recuperarla es volver a pasar por el login de Google. De ahí que se venga usand
 ⚠️ Los push de FCM siguen siendo de **un móvil a la vez**: `users/<uid>.fcmToken` es uno por
 usuario, y quien entre último se lleva los avisos (ver la sección del Redmi más abajo).
 
-1. **Subir `versionCode` a 21** en `app/build.gradle.kts`. Hoy sigue en 20 para que el árbol
-   no finja ser lo que está publicado. Decidir el `versionName`: si entra el selector de
-   idioma, ya **no** es solo un cambio invisible como fue el 19 → 20.
+1. ✅ **Hecho el 2026-11-16**: `versionCode = 21`, `versionName = "1.7"`.
 2. **Probar en un dispositivo el selector de idioma Y la corrección del nombre de plato.**
    Son las dos cosas de la v21 sin verificar.
    Cuatro cosas: que el diálogo salga; que al elegir un idioma la app se recree en él; que
    el subtítulo de la fila lo refleje; y que "Predeterminado del sistema" devuelva el
    control al idioma del móvil. Mejor en el emulador `FoodRanker_Test` (API 35) que en el
    Redmi: en el móvil haría falta desinstalar el build de Play y se pierde la sesión.
-3. **Sobre el AAB, no sobre el fuente**: `CAMERA` ausente, `READ_MEDIA_IMAGES` ausente, y
-   los símbolos de depuración presentes (que Play deje de dar la advertencia).
-4. **Las comprobaciones de `tools/i18n/`**, sobre todo `check_strings.py`.
-5. **Las verificaciones binarias de siempre**: `jarsigner -verify`, versionCode y
+3. ✅ **Sobre el AAB, no sobre el fuente**: `CAMERA` ausente, `READ_MEDIA_IMAGES` ausente.
+   ⚠️ Lo de *"y los símbolos de depuración presentes"* que decía aquí **era falso**: no se
+   pueden generar en esta app porque los `.so` vienen ya stripeados de androidx. Ver la
+   sección de la v21 arriba del todo.
+4. ✅ **Las comprobaciones de `tools/i18n/`** — pasadas todas el 2026-11-16.
+5. ✅ **Las verificaciones binarias de siempre**: `jarsigner -verify`, versionCode y
    versionName en el manifest fusionado, los 4 marcadores de UMP en `base/dex/*.dex` (R8
    puede llevarse el SDK de consentimiento sin avisar) y `08 03 10 01` en `BundleConfig.pb`
    para el split de idiomas.
