@@ -15,6 +15,70 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+
+### 🎉 FOODRANKER ESTÁ PUBLICADA EN PRODUCCIÓN (2026-11-16)
+
+Google aprobó la v20 y, con la **publicación gestionada desactivada**, salió sola sin pedir
+confirmación.
+
+```
+Producción · Activo · Última versión: 20 (1.6) · 2 países · 14 descargas
+```
+
+Confirmado desde fuera: `https://play.google.com/store/apps/details?id=com.app.foodranker`
+devuelve **HTTP 200**. Ayer daba 404. La ficha es pública en España y Reino Unido.
+
+Se acabó el camino que empezó el 2026-08-09. **A partir de aquí lo que falla, falla en
+manos de desconocidos.**
+
+#### ✅ El "Sitio web" de la ficha, cambiado a `foodranker.web.app`
+
+Hecho el mismo día, una vez aprobada la versión. ⚠️ **Ese campo NO pasa por revisión**: el
+diálogo avisa de que *"los cambios se publicarán en Google Play inmediatamente"* y el botón
+es **"Guardar y publicar"**. No hay que enviarlo desde Resumen de publicación.
+
+El campo **"Política de privacidad" se dejó intacto**, apuntando a
+`sdelapenya.github.io/FoodRanker/privacy.html`, que es donde viven las páginas que genera
+`tools/legal/build_pages.py`. La portada nueva de `foodranker.web.app` enlaza a ellas.
+
+#### ⏳ app-ads.txt: servido y esperando a que AdMob lo rastree
+
+La pantalla **AdMob → Aplicaciones → FoodRanker → app-ads.txt** confirmó el diagnóstico
+entero: la fila mostraba la URL vieja, `sdelapenya.github…`, con **"Último rastreo: hace 15
+horas"** —antes del cambio— y estado *"No se ha encontrado ningún archivo app-ads.txt"*.
+
+⚠️ **La URL no se puede escribir a mano en AdMob.** El botón "Configurar app-ads.txt" solo
+abre instrucciones; AdMob saca la URL **siempre** de la ficha de Play. Por eso el arreglo
+tenía que ser el cambio de ficha.
+
+**Qué mirar para saber si funcionó**: la celda *"URL del archivo app-ads.txt"*, no el
+estado. Cuando ponga `foodranker.web.app`, AdMob ya ha leído la ficha nueva. De 24 a 48
+horas. Si a los tres días sigue en github.io, comprobar que la ficha se publicó de verdad.
+
+📊 **112 consultas de anuncios en 7 días** con 14 descargas: ya hay inventario moviéndose,
+que es lo que hace que este fichero valga dinero.
+
+#### Lo que cambia de prioridad ahora que hay usuarios reales
+
+**App Check.** Hasta hoy no se podía encender el enforcement porque no había tráfico con el
+que comprobar que no se deja fuera a nadie legítimo — y encenderlo a ciegas es la forma
+clásica de echar a todos los usuarios de golpe. Ahora empieza a haberlo. En unos días las
+métricas tendrán datos. La clave de Places viaja en un binario que ya es público, así que
+el riesgo dejó de ser teórico.
+
+#### Las 3 recomendaciones que Play enseña en el panel
+
+Ninguna bloquea nada:
+
+1. *"Es posible que la vista de extremo a extremo no funcione para todos los usuarios"*
+2. *"Tu aplicación usa APIs o parámetros obsoletos para la vista de extremo a extremo"*
+3. *"Mejora la memoria y el rendimiento con la optimización de R8"*
+
+Las dos primeras son el **edge-to-edge** que ya estaba en el backlog, y aprietan porque la
+app apunta a API 36. La tercera hay que leerla con cuidado antes de tocar nada:
+`isShrinkResources` está en **false a propósito** desde que borró cinco cadenas que el
+código sí usaba (ver más abajo en este documento).
+
 ### 🔔 ALERTAS DE CRASHLYTICS: ESTABAN A MEDIAS, Y POR ESO NO NOS ENTERAMOS (2026-11-16)
 
 **Dónde están**, que no es donde uno busca: Firebase Console → **Configuración de proyecto
