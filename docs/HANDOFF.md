@@ -154,7 +154,9 @@ es el fallo clásico.
 
 ⚠️ Lo que sí queda sin verificar es el aspecto real en un Android 15/16: con `targetSdk 36` el
 edge-to-edge **ya está forzado en producción**. Nadie se ha quejado, pero son 14 usuarios.
-Mirarlo en el emulador API 36 (`FoodRanker_Test.avd`) cuando se pruebe la v21.
+Mirarlo en el emulador `FoodRanker_Test` (**API 35**) cuando se pruebe la v21: el forzado
+del edge-to-edge empieza en Android 15 = API 35, así que ese AVD ya lo reproduce y no hace
+falta bajar una imagen de API 36.
 
 📌 La tercera recomendación, la de **R8**, sigue sin tocar y hay que leerla con cuidado:
 `isShrinkResources` está en **false a propósito** (ver más abajo).
@@ -577,6 +579,23 @@ De paso: el diálogo de idioma usaba un `lang_cancel` propio cuando ya existía
 Decidido el 2026-11-15: el selector de idioma **no** se prueba hasta entonces. Habría hecho
 falta arrancar el emulador e iniciar sesión a mano, y no compensaba con la v20 en revisión.
 
+##### 🧭 Dónde se prueba cada cosa (y por qué no todo es en el Redmi)
+
+Lo que más despista: **en el Redmi 14C no se puede instalar una build local encima de la de
+Play.** La de Play va firmada con la clave de Play y la de aquí con la de subida, así que la
+instalación falla por firma; desinstalar sí deja instalarla, pero **se pierde la sesión**, y
+recuperarla es volver a pasar por el login de Google. De ahí que se venga usando el emulador.
+
+| Qué | Dónde | Por qué |
+|---|---|---|
+| Comprobaciones del AAB (`CAMERA`, `READ_MEDIA_IMAGES`, símbolos, `jarsigner`, marcadores de UMP, `BundleConfig.pb`) y `tools/i18n/` | **Ningún dispositivo** | Son sobre el fichero. Se pueden hacer antes de instalar nada |
+| Selector de idioma · corrección del nombre de plato · aspecto edge-to-edge | **Emulador `FoodRanker_Test` (API 35)** | Es la vía directa. Peaje: la app es un muro de login y hay que entrar a mano una vez |
+| Que `recordException` llegue a Crashlytics | Emulador o Redmi | Da igual cuál: lo que se mira es la consola de Firebase, no la pantalla |
+| Cualquier cosa con la build **real** de la tienda | **Redmi, por el canal de pruebas** | Subir el AAB a prueba interna/cerrada: Play lo actualiza encima, **misma firma y sesión intacta**. Es la única forma de tocar en el móvil lo que de verdad se publica |
+
+⚠️ Los push de FCM siguen siendo de **un móvil a la vez**: `users/<uid>.fcmToken` es uno por
+usuario, y quien entre último se lleva los avisos (ver la sección del Redmi más abajo).
+
 1. **Subir `versionCode` a 21** en `app/build.gradle.kts`. Hoy sigue en 20 para que el árbol
    no finja ser lo que está publicado. Decidir el `versionName`: si entra el selector de
    idioma, ya **no** es solo un cambio invisible como fue el 19 → 20.
@@ -601,7 +620,7 @@ falta arrancar el emulador e iniciar sesión a mano, y no compensaba con la v20 
    Y comprobar que **no** sale nada raro con solo abrir y navegar la app: si en un paseo
    normal por las pantallas ya se registran no fatales, o el filtro está mal o hay un fallo
    de verdad que llevaba tiempo escondido.
-7. **Mirar el edge-to-edge en el emulador API 36.** No es un pendiente de código (ver la
+7. **Mirar el edge-to-edge en el emulador `FoodRanker_Test` (API 35).** No es un pendiente de código (ver la
    sección de edge-to-edge arriba: las APIs obsoletas son de las dependencias), pero con
    `targetSdk 36` el modo ya está forzado en producción y nunca se ha visto en una pantalla
    de Android 15/16. Que no haya texto debajo de la barra de estado ni de la de navegación.
