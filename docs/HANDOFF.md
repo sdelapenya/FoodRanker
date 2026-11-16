@@ -39,8 +39,32 @@ problemas ya conocidos —que se repiten mucho, o que vuelven— pero no la que 
 aparecido uno que no existía". Por eso el fallo de `MainActivity.kt:197` vivió desde la 1.2
 hasta que alguien entró a mirar por casualidad.
 
-⏳ Queda la pestaña **"Alertas de velocidad"**, que es otra pantalla dentro de la misma
-sección.
+#### La pestaña "Alertas de velocidad" (misma sección, otra pantalla)
+
+También configurada: **Problemas irrecuperables** y **Problemas de ANR**, las dos con
+correo y consola.
+
+El umbral venía de fábrica en **25 usuarios `y` 1 %**, y es un **"y"**: con 13 usuarios en
+total, que 25 se vieran afectados era aritméticamente imposible. **No habrían saltado
+nunca.** Es el valor por defecto de Google, pensado para apps con cientos de miles de
+instalaciones.
+
+Puestas en **10**, que es el suelo que impone Firebase ("La cantidad mínima de usuarios
+debe ser de 10"; rechaza 3).
+
+✅ **No hay que volver a tocarlo al crecer** — el porcentaje escala solo:
+
+| Usuarios | Hace falta | En la práctica |
+|---|---|---|
+| 13 | 10 **y** 1 % | 10 personas, el 77 % |
+| 1.000 | 10 **y** 10 | 10 personas, el 1 % |
+| 100.000 | 10 **y** 1.000 | 1.000 personas |
+
+Con pocos usuarios manda el suelo de 10; pasado el millar manda el porcentaje.
+
+⚠️ Aun así, a 13 usuarios estas dos **casi no van a sonar**: que 10 personas vean el mismo
+fallo ya es una catástrofe. **La que hace el trabajo a esta escala es "Nuevos problemas
+irrecuperables"**, de la pestaña básica.
 
 #### 🔇 Lo que las alertas dejaron a la vista: nadie registra los no fatales
 
