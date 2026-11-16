@@ -96,7 +96,13 @@ tabla de App bundles hay una sección **"Versión anterior"** que lista el bundl
 nueva lleva adjunto el bundle viejo. No es así: el de la versión es el que sale arriba, bajo
 "Subir app bundles".
 
-👀 **Qué mirar cuando aprueben la de prueba interna:** que desaparezca sola la declaración
+✅ **La de prueba interna salió al momento**, sin pasar por revisión: *"Activo · Última
+versión: 21 (1.7) · Disponible para testers internos"*, publicada a las 22:03 del mismo día.
+Las versiones de prueba interna no se revisan, así que **no aparecen en "Cambios en
+revisión"** — no hay que esperarlas ahí. Con eso, el bundle 17 deja de ser la versión activa
+de ese canal.
+
+👀 **Qué mirar ahora:** que desaparezca sola la declaración
 de **"Permisos de fotos y vídeos"**. Existía solo porque el único bundle que Play veía
 pidiendo `READ_MEDIA_IMAGES` era el **17 (1.4)**, parado ahí desde el 10 de octubre; el 21
 no lo pide (verificado sobre el AAB). Si no se va sola al cabo de unos días, habrá que
