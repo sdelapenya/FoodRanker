@@ -15,6 +15,115 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 📱 LA v21 PROBADA EN EL REDMI, Y LO QUE APARECIÓ DEBAJO (2026-11-17)
+
+Probada por adb sobre el **Redmi 14C, que lleva Android 16 (SDK 36)** — dato que no estaba
+apuntado y que importa: **el edge-to-edge está forzado en ese móvil**, así que lo que la
+lista de comprobación mandaba mirar en el emulador se ha visto en hardware real.
+
+Actualizada desde Play (canal cerrado): `versionCode=21 versionName=1.7`, **sin cable y sin
+perder la sesión**, como estaba previsto.
+
+#### 🔴 LO IMPORTANTE: falta un índice y el "rango en la ciudad" NO ha funcionado nunca
+
+En un paseo normal por la app, logcat soltó esto **dos veces**:
+
+```
+Firestore: Listen for Query(users where city==Casarrubios Del Monte and xp>495
+order by -xp, -__name__) failed: code=FAILED_PRECONDITION,
+description=The query requires an index.
+```
+
+Es exactamente el escenario que se describió ayer al instrumentar esos `catch`, palabra por
+palabra: *"son las que fallan enteras si falta el índice compuesto, y así no se notaría
+nunca"*. **Pasó al día siguiente.**
+
+Son **dos consultas distintas** en `ProfileViewModel`, y solo una está rota:
+
+| Consulta | Índice que necesita | ¿Declarado? |
+|---|---|---|
+| Rival más cercano (`orderBy xp ASCENDING`) | `(city ASC, xp ASC)` | ✅ sí |
+| **Rango en la ciudad** (`orderBy xp DESCENDING`) | `(city ASC, xp DESC)` | ❌ **no** |
+
+El `order by -xp` del error es descendente: es la del rango. Lleva rota desde que existe, y
+**nadie se iba a enterar**, porque el `catch` devuelve `0` y un 0 se lee como "eres el
+primero de tu ciudad".
+
+**Arreglo preparado en `firestore.indexes.json`**: segundo índice `(city ASC, xp DESC)`.
+⚠️ Desplegar el índice lo arregla **para todas las instalaciones de golpe, sin actualizar la
+app**, que es lo que importa con la v20 todavía en manos de la gente.
+
+💡 Alternativa que NO necesita índice nuevo, por si algún día se quiere simplificar: cambiar
+ese `DESCENDING` por `ASCENDING`. La consulta cuenta usuarios por encima con `limit(200)`, y
+el conteo sale igual en los dos sentidos. Pero eso exige una release; el índice no.
+
+#### ✅ Selector de idioma: las cuatro comprobaciones
+
+1. El diálogo sale, con las tres opciones y "Predeterminado del sistema" marcada.
+2. Al elegir English **la app se recrea en inglés** (perfil entero traducido), y
+   `cmd locale get-app-locales com.app.foodranker` devuelve `[en]`.
+3. El subtítulo de la fila pasa a decir **"English"**.
+4. "System default" devuelve el control al móvil: vuelve a castellano y el framework
+   devuelve `[]`.
+
+Los nombres de idioma se quedan cada uno en su lengua ("Español" / "English"), que es lo
+buscado. Y el reparto instalado confirma el otro acierto: solo hay `base`,
+`split_config.arm64_v8a` y `split_config.xhdpi`, **ningún split de idioma** — por eso están
+los dos idiomas instalados y el selector puede funcionar.
+
+#### ✅ Corrección del nombre de plato: las dos ramas
+
+Sobre "Pulpo a la plancha con mojo verde", y **dejado como estaba al terminar**:
+
+- **Rechazo**: añadiendo " picante" (slug distinto) el campo se pone rojo y sale *"Solo
+  puedes corregir cómo está escrito el nombre. Si es un plato distinto, añádelo como uno
+  nuevo."* No escribe nada.
+- **Aceptación**: cambiando solo la última letra a mayúscula (`verdE`, mismo slug) **guarda**
+  — verificado reabriendo la hoja. Revertido después, también verificado.
+
+#### ✅ Que `recordException` llegue: verificado en el binario, no en la consola
+
+No se puede forzar un no fatal sin romper algo o tocar las reglas de producción, así que se
+verificó por el otro lado, que además es más fuerte: **el mapeo de R8 del AAB instalado**.
+
+`Fallos` aparece como `R8$$REMOVED$$CLASS$$692` — R8 **integró** el método en los **521**
+sitios que lo llaman, no lo eliminó. Y la cadena inline llega entera hasta el fondo:
+
+```
+Fallos.reportar:52                          → descarta CancellationException
+ErrorMapper.esDelEntorno:62 ← reportar:53   → el filtro
+FirebaseCrashlytics.log:251 ← reportar:55   → el breadcrumb
+FirebaseCrashlytics.recordException:213 ← reportar:56
+CrashlyticsCore.logException:331            → el registro real
+```
+
+⚠️ Esto prueba que **el código llega vivo al binario**. Lo que no prueba es la entrega a
+Firebase. Pero con el fallo del índice saltando de verdad, el no fatal "perfil: rango en la
+ciudad" debería aparecer solo en Crashlytics: **mirarlo**, y si está, el camino queda
+cerrado de punta a punta sin haber roto nada.
+
+#### 🟡 Lo que apareció de paso (ninguno bloquea)
+
+**El modo oscuro está a medias, y no es nuevo.** El Redmi está en modo oscuro: las pantallas
+salen claras porque hay **12 sitios con `containerColor = BackgroundLight` clavado**, pero
+los diálogos y las hojas sí siguen el tema y salen oscuros. Resultado: app clara con
+diálogos negros. No lo introduce el selector de idioma — en `ProfileScreen` ya había cinco
+`AlertDialog` con lo mismo. O se soporta el modo oscuro de verdad, o se fuerza el claro;
+ahora mismo no es ninguna de las dos.
+
+**La hoja de editar plato, por debajo de la barra de navegación.** Cuando sale el mensaje de
+error (tres líneas), el contenido baja y los botones del sistema se dibujan **encima** de
+"Guardar". Se arregla desplazando la hoja, así que no bloquea, pero no debería pasar.
+
+**El mensaje de error no se limpia al escribir.** Tras un rechazo, el texto rojo sigue ahí
+mientras corriges el nombre, hasta el siguiente intento.
+
+**Cero crashes** en todo el recorrido (`FATAL EXCEPTION` = 0).
+
+ℹ️ Y de paso, para la próxima vez que haya que conducir el móvil por adb: `KEYCODE_BACK`
+**cierra la hoja entera**, no solo el teclado — se pierde lo escrito. Para ocultar el teclado
+hay que pulsar la tecla ✓ del propio teclado (abajo a la derecha).
+
 ### 📦 LA v21 (1.7) COMPILADA Y VERIFICADA SOBRE EL BINARIO (2026-11-16)
 
 `versionCode 21`, `versionName 1.7`. El salto de nombre (1.6 → 1.7, y no otro invisible como

@@ -148,6 +148,14 @@
         { "fieldPath": "city", "order": "ASCENDING" },
         { "fieldPath": "xp", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "city", "order": "ASCENDING" },
+        { "fieldPath": "xp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
