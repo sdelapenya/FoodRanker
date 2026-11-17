@@ -792,9 +792,19 @@ entera en un cambio de texto.
   y la declaración desaparecería sola. Su texto además afirma que *"se usa la cámara para
   tomar la foto en el momento"*, que nunca fue cierto.
 - **Estado de operador**: tope **1 de febrero de 2027**. Va con la gestoría.
-- **Seguridad de los datos**: el borrado parcial sigue declarado como **No** cuando la app
+- **Seguridad de los datos**: ⚠️ **lo que decía aquí abajo era falso y costó una hora de
+  trabajo imaginario.** NO hace falta escribir ninguna página: `delete-account.html` ya
+  documenta el borrado parcial desde el 2026-11-02, con los pasos de cada caso y una sección
+  "Qué no se puede borrar por separado" para las valoraciones. Las seis páginas legales
+  responden 200 (comprobado el 2026-11-17). **Lo único que falta es el paso 3 de aquella
+  tanda, que nunca se dio**: Play Console → Política → Contenido de la aplicación →
+  **Seguridad de los datos → paso 2** → la pregunta del borrado parcial de **No** a **Sí**,
+  con `https://sdelapenya.github.io/FoodRanker/delete-account.html`. Es un cambio de
+  formulario, no de código, y entra en la cola de publicación como uno más.
+- ~~**Seguridad de los datos**: el borrado parcial sigue declarado como **No** cuando la app
   sí lo permite. Declara menos control del usuario del que hay, que no es lo que hunde una
-  revisión, pero es falso. Arreglarlo exige una segunda URL que explique el borrado parcial.
+  revisión, pero es falso. Arreglarlo exige una segunda URL que explique el borrado
+  parcial.~~ ← falso, ver arriba.
 
 ### 🟢 LA CUENTA DE REVISIÓN SE BLOQUEÓ SOLA — RESUELTA CON UNA NUEVA (2026-11-15)
 
