@@ -96,6 +96,11 @@ tabla de App bundles hay una sección **"Versión anterior"** que lista el bundl
 nueva lleva adjunto el bundle viejo. No es así: el de la versión es el que sale arriba, bajo
 "Subir app bundles".
 
+✅ **Aprobada y activa en los dos canales** (comprobado el 2026-11-17): *Prueba cerrada -
+Alpha · Versión: 21 (1.7) · Última actualización: 16 nov 2026*, con el check verde. **El
+Redmi ya puede actualizarse desde Play**, sin cable y sin perder la sesión — con eso quedan
+desbloqueadas las tres pruebas de pantalla que faltan.
+
 ✅ **La de prueba interna salió al momento**, sin pasar por revisión: *"Activo · Última
 versión: 21 (1.7) · Disponible para testers internos"*, publicada a las 22:03 del mismo día.
 Las versiones de prueba interna no se revisan, así que **no aparecen en "Cambios en
@@ -774,37 +779,21 @@ conviene mirar la lista desplegada antes de darle: si solo aparece la declaraci�
 la versión de producción todavía no se ha creado y se gastaría una ronda de revisión
 entera en un cambio de texto.
 
-#### Lo que NO bloqueó y queda para después
+#### Lo que NO bloqueo y queda para despues
 
-- **`app-ads.txt`**: el fichero está en `hosting/public/app-ads.txt` **sin desplegar**.
-  Para que sirva hay que (1) desplegar el hosting y (2) **cambiar el "Sitio web" de la
-  ficha a `https://foodranker.web.app`** — el camino que documenta AdMob para sitios que no
-  dejan publicar en la raíz, como el *project site* de GitHub Pages actual. Conviene
-  añadir antes un `index.html` a `hosting/public/`, porque hoy esa raíz sirve `open.html`
-  (*"Ábrelo en FoodRanker"*). ⚠️ El campo **"Política de privacidad"** es otro y **se queda
-  apuntando a github.io**: ahí viven las páginas que genera `tools/legal/build_pages.py`.
-- **Permiso `CAMERA`**: sigue en el binario y está **muerto** (cero usos en el código,
-  comprobado el 2026-11-15). Quitarlo en la v21, junto con `debugSymbolLevel`, que ya está
-  puesto en `app/build.gradle.kts` y entra en la próxima compilación.
-- **Declaración de "Permisos de fotos y vídeos"**: sigue existiendo porque el único bundle
-  que Play ve pidiendo `READ_MEDIA_IMAGES` es la **17 (1.4), en Prueba interna**, del 10 de
-  octubre. Ni la 18, ni la 19, ni la 20. Subir la 20 también a prueba interna la retiraría
-  y la declaración desaparecería sola. Su texto además afirma que *"se usa la cámara para
-  tomar la foto en el momento"*, que nunca fue cierto.
-- **Estado de operador**: tope **1 de febrero de 2027**. Va con la gestoría.
-- **Seguridad de los datos**: ⚠️ **lo que decía aquí abajo era falso y costó una hora de
-  trabajo imaginario.** NO hace falta escribir ninguna página: `delete-account.html` ya
-  documenta el borrado parcial desde el 2026-11-02, con los pasos de cada caso y una sección
-  "Qué no se puede borrar por separado" para las valoraciones. Las seis páginas legales
-  responden 200 (comprobado el 2026-11-17). **Lo único que falta es el paso 3 de aquella
-  tanda, que nunca se dio**: Play Console → Política → Contenido de la aplicación →
-  **Seguridad de los datos → paso 2** → la pregunta del borrado parcial de **No** a **Sí**,
-  con `https://sdelapenya.github.io/FoodRanker/delete-account.html`. Es un cambio de
-  formulario, no de código, y entra en la cola de publicación como uno más.
-- ~~**Seguridad de los datos**: el borrado parcial sigue declarado como **No** cuando la app
-  sí lo permite. Declara menos control del usuario del que hay, que no es lo que hunde una
-  revisión, pero es falso. Arreglarlo exige una segunda URL que explique el borrado
-  parcial.~~ ← falso, ver arriba.
+⚠️ **ESTA LISTA ERA DE LA ERA v20 Y ESTABA CASI TODA OBSOLETA.** Revisada entera el
+2026-11-17 **mirando la consola, no la memoria**: de los cinco puntos, cuatro ya estaban
+resueltos y uno de ellos ni siquiera hizo falta hacerlo. Lección para la próxima: antes de
+ponerse a trabajar en algo de esta lista, **abrir Play Console y comprobar que sigue
+pendiente de verdad**. Casi cuesta una hora de trabajo imaginario.
+
+| Pendiente de entonces | Estado real (2026-11-17) |
+|---|---|
+| `app-ads.txt` sin desplegar, y la ficha apuntando a github.io | ✅ **Hecho el 2026-11-16.** Desplegado, `index.html` creado, y el "Sitio web" de la ficha cambiado a `foodranker.web.app` — verificado en el HTML público de Play. Solo falta que AdMob vuelva a rastrear |
+| Permiso `CAMERA` muerto en el binario | ✅ **Fuera en la v21**, verificado sobre el AAB (0 apariciones de `CAMERA` y de `hardware.camera`) |
+| Declaración de "Permisos de fotos y vídeos" por culpa del bundle 17 | ✅ **La mitad que importaba.** Subida la v21 a prueba interna, Play ya no detecta `READ_MEDIA_IMAGES` en ningún bundle activo. Queda el texto archivado, que **no se puede editar**: esa página no tiene botón de Guardar |
+| Seguridad de los datos: borrado parcial declarado como "No" | ✅ **Ya estaba en "Sí"** con `delete-account.html` como URL. Ni hacía falta escribir una página nueva (la que hay ya documenta el borrado parcial desde el 2026-11-02) ni tocar el formulario |
+| Estado de operador | ⏳ **El único que sigue vivo.** Tope **1 de febrero de 2027**, va con la gestoría junto a la cuenta de comercio. El banner ya sale fijo arriba en Play Console |
 
 ### 🟢 LA CUENTA DE REVISIÓN SE BLOQUEÓ SOLA — RESUELTA CON UNA NUEVA (2026-11-15)
 
