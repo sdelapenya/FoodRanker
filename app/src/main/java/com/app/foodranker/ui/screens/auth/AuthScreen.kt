@@ -183,8 +183,14 @@ fun AuthScreen(
                         .scale(btnScale),
                     shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
+                        // Fijos los dos, y tienen que ir juntos: esta pantalla no sigue el
+                        // tema (su fondo es el degradado naranja, igual en claro y en
+                        // oscuro) y el boton es blanco siempre. Poner aqui el color de
+                        // texto del tema dejaba el "Continue with Google" en gris claro
+                        // sobre blanco, ilegible — visto en el emulador en oscuro al
+                        // convertir la app a FoodTheme.colors (2026-11-17).
                         containerColor = Color.White,
-                        contentColor = TextPrimary
+                        contentColor = TextPrimary // tema-fijo: boton blanco sobre degradado
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 12.dp),
                     enabled = !isLoading

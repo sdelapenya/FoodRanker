@@ -39,15 +39,15 @@ fun FollowListScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringResource(uiState.titleRes), fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(stringResource(uiState.titleRes), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary)
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = FoodTheme.colors.textPrimary)
                     }
                 },
                 actions = {
@@ -55,7 +55,7 @@ fun FollowListScreen(
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh), tint = OrangePrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { padding ->
@@ -72,7 +72,7 @@ fun FollowListScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("⚠️", fontSize = 44.sp)
                     Spacer(Modifier.height(12.dp))
-                    Text(uiState.error ?: "", color = TextSecondary, textAlign = TextAlign.Center)
+                    Text(uiState.error ?: "", color = FoodTheme.colors.textSecondary, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)) {
                         Text(stringResource(R.string.action_retry))
@@ -93,14 +93,14 @@ fun FollowListScreen(
                             else R.string.fl_no_following
                         ),
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
+                        color = FoodTheme.colors.textPrimary,
                         textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
                         stringResource(R.string.fl_will_appear),
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = FoodTheme.colors.textSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -128,7 +128,7 @@ private fun FollowRowItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
-        color = SurfaceWhite,
+        color = FoodTheme.colors.surface,
         shadowElevation = 1.dp,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
     ) {
@@ -140,7 +140,7 @@ private fun FollowRowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(44.dp).clip(CircleShape).background(DividerColor),
+                modifier = Modifier.size(44.dp).clip(CircleShape).background(FoodTheme.colors.divider),
                 contentAlignment = Alignment.Center
             ) {
                 if (row.photoUrl.isNotEmpty()) {
@@ -151,7 +151,7 @@ private fun FollowRowItem(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(Icons.Default.Person, contentDescription = null, tint = TextSecondary)
+                    Icon(Icons.Default.Person, contentDescription = null, tint = FoodTheme.colors.textSecondary)
                 }
             }
             Spacer(Modifier.width(12.dp))
@@ -159,7 +159,7 @@ private fun FollowRowItem(
                 row.name,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp,
-                color = TextPrimary,
+                color = FoodTheme.colors.textPrimary,
                 modifier = Modifier.weight(1f)
             )
             Text(stringResource(R.string.fl_view_profile), fontSize = 12.sp, color = OrangePrimary, fontWeight = FontWeight.Medium)

@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -153,7 +155,7 @@ fun ProfileScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
                 title = { },
@@ -253,8 +255,8 @@ fun ProfileScreen(
                                 onClick = { viewModel.toggleFollow(userId) },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (uiState.isFollowing) DividerColor else OrangePrimary,
-                                    contentColor = if (uiState.isFollowing) TextPrimary else Color.White
+                                    containerColor = if (uiState.isFollowing) FoodTheme.colors.divider else OrangePrimary,
+                                    contentColor = if (uiState.isFollowing) FoodTheme.colors.textPrimary else Color.White
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
@@ -274,7 +276,7 @@ fun ProfileScreen(
                                         .padding(8.dp)
                                 ) {
                                     Text(uiState.followerCount.formatCompact(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = OrangePrimary)
-                                    Text(stringResource(R.string.prof_followers), fontSize = 11.sp, color = TextSecondary)
+                                    Text(stringResource(R.string.prof_followers), fontSize = 11.sp, color = FoodTheme.colors.textSecondary)
                                 }
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -283,7 +285,7 @@ fun ProfileScreen(
                                         .padding(8.dp)
                                 ) {
                                     Text(uiState.followingCount.formatCompact(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = OrangePrimary)
-                                    Text(stringResource(R.string.prof_following), fontSize = 11.sp, color = TextSecondary)
+                                    Text(stringResource(R.string.prof_following), fontSize = 11.sp, color = FoodTheme.colors.textSecondary)
                                 }
                             }
                         }
@@ -337,7 +339,7 @@ fun ProfileScreen(
                                 com.app.foodranker.viewmodel.ProfileTab.SAVED -> 1
                                 com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS -> 2
                             },
-                            containerColor = SurfaceWhite,
+                            containerColor = FoodTheme.colors.surface,
                             contentColor = OrangePrimary,
                             indicator = { tabPositions ->
                                 TabRowDefaults.SecondaryIndicator(
@@ -356,19 +358,19 @@ fun ProfileScreen(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) },
                                 text = { Text(stringResource(R.string.prof_tab_my_plates, uiState.plates.size), fontWeight = FontWeight.Medium,
-                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) OrangePrimary else TextSecondary) }
+                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) OrangePrimary else FoodTheme.colors.textSecondary) }
                             )
                             Tab(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.SAVED) },
                                 text = { Text(stringResource(R.string.prof_tab_saved, uiState.savedPlates.size), fontWeight = FontWeight.Medium,
-                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED) OrangePrimary else TextSecondary) }
+                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED) OrangePrimary else FoodTheme.colors.textSecondary) }
                             )
                             Tab(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) },
                                 text = { Text(stringResource(R.string.prof_tab_lists, uiState.collections.size), fontWeight = FontWeight.Medium,
-                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) OrangePrimary else TextSecondary) }
+                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) OrangePrimary else FoodTheme.colors.textSecondary) }
                             )
                         }
                     } else {
@@ -496,6 +498,7 @@ fun ProfileScreen(
             EditPlateSheet(
                 plate = plate,
                 nameError = renameError,
+                onNameEdited = { if (renameError != null) renameError = null },
                 onDismiss = { showEditPlateId = null; renameError = null },
                 onSave = { nombre, desc ->
                     viewModel.updatePlateDescription(plateId, desc)
@@ -591,10 +594,10 @@ private fun ProfileSectionTitle(
                 tint = OrangePrimary.copy(alpha = 0.92f),
                 modifier = Modifier.size(24.dp)
             )
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = TextPrimary)
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = FoodTheme.colors.textPrimary)
         }
         Spacer(Modifier.height(4.dp))
-        Text(subtitle, fontSize = 12.sp, color = TextSecondary, lineHeight = 16.sp)
+        Text(subtitle, fontSize = 12.sp, color = FoodTheme.colors.textSecondary, lineHeight = 16.sp)
     }
 }
 
@@ -614,7 +617,7 @@ private fun ProfileSocialSummary(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+            colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.cardRaised)
         ) {
             Row(
@@ -629,7 +632,7 @@ private fun ProfileSocialSummary(
                     label = stringResource(R.string.prof_followers),
                     onClick = onFollowersClick
                 )
-                Box(modifier = Modifier.width(1.dp).height(36.dp).background(DividerColor))
+                Box(modifier = Modifier.width(1.dp).height(36.dp).background(FoodTheme.colors.divider))
                 ProfileSocialChip(
                     value = followingCount.formatCompact(),
                     label = stringResource(R.string.prof_following),
@@ -649,7 +652,7 @@ private fun ProfileSocialChip(value: String, label: String, onClick: () -> Unit)
             .padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = OrangePrimary)
-        Text(label, fontSize = 12.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+        Text(label, fontSize = 12.sp, color = FoodTheme.colors.textSecondary, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -659,7 +662,7 @@ private fun ProfileMenuRow(
     title: String,
     subtitle: String? = null,
     iconTint: Color,
-    arrowTint: Color = TextSecondary,
+    arrowTint: Color = FoodTheme.colors.textSecondary,
     backgroundColor: Color = OrangePrimary.copy(alpha = 0.06f),
     onClick: () -> Unit
 ) {
@@ -687,9 +690,9 @@ private fun ProfileMenuRow(
                     modifier = Modifier.size(22.dp)
                 )
                 Column {
-                    Text(title, fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(title, fontSize = 14.sp, color = FoodTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold)
                     if (subtitle != null) {
-                        Text(subtitle, fontSize = 11.sp, color = TextSecondary)
+                        Text(subtitle, fontSize = 11.sp, color = FoodTheme.colors.textSecondary)
                     }
                 }
             }
@@ -717,7 +720,7 @@ private fun ProfileAccountDangerZone(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.card)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -725,11 +728,11 @@ private fun ProfileAccountDangerZone(
                 stringResource(R.string.prof_account),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                color = TextSecondary,
+                color = FoodTheme.colors.textSecondary,
                 modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp)
             )
 
-            HorizontalDivider(color = DividerColor.copy(alpha = 0.85f))
+            HorizontalDivider(color = FoodTheme.colors.divider.copy(alpha = 0.85f))
 
             if (!isPremium) {
                 // Mientras la suscripcion no este a la venta, la fila no puede decir "Hazte
@@ -925,7 +928,7 @@ private fun ProfileAccountDangerZone(
                 onClick = onTerms
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerColor.copy(alpha = 0.85f))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = FoodTheme.colors.divider.copy(alpha = 0.85f))
 
             Surface(
                 onClick = { expanded = !expanded },
@@ -945,18 +948,18 @@ private fun ProfileAccountDangerZone(
                             stringResource(R.string.prof_delete_account),
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 15.sp,
-                            color = TextPrimary
+                            color = FoodTheme.colors.textPrimary
                         )
                         Text(
                             stringResource(R.string.prof_delete_warn),
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = FoodTheme.colors.textSecondary
                         )
                     }
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = null,
-                        tint = TextSecondary
+                        tint = FoodTheme.colors.textSecondary
                     )
                 }
             }
@@ -990,7 +993,7 @@ private fun ProfileAccountDangerZone(
                     Text(
                         stringResource(R.string.prof_delete_detail),
                         fontSize = 11.sp,
-                        color = TextSecondary,
+                        color = FoodTheme.colors.textSecondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 10.dp)
                     )
@@ -1055,7 +1058,7 @@ private fun ProfileHero(
                     modifier = Modifier
                         .size(100.dp)
                         .clip(CircleShape)
-                        .background(DividerColor),
+                        .background(FoodTheme.colors.divider),
                     contentAlignment = Alignment.Center
                 ) {
                     if (photoUrl.isNotEmpty()) {
@@ -1066,7 +1069,7 @@ private fun ProfileHero(
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
                     } else {
-                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(52.dp), tint = TextSecondary)
+                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(52.dp), tint = FoodTheme.colors.textSecondary)
                     }
                 }
                 if (isPremium) {
@@ -1118,7 +1121,7 @@ private fun ProfileStats2x2(
     Card(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.cardRaised)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -1131,14 +1134,14 @@ private fun ProfileStats2x2(
                 VerticalDivider()
                 StatItem(likesReceived.formatCompact(), stringResource(R.string.prof_likes_received), modifier = Modifier.weight(1f))
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerColor)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = FoodTheme.colors.divider)
             Row(modifier = Modifier.fillMaxWidth()) {
                 StatItem(likesGiven.formatCompact(), stringResource(R.string.prof_likes_given), modifier = Modifier.weight(1f))
                 VerticalDivider()
                 StatItem(ratingsGiven.formatCompact(), stringResource(R.string.prof_ratings_given), modifier = Modifier.weight(1f))
             }
             if (cityRank > 0 && city.isNotEmpty()) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerColor)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = FoodTheme.colors.divider)
                 StatItem(
                     value = stringResource(R.string.prof_city_rank_value, cityRank, city),
                     label = stringResource(R.string.prof_city_rank),
@@ -1155,7 +1158,7 @@ private fun VerticalDivider() {
         modifier = Modifier
             .width(1.dp)
             .height(40.dp)
-            .background(DividerColor)
+            .background(FoodTheme.colors.divider)
     )
 }
 
@@ -1164,7 +1167,7 @@ fun StatItem(value: String, label: String, modifier: Modifier = Modifier) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Text(text = value, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = OrangePrimary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(2.dp))
-        Text(text = label, fontSize = 11.sp, color = TextSecondary, textAlign = TextAlign.Center)
+        Text(text = label, fontSize = 11.sp, color = FoodTheme.colors.textSecondary, textAlign = TextAlign.Center)
     }
 }
 
@@ -1197,7 +1200,7 @@ private fun EditProfileSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Icon(Icons.Default.Edit, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(26.dp))
-                Text(stringResource(R.string.prof_edit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(stringResource(R.string.prof_edit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary)
             }
 
             OutlinedTextField(
@@ -1209,7 +1212,7 @@ private fun EditProfileSheet(
                 singleLine = false,
                 maxLines = 3,
                 shape = MaterialTheme.shapes.small,
-                supportingText = { Text("${bio.length}/${com.app.foodranker.utils.InputLimits.BIO}", color = TextSecondary) },
+                supportingText = { Text("${bio.length}/${com.app.foodranker.utils.InputLimits.BIO}", color = FoodTheme.colors.textSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = OrangePrimary,
                     focusedLabelColor = OrangePrimary
@@ -1225,7 +1228,7 @@ private fun EditProfileSheet(
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
                 leadingIcon = {
-                    Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = TextSecondary)
+                    Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = FoodTheme.colors.textSecondary)
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = OrangePrimary,
@@ -1246,7 +1249,7 @@ private fun EditProfileSheet(
                 } else null,
                 shape = MaterialTheme.shapes.small,
                 leadingIcon = {
-                    Icon(Icons.Outlined.Link, contentDescription = null, tint = TextSecondary)
+                    Icon(Icons.Outlined.Link, contentDescription = null, tint = FoodTheme.colors.textSecondary)
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = OrangePrimary,
@@ -1292,7 +1295,7 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.cardRaised)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1304,9 +1307,9 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(level.emoji, fontSize = 28.sp)
                     Column {
-                        Text(stringResource(R.string.prof_level_xp), fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
-                        Text(stringResource(level.nameRes), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-                        Text(stringResource(R.string.prof_xp, xp), fontSize = 12.sp, color = TextSecondary)
+                        Text(stringResource(R.string.prof_level_xp), fontSize = 11.sp, color = FoodTheme.colors.textSecondary, fontWeight = FontWeight.Medium)
+                        Text(stringResource(level.nameRes), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FoodTheme.colors.textPrimary)
+                        Text(stringResource(R.string.prof_xp, xp), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
                     }
                 }
                 if (level.number < 6) {
@@ -1319,11 +1322,11 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                 color = OrangePrimary,
-                trackColor = DividerColor
+                trackColor = FoodTheme.colors.divider
             )
 
             if (badges.isNotEmpty()) {
-                Text(stringResource(R.string.prof_badges_hint), fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.prof_badges_hint), fontSize = 13.sp, color = FoodTheme.colors.textSecondary, fontWeight = FontWeight.Medium)
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
@@ -1397,7 +1400,7 @@ private fun CollectionsSection(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.prof_my_lists), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+            Text(stringResource(R.string.prof_my_lists), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FoodTheme.colors.textPrimary)
             TextButton(onClick = { showCreate = true }) {
                 Text(stringResource(R.string.prof_new_list), color = OrangePrimary, fontWeight = FontWeight.Medium)
             }
@@ -1418,7 +1421,7 @@ private fun CollectionsSection(
                         onCollectionTap(col.plateIds)
                     },
                     shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                    colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(modifier = Modifier.padding(14.dp).fillMaxWidth(),
@@ -1428,18 +1431,18 @@ private fun CollectionsSection(
                             Text(col.emoji, fontSize = 24.sp, modifier = Modifier.padding(8.dp))
                         }
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(col.name, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 12.sp, color = TextSecondary)
+                            Text(col.name, fontWeight = FontWeight.SemiBold, color = FoodTheme.colors.textPrimary)
+                            Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
                         }
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
-                            tint = TextSecondary,
+                            tint = FoodTheme.colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                         IconButton(onClick = { collectionToDelete = col }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete),
-                                tint = TextSecondary, modifier = Modifier.size(20.dp))
+                                tint = FoodTheme.colors.textSecondary, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -1467,9 +1470,9 @@ private fun CollectionsSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(col.emoji, fontSize = 22.sp)
-                    Text(col.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                    Text(col.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary)
                     Spacer(Modifier.weight(1f))
-                    Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 13.sp, color = TextSecondary)
+                    Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 13.sp, color = FoodTheme.colors.textSecondary)
                 }
 
                 if (isLoadingCollectionPlates) {
@@ -1480,7 +1483,7 @@ private fun CollectionsSection(
                     Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                         Text(
                             if (col.plateIds.isEmpty()) stringResource(R.string.prof_list_empty) else stringResource(R.string.prof_plates_load_fail),
-                            color = TextSecondary, textAlign = TextAlign.Center
+                            color = FoodTheme.colors.textSecondary, textAlign = TextAlign.Center
                         )
                     }
                 } else {
@@ -1573,12 +1576,12 @@ private fun CollectionsSection(
         ModalBottomSheet(onDismissRequest = { showCreate = false; newName = "" }) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(stringResource(R.string.prof_new_list_title), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text(stringResource(R.string.prof_new_list_title), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     emojiOptions.forEach { emoji ->
                         Surface(modifier = Modifier.size(36.dp).clickable { newEmoji = emoji },
                             shape = MaterialTheme.shapes.small,
-                            color = if (newEmoji == emoji) OrangePrimary.copy(alpha = 0.15f) else SurfaceMuted) {
+                            color = if (newEmoji == emoji) OrangePrimary.copy(alpha = 0.15f) else FoodTheme.colors.surfaceMuted) {
                             Box(contentAlignment = Alignment.Center) { Text(emoji) }
                         }
                     }
@@ -1607,7 +1610,14 @@ private fun EditPlateSheet(
     onSave: (String, String) -> Unit,
     onDelete: () -> Unit,
     /** Id de texto del error del nombre, o null. Lo decide el servidor, no esta hoja. */
-    nameError: Int? = null
+    nameError: Int? = null,
+    /**
+     * Avisa de que el usuario ha tocado el nombre, para que quien guarda [nameError] lo
+     * borre. El error lo decide el servidor y vive fuera de esta hoja, asi que la hoja no
+     * puede limpiarlo ella sola: sin esto el texto rojo se queda puesto mientras corriges,
+     * contradiciendo lo que estas escribiendo hasta que vuelves a darle a guardar.
+     */
+    onNameEdited: () -> Unit = {}
 ) {
     val maxLen = com.app.foodranker.utils.InputLimits.PLATE_DESCRIPTION
     val maxLenNombre = com.app.foodranker.utils.InputLimits.PLATE_NAME
@@ -1631,14 +1641,31 @@ private fun EditPlateSheet(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) {
-                    Text(stringResource(R.string.action_cancel), color = TextSecondary)
+                    Text(stringResource(R.string.action_cancel), color = FoodTheme.colors.textSecondary)
                 }
             }
         )
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        // El alto de esta hoja no es fijo: el nombre del plato ocupa hasta dos lineas, la
+        // descripcion hasta cuatro, y el error del nombre se va a tres cuando sale el de
+        // "solo cosmetico". Con el alto maximo, el boton de guardar y el de borrar se
+        // metian DEBAJO de la barra de navegacion y no habia forma de llegar a ellos
+        // (visto en el Redmi, 2026-11-16). Por eso:
+        //  - verticalScroll, para que el contenido que no cabe se pueda subir;
+        //  - navigationBarsPadding, porque con enableEdgeToEdge() la hoja se dibuja por
+        //    debajo de la barra y el padding de 32.dp era un numero inventado que no se
+        //    corresponde con ninguna barra real;
+        //  - imePadding, porque son dos campos de texto: sin el, el teclado tapa
+        //    justamente el boton de guardar.
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(
@@ -1651,7 +1678,7 @@ private fun EditPlateSheet(
                     text = stringResource(R.string.prof_edit_plate, plate.name),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = FoodTheme.colors.textPrimary,
                     maxLines = 2
                 )
             }
@@ -1661,7 +1688,12 @@ private fun EditPlateSheet(
             // es peor. El servidor vuelve a comprobarlo de todas formas (renamePlate).
             OutlinedTextField(
                 value = name,
-                onValueChange = { if (it.length <= maxLenNombre) name = it },
+                onValueChange = {
+                    if (it.length <= maxLenNombre) {
+                        name = it
+                        onNameEdited()
+                    }
+                },
                 label = { Text(stringResource(R.string.prof_plate_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -1670,7 +1702,7 @@ private fun EditPlateSheet(
                 supportingText = {
                     Text(
                         stringResource(nameError ?: R.string.prof_plate_name_help),
-                        color = if (nameError != null) ErrorRed else TextSecondary,
+                        color = if (nameError != null) ErrorRed else FoodTheme.colors.textSecondary,
                         fontSize = 11.sp
                     )
                 },
@@ -1684,7 +1716,7 @@ private fun EditPlateSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = false, maxLines = 4,
                 shape = MaterialTheme.shapes.small,
-                supportingText = { Text("${description.length}/$maxLen", color = TextSecondary, fontSize = 11.sp) },
+                supportingText = { Text("${description.length}/$maxLen", color = FoodTheme.colors.textSecondary, fontSize = 11.sp) },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangePrimary, focusedLabelColor = OrangePrimary)
             )
             Button(
@@ -1728,7 +1760,7 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
             onLongClickLabel = if (showEditButton) stringResource(R.string.prof_edit_or_delete) else null
         ),
         shape = MaterialTheme.shapes.small,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.card)
     ) {
         Column {
@@ -1782,8 +1814,8 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
                 }
             }
             Column(modifier = Modifier.padding(8.dp)) {
-                Text(plate.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary, maxLines = 1)
-                Text("${plate.city}, ${plate.country}", fontSize = 11.sp, color = TextSecondary, maxLines = 1)
+                Text(plate.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FoodTheme.colors.textPrimary, maxLines = 1)
+                Text("${plate.city}, ${plate.country}", fontSize = 11.sp, color = FoodTheme.colors.textSecondary, maxLines = 1)
                 if (plate.likes > 0) {
                     Text("❤️ ${plate.likes.formatCompact()}", fontSize = 11.sp, color = OrangePrimary)
                 }

@@ -8,4 +8,17 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="notification_color">#FFFF8C42</color>
+
+    <!-- Estos dos los pinta el SISTEMA, no Compose, asi que no pueden salir de
+         FoodRankerColorTokens: el fondo del splash se dibuja antes de que exista
+         ninguna Composable, y windowBackground es lo que se ve en el hueco entre que
+         la ventana aparece y la primera composicion se pinta.
+
+         Por eso tienen su gemelo en values-night/: hasta el 2026-11-17 el splash era
+         #FFFFFF fijo y en modo oscuro la app arrancaba con un fogonazo blanco a pantalla
+         completa antes de dibujarse en oscuro. Si se cambian los de BackgroundLight /
+         BackgroundDark en Color.kt, hay que cambiarlos aqui tambien: son los mismos
+         valores escritos dos veces porque viven en dos mundos distintos. -->
+    <color name="splash_background">#FFFFFF</color>
+    <color name="window_background">#F8F9FA</color>
 </resources>

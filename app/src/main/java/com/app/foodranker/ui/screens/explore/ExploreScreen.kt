@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,23 +59,23 @@ fun ExploreScreen(
     var isGridView  by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             Column(
                 modifier = Modifier
-                    .background(SurfaceWhite)
+                    .background(FoodTheme.colors.surface)
                     .padding(bottom = 8.dp)
             ) {
                 TopAppBar(
                     title = {
-                        Text(stringResource(R.string.ex_title), fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(stringResource(R.string.ex_title), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary)
                     },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.action_back),
-                                tint = TextPrimary
+                                tint = FoodTheme.colors.textPrimary
                             )
                         }
                     },
@@ -83,7 +84,7 @@ fun ExploreScreen(
                             Icon(
                                 if (isGridView) Icons.Default.ViewList else Icons.Default.GridView,
                                 contentDescription = stringResource(R.string.ex_toggle_view),
-                                tint = TextPrimary
+                                tint = FoodTheme.colors.textPrimary
                             )
                         }
                         Box {
@@ -91,7 +92,7 @@ fun ExploreScreen(
                                 Icon(
                                     Icons.Default.Sort,
                                     contentDescription = stringResource(R.string.ex_sort),
-                                    tint = TextPrimary
+                                    tint = FoodTheme.colors.textPrimary
                                 )
                             }
                             DropdownMenu(
@@ -103,7 +104,7 @@ fun ExploreScreen(
                                         text = {
                                             Text(
                                                 stringResource(option.label),
-                                                color = if (uiState.sortBy == option) OrangePrimary else TextPrimary,
+                                                color = if (uiState.sortBy == option) OrangePrimary else FoodTheme.colors.textPrimary,
                                                 fontWeight = if (uiState.sortBy == option) FontWeight.Bold else FontWeight.Normal
                                             )
                                         },
@@ -116,7 +117,7 @@ fun ExploreScreen(
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
                 )
 
                 OutlinedTextField(
@@ -124,7 +125,7 @@ fun ExploreScreen(
                     onValueChange = { viewModel.onQueryChange(it) },
                     placeholder = { Text(stringResource(R.string.ex_search_hint)) },
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary)
+                        Icon(Icons.Default.Search, contentDescription = null, tint = FoodTheme.colors.textSecondary)
                     },
                     trailingIcon = {
                         if (uiState.query.isNotEmpty()) {
@@ -132,7 +133,7 @@ fun ExploreScreen(
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription = stringResource(R.string.ex_clear),
-                                    tint = TextSecondary
+                                    tint = FoodTheme.colors.textSecondary
                                 )
                             }
                         }
@@ -144,7 +145,7 @@ fun ExploreScreen(
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = OrangePrimary,
-                        unfocusedBorderColor = DividerColor
+                        unfocusedBorderColor = FoodTheme.colors.divider
                     )
                 )
 
@@ -157,13 +158,13 @@ fun ExploreScreen(
                         selected = uiState.searchMode == com.app.foodranker.viewmodel.SearchMode.PLATES,
                         onClick = { viewModel.setSearchMode(com.app.foodranker.viewmodel.SearchMode.PLATES) },
                         label = { Text(stringResource(R.string.ex_tab_plates)) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = OrangePrimary, selectedLabelColor = SurfaceWhite)
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = OrangePrimary, selectedLabelColor = Color.White)
                     )
                     FilterChip(
                         selected = uiState.searchMode == com.app.foodranker.viewmodel.SearchMode.USERS,
                         onClick = { viewModel.setSearchMode(com.app.foodranker.viewmodel.SearchMode.USERS) },
                         label = { Text(stringResource(R.string.ex_tab_people)) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = OrangePrimary, selectedLabelColor = SurfaceWhite)
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = OrangePrimary, selectedLabelColor = Color.White)
                     )
                 }
 
@@ -180,7 +181,7 @@ fun ExploreScreen(
                         label = { Text(stringResource(R.string.ex_all)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OrangePrimary,
-                            selectedLabelColor = SurfaceWhite
+                            selectedLabelColor = Color.White
                         )
                     )
                     PlateCategory.entries.forEach { category ->
@@ -190,7 +191,7 @@ fun ExploreScreen(
                             label = { Text("${category.emoji} " + category.categoryName()) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = OrangePrimary,
-                                selectedLabelColor = SurfaceWhite
+                                selectedLabelColor = Color.White
                             )
                         )
                     }
@@ -241,7 +242,7 @@ fun ExploreScreen(
                         uiState.results.size,
                         uiState.results.size.formatCompact()
                     ),
-                    fontSize = 14.sp, color = TextSecondary
+                    fontSize = 14.sp, color = FoodTheme.colors.textSecondary
                 )
                 Text(
                     text = stringResource(uiState.sortBy.label),
@@ -435,25 +436,25 @@ private fun UserResultCard(user: com.app.foodranker.viewmodel.UserResult, onClic
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                .background(DividerColor), contentAlignment = Alignment.Center) {
+                .background(FoodTheme.colors.divider), contentAlignment = Alignment.Center) {
                 if (user.photoUrl.isNotEmpty()) {
                     coil.compose.AsyncImage(model = user.photoUrl, contentDescription = null,
                         modifier = Modifier.fillMaxSize().clip(androidx.compose.foundation.shape.CircleShape),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 } else {
                     Text(user.name.firstOrNull()?.uppercase() ?: "?", fontWeight = FontWeight.Bold,
-                        color = TextSecondary, fontSize = 18.sp)
+                        color = FoodTheme.colors.textSecondary, fontSize = 18.sp)
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(user.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
-                if (user.bio.isNotEmpty()) Text(user.bio, fontSize = 13.sp, color = TextSecondary, maxLines = 1,
+                Text(user.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = FoodTheme.colors.textPrimary)
+                if (user.bio.isNotEmpty()) Text(user.bio, fontSize = 13.sp, color = FoodTheme.colors.textSecondary, maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             if (user.xp > 0) {

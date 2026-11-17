@@ -19,16 +19,16 @@ import com.app.foodranker.ui.theme.*
 @Composable
 fun TermsOfServiceScreen(onNavigateBack: () -> Unit) {
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.tos_screen_title), fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = { Text(stringResource(R.string.tos_screen_title), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.legal_back), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.legal_back), tint = FoodTheme.colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { paddingValues ->
@@ -41,7 +41,7 @@ fun TermsOfServiceScreen(onNavigateBack: () -> Unit) {
                 Text(
                     stringResource(R.string.tos_updated),
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = FoodTheme.colors.textSecondary
                 )
             }
             items(

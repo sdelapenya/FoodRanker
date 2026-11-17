@@ -61,7 +61,7 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { paddingValues ->
@@ -135,8 +135,8 @@ fun PremiumScreen(onNavigateBack: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(title, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text(subtitle, fontSize = 13.sp, color = TextSecondary)
+                        Text(title, fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary)
+                        Text(subtitle, fontSize = 13.sp, color = FoodTheme.colors.textSecondary)
                     }
                 }
             }

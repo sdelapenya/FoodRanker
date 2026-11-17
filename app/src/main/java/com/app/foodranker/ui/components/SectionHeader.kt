@@ -16,9 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.app.foodranker.ui.theme.FoodTheme
 import com.app.foodranker.ui.theme.AppSpacing
-import com.app.foodranker.ui.theme.TextPrimary
-import com.app.foodranker.ui.theme.TextSecondary
 
 /**
  * Título de sección consistente (tipografía Material + icono opcional).
@@ -47,9 +46,9 @@ fun SectionHeader(
                     modifier = Modifier.size(22.dp)
                 )
             }
-            Text(text = title, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+            Text(text = title, style = MaterialTheme.typography.titleMedium, color = FoodTheme.colors.textPrimary)
         }
         Spacer(Modifier.height(4.dp))
-        Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = FoodTheme.colors.textSecondary)
     }
 }

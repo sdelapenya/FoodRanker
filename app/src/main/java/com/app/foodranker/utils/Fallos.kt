@@ -31,14 +31,32 @@ import kotlinx.coroutines.CancellationException
  *  - fallos de subida (Cloudinary) → problema nuestro, y el usuario pierde su foto.
  *  - cualquier cosa inesperada → justo lo que no se puede prever desde aquí.
  *
- * ## Por qué no relanza la cancelación
+ * ## Por qué esta función SÍ puede lanzar (y tiene que hacerlo)
  *
- * `catch (e: Exception)` captura también `CancellationException`, así que ahora mismo los
- * ViewModels se tragan las cancelaciones y rompen la concurrencia estructurada. Lo
- * correcto sería relanzarla, pero eso cambia el flujo de control en 78 sitios de una app
- * que ya está en producción y que no se puede probar a mano entera. Aquí solo se evita
- * **reportarla** (una cancelación no es un fallo). Arreglar el tragado va aparte, con su
- * propia prueba; está apuntado en docs/HANDOFF.md.
+ * `catch (e: Exception)` captura también [CancellationException], que no es un fallo: es
+ * la señal de que a la corrutina le han dicho que pare. Tragársela rompe la concurrencia
+ * estructurada — el `cancel()` deja de significar nada y el `catch` sigue ejecutando el
+ * cuerpo, así que un ViewModel que se está destruyendo todavía escribe su `_uiState`, o
+ * pinta un error al usuario por una carga que él mismo canceló al salir de la pantalla.
+ *
+ * Por eso [reportar] **relanza la cancelación** en vez de simplemente no reportarla. Que
+ * una función con este nombre lance es poco intuitivo, y va aquí a propósito: es el único
+ * punto por el que pasan los 68 `catch` de la app, y arreglarlo aquí los arregla todos.
+ * La alternativa era un `catch (e: CancellationException) { throw e }` repetido 68 veces,
+ * que es justo la clase de línea que alguien olvida al añadir el sitio 69.
+ *
+ * Esto funciona porque en los 68 sitios [reportar] es la **primera** sentencia del
+ * `catch`: lo que se salta al relanzar es precisamente lo que no se debe ejecutar cuando
+ * ya no hay a quién enseñárselo. Y relanzar dentro de una corrutina no es un fallo: es el
+ * camino normal de la cancelación, la maquinaria lo recoge y no revienta la app.
+ *
+ * ⚠️ Dos cosas que hay que mantener para que siga siendo seguro:
+ *  - **Que siga siendo la primera sentencia del `catch`.** Si se llama al final, lo de
+ *    arriba ya se ha ejecutado y el relanzado no arregla nada.
+ *  - **Nada de `withTimeout`.** `TimeoutCancellationException` **es** una
+ *    [CancellationException], así que un `catch` que pretenda enseñar "se ha agotado el
+ *    tiempo" dejaría de funcionar. Hoy no hay ni uno en la app (comprobado); si se añade,
+ *    ese `catch` tiene que capturar el timeout antes de llamar aquí.
  */
 object Fallos {
 
@@ -47,9 +65,12 @@ object Fallos {
      *   ("cargar perfil", "borrar colección"). Va como breadcrumb del informe: Crashlytics
      *   agrupa los no fatales por traza, no por este texto, así que sirve para leer el
      *   informe, no para separarlos.
+     * @throws CancellationException si [e] lo es, para no romper la concurrencia
+     *   estructurada. Ver la nota de la clase: es intencionado.
      */
     fun reportar(e: Throwable, donde: String) {
-        if (e is CancellationException) return
+        // No es "no reportar la cancelación", es "no tragársela". Ver el KDoc de arriba.
+        if (e is CancellationException) throw e
         if (e is Exception && ErrorMapper.esDelEntorno(e)) return
         FirebaseCrashlytics.getInstance().apply {
             log(donde)

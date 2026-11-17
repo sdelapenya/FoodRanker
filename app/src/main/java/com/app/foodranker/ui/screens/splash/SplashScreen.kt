@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.foodranker.ui.components.FoodRankerLogo
+import com.app.foodranker.ui.theme.FoodTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -47,14 +48,21 @@ fun SplashScreen(
         if (awaitAuthReady()) onNavigateToHome() else onNavigateToAuth()
     }
 
+    // El degradado tiene dos versiones porque esta pantalla es lo PRIMERO que se ve. El
+    // fondo del splash del sistema (values-night/colors.xml) ya es oscuro; si este se
+    // quedara claro, quien use el movil en oscuro vería el arranque negro, un fogonazo
+    // blanco y otra vez oscuro al entrar en la app. Son los mismos tonos calidos, uno
+    // subiendo desde el blanco y el otro desde el negro.
+    val esOscuro = FoodTheme.colors.isDark
+    val degradado = if (esOscuro)
+        listOf(Color(0xFF0D0D0D), Color(0xFF16100D), Color(0xFF231711))
+    else
+        listOf(Color.White, Color(0xFFFFF8F4), Color(0xFFFFECE0))
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color.White, Color(0xFFFFF8F4), Color(0xFFFFECE0))
-                )
-            ),
+            .background(Brush.verticalGradient(degradado)),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -68,7 +76,9 @@ fun SplashScreen(
                         translationY = textOffsetY.value
                     },
                 markSize = 138.dp,
-                onDark = false,
+                // onDark NO es "tema oscuro", es "el logo va sobre un fondo oscuro". Aquí
+                // coinciden porque el fondo de esta pantalla es el degradado de arriba.
+                onDark = esOscuro,
                 showTagline = true
             )
         }
@@ -76,7 +86,7 @@ fun SplashScreen(
         Text(
             // Se lee del build: escrita a mano se quedó en v1.0 mientras la app iba por la 1.2.
             text = "v" + com.app.foodranker.BuildConfig.VERSION_NAME,
-            color = Color(0xFF11122E).copy(alpha = 0.38f),
+            color = FoodTheme.colors.textSecondary.copy(alpha = 0.6f),
             fontSize = 12.sp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)

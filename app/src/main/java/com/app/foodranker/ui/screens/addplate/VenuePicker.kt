@@ -70,7 +70,7 @@ fun VenuePicker(
             isLoadingDishes -> Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = OrangePrimary)
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.vp_searching_dishes), fontSize = 12.sp, color = TextSecondary)
+                Text(stringResource(R.string.vp_searching_dishes), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
             }
 
             dishes.isNotEmpty() -> {
@@ -78,7 +78,7 @@ fun VenuePicker(
                     stringResource(R.string.vp_already_rated),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextSecondary
+                    color = FoodTheme.colors.textSecondary
                 )
                 Spacer(Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -90,14 +90,14 @@ fun VenuePicker(
                 Text(
                     stringResource(R.string.vp_not_listed),
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = FoodTheme.colors.textSecondary
                 )
             }
 
             else -> Text(
                 stringResource(R.string.vp_nobody_rated),
                 fontSize = 12.sp,
-                color = TextSecondary
+                color = FoodTheme.colors.textSecondary
             )
         }
         return
@@ -123,7 +123,7 @@ fun VenuePicker(
             Text(stringResource(R.string.vp_search_near), fontWeight = FontWeight.Bold)
         }
 
-        Text(stringResource(R.string.vp_or_by_name), fontSize = 11.sp, color = TextSecondary)
+        Text(stringResource(R.string.vp_or_by_name), fontSize = 11.sp, color = FoodTheme.colors.textSecondary)
 
         OutlinedTextField(
             value = query,
@@ -142,7 +142,7 @@ fun VenuePicker(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = OrangePrimary)
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.vp_searching), fontSize = 12.sp, color = TextSecondary)
+                Text(stringResource(R.string.vp_searching), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
             }
         }
 
@@ -164,9 +164,9 @@ fun VenuePicker(
                 ) {
                     Icon(Icons.Default.Place, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(s.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(s.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = FoodTheme.colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (s.address.isNotBlank()) {
-                            Text(s.address, fontSize = 11.sp, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(s.address, fontSize = 11.sp, color = FoodTheme.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -189,15 +189,15 @@ private fun SelectedVenue(venue: Venue, onClear: () -> Unit) {
         ) {
             Icon(Icons.Default.Place, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
             Column(Modifier.weight(1f)) {
-                Text(venue.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(venue.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val place = listOf(venue.address.ifBlank { venue.city }, venue.country)
                     .filter { it.isNotBlank() }.joinToString(" · ")
                 if (place.isNotBlank()) {
-                    Text(place, fontSize = 11.sp, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(place, fontSize = 11.sp, color = FoodTheme.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             IconButton(onClick = onClear) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.vp_change), tint = TextSecondary)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.vp_change), tint = FoodTheme.colors.textSecondary)
             }
         }
     }
@@ -208,7 +208,7 @@ private fun ExistingDishChip(plate: Plate, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
-        color = SurfaceWhite,
+        color = FoodTheme.colors.surface,
         modifier = Modifier.width(120.dp)
     ) {
         Column {
@@ -219,7 +219,7 @@ private fun ExistingDishChip(plate: Plate, onClick: () -> Unit) {
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
             Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
-                Text(plate.name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(plate.name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = FoodTheme.colors.textPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     "★ %.1f".format(plate.averageScore),
                     fontSize = 10.sp,

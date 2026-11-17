@@ -19,6 +19,12 @@ python -I tools/i18n/scan_ui.py            # literales en posición de UI (cualq
 python -I tools/i18n/check_apk.py          # cobertura sobre el APK ya construido
 ```
 
+No son los únicos: al tocar la UI hay además
+**`python -I tools/ui/check_theme_colors.py`**, que avisa si una pantalla vuelve a clavar
+los colores del tema claro en vez de usar `FoodTheme.colors`. Está fuera de esta carpeta
+porque no es cosa de idiomas, pero se ejecuta en el mismo momento y por el mismo motivo:
+es un fallo que compila bien y solo se ve al usar la app, en su caso en modo oscuro.
+
 `-I` (modo aislado) evita que un `.py` cualquiera del directorio de trabajo se cuele
 por un `import`. Los dos escáneres escriben el detalle en `$TEMP`, porque la consola
 de Windows es cp1252 y se atraganta con los acentos.

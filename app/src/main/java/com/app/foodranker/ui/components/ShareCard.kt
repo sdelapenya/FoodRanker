@@ -21,6 +21,19 @@ import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.ui.theme.*
 
+/**
+ * ⚠️ Los colores de esta tarjeta están clavados **a propósito**, y es el único sitio de la
+ * app donde eso es correcto.
+ *
+ * El 2026-11-17 las 21 pantallas pasaron de colores fijos a `FoodTheme.colors`, para que el
+ * modo oscuro funcione. Este fichero quedó fuera: no se dibuja para el usuario, se
+ * convierte en la **imagen que se comparte** (ver `ShareManager`). Si siguiera el tema, la
+ * misma imagen saldría clara o oscura según cómo tenga el móvil quien comparte, y además la
+ * leería gente que no tiene la app. Una imagen que se publica tiene que salir igual
+ * siempre.
+ *
+ * O sea: si alguien ve colores fijos aquí y los "arregla", rompe la función.
+ */
 @Composable
 fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
     Box(
@@ -161,12 +174,12 @@ fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
 fun MiniScoreBadge(label: String, value: Double?) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = BackgroundLight
+        color = BackgroundLight // tema-fijo: imagen que se comparte
     ) {
         Text(
             text = if (value != null) "$label: ${"%.1f".format(value)}" else label,
             fontSize = 11.sp,
-            color = TextSecondary,
+            color = TextSecondary, // tema-fijo: imagen que se comparte
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
     }

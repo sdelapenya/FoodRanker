@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-16
+**Actualizado:** 2026-11-17
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,132 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 📦 LA v22 (1.8), LISTA PARA SUBIR (2026-11-17)
+
+Es la versión que **desbloquea los canales de avisos**: hasta que esté repartida no se
+puede desplegar `functions` (ver la sección siguiente). Lleva, además del reparto de
+canales, el modo oscuro y dos arreglos de la hoja de editar plato.
+
+AAB construido en `app/build/outputs/bundle/release/app-release.aab` (16,0 MB),
+`versionCode = 22`, `versionName = "1.8"`.
+
+#### 1. El modo oscuro no existía — existía el tema, no el uso
+
+`FoodRankerTheme` calculaba desde siempre un `FoodRankerColorTokens` con los colores de
+cada modo y lo publicaba en `LocalFoodColors`. **No lo leía nadie**: `FoodTheme.colors`
+no aparecía ni una vez fuera de su propia definición. Las pantallas usaban directamente
+las constantes del tema CLARO — `TextPrimary`, `SurfaceWhite`, `DividerColor`… — **330
+veces en 24 ficheros**.
+
+Por eso en oscuro salía una mezcla: los diálogos de Material sí seguían el tema (usan
+`MaterialTheme`) y el resto de la app seguía blanca. No era "el modo oscuro a medias",
+era que el modo oscuro estaba construido y sin enchufar.
+
+**Convertidos 304 usos** a `FoodTheme.colors.*`. Mapeo 1 a 1:
+
+| Constante del tema claro | Token |
+|---|---|
+| `BackgroundLight` | `FoodTheme.colors.background` |
+| `SurfaceWhite` | `FoodTheme.colors.surface` |
+| `SurfaceMuted` | `FoodTheme.colors.surfaceMuted` |
+| `TextPrimary` | `FoodTheme.colors.textPrimary` |
+| `TextSecondary` | `FoodTheme.colors.textSecondary` |
+| `DividerColor` | `FoodTheme.colors.divider` |
+
+#### Los tres sitios donde el color fijo es CORRECTO
+
+No todo color fijo es un bug. Lo es cuando el contenido va sobre un fondo que **no sigue
+el tema**:
+
+- **El botón de Google del login.** Fondo blanco fijo sobre el degradado naranja. Al
+  convertirlo, su texto pasó a seguir el tema y en oscuro salía gris claro sobre blanco:
+  "Continue with Google" **ilegible**. Lo pillé en el emulador, no leyéndolo.
+- **El logo con `onDark = false`.** `onDark` significa "voy sobre fondo oscuro", no "tema
+  oscuro". Con el color del tema, "Ranker" desapareció del splash y quedó solo "Food".
+- **`ShareCard`.** No se le dibuja al usuario: se convierte en la **imagen que se
+  comparte**. Si siguiera el tema, la misma imagen saldría clara u oscura según el móvil
+  de quien comparte, y la ve gente que ni tiene la app.
+
+Los tres llevan el marcador `// tema-fijo: <motivo>` en la propia línea.
+
+#### El guardián: `tools/ui/check_theme_colors.py`
+
+Este fallo **no lo caza el compilador** —la constante existe y compila igual de bien— y no
+se ve si solo se prueba en claro, que es como se probó durante dos años. El script falla si
+una pantalla vuelve a clavar un color del tema claro sin el marcador. Ejecutarlo al tocar
+UI, junto con los de `tools/i18n/`.
+
+#### El arranque también era blanco
+
+Dos sitios que **no pinta Compose** y que por eso no salían en el recuento:
+
+- `windowSplashScreenBackground` era `#FFFFFF` fijo → ahora `@color/splash_background`,
+  con su gemelo en **`values-night/colors.xml`** (nuevo).
+- `android:windowBackground`, que es lo que se ve entre que aparece la ventana y se pinta
+  la primera composición → `@color/window_background`, igual.
+- El splash de Compose (`SplashScreen.kt`) tenía el degradado blanco clavado. Ahora tiene
+  dos versiones y pasa `onDark = esOscuro` al logo.
+
+⚠️ Esos dos colores son los de `BackgroundLight` / `BackgroundDark` **escritos otra vez** en
+XML, porque viven en dos mundos. Si se tocan en `Color.kt`, hay que tocarlos aquí también.
+
+#### 2. La hoja de editar plato: dos arreglos
+
+- **Se metía debajo de la barra de navegación.** El alto no es fijo (nombre hasta 2 líneas,
+  descripción hasta 4, y el error del nombre se va a 3 con el de "solo cosmético") y el
+  `padding(bottom = 32.dp)` era un número inventado. Con el alto máximo, guardar y borrar
+  quedaban **inalcanzables**. Ahora: `verticalScroll` + `navigationBarsPadding()` +
+  `imePadding()` (el teclado tapaba justo el botón de guardar).
+- **El error rojo no se borraba al reescribir.** `nameError` lo decide el servidor y vive
+  fuera de la hoja, así que la hoja no podía limpiarlo sola: el texto rojo se quedaba
+  contradiciendo lo que estabas escribiendo. Nuevo callback `onNameEdited`.
+
+#### 3. `Fallos.reportar` ya no se traga la cancelación
+
+`catch (e: Exception)` captura también `CancellationException`, que no es un fallo: es la
+señal de que a la corrutina le han dicho que pare. Tragársela rompe la concurrencia
+estructurada — el `cancel()` deja de significar nada y el `catch` sigue, así que un
+ViewModel que se está destruyendo todavía escribe su `_uiState`, o pinta un error por una
+carga que el usuario canceló al salir.
+
+Ahora **relanza**. Que una función llamada `reportar` lance es poco intuitivo y va ahí a
+propósito: es el único punto por el que pasan los **68 `catch`** de la app. La alternativa
+era repetir `catch (e: CancellationException) { throw e }` 68 veces, que es justo la línea
+que alguien olvida al añadir el sitio 69.
+
+Es seguro porque se comprobaron dos cosas, no porque lo parezca:
+- en los **68 sitios** `Fallos.reportar` es la **primera** sentencia del `catch`
+  (verificado con script), así que lo que se salta al relanzar es precisamente lo que no
+  debe ejecutarse;
+- **no hay ni un `withTimeout`** en la app. `TimeoutCancellationException` **es** una
+  `CancellationException`, así que el día que se añada uno, ese `catch` tiene que capturar
+  el timeout antes de llamar aquí. Está escrito en el KDoc.
+
+4 tests nuevos en `FallosTest`, que se pueden ejecutar sin Firebase porque los dos casos
+filtrados deciden **antes** de pedir `FirebaseCrashlytics.getInstance()`. Eso convierte "no
+ha reventado" en una aserción de verdad.
+
+#### Qué está probado y qué no
+
+✅ Compila, **76 tests en verde**, pasan los cinco `tools/i18n/` y el nuevo de colores.
+✅ Visto en el emulador (API 35) **en claro y en oscuro**: splash del sistema, splash de
+Compose, login y Términos.
+
+⚠️ **Las 18 pantallas de dentro NO se han visto en oscuro.** El emulador no tiene cuenta de
+Google y la app no deja pasar del login; y un build local no se puede instalar encima del
+de Play, así que tampoco en el Redmi. Las 18 usan los mismos seis tokens por el mismo
+mecanismo que las que sí se han visto, pero eso es un argumento, no una captura. **Al
+instalar la v22 por prueba interna, darse una vuelta con el móvil en oscuro.**
+
+#### Pendiente de esta sección
+
+- Subir la v22 a **prueba interna** → esperar a que esté repartida → **entonces** desplegar
+  `functions`.
+- El pie del logo (`FoodRankerMark`) es azul marino y sobre fondo oscuro casi no se ve. Es
+  el activo de marca, no un color de tema; se deja como está a propósito.
+
+---
 
 ### 🔀 LOS AVISOS, REPARTIDOS EN TRES CANALES (2026-11-17) — ⚠️ SERVIDOR SIN DESPLEGAR
 

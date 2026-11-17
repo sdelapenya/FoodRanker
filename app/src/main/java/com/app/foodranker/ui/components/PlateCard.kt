@@ -27,11 +27,9 @@ import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.categoryName
 import com.app.foodranker.data.model.PlateCategory
+import com.app.foodranker.ui.theme.FoodTheme
 import com.app.foodranker.ui.theme.AppElevation
 import com.app.foodranker.ui.theme.OrangePrimary
-import com.app.foodranker.ui.theme.SurfaceWhite
-import com.app.foodranker.ui.theme.TextPrimary
-import com.app.foodranker.ui.theme.TextSecondary
 import com.app.foodranker.ui.theme.cardGradient
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
@@ -88,7 +86,7 @@ fun PlateCard(
                 onClick()
             },
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.cardRaised)
     ) {
         Column {
@@ -139,14 +137,14 @@ fun PlateCard(
                     plate.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = TextPrimary,
+                    color = FoodTheme.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     plate.restaurantName,
                     fontSize = 12.sp,
-                    color = TextSecondary,
+                    color = FoodTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -199,7 +197,7 @@ fun PlateCardHorizontal(
                 onClick()
             },
         shape = MaterialTheme.shapes.small,
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.card)
     ) {
         Row(
@@ -254,14 +252,14 @@ fun PlateCardHorizontal(
                     plate.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = TextPrimary,
+                    color = FoodTheme.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     plate.restaurantName,
                     fontSize = 12.sp,
-                    color = TextSecondary,
+                    color = FoodTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -274,7 +272,7 @@ fun PlateCardHorizontal(
                     fontSize = 16.sp,
                     color = OrangePrimary
                 )
-                Text(plate.totalRatings.votesLabel(), fontSize = 10.sp, color = TextSecondary)
+                Text(plate.totalRatings.votesLabel(), fontSize = 10.sp, color = FoodTheme.colors.textSecondary)
                 if (onLike != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     LikeRowSmall(likes = plate.likes, isLiked = isLiked, onLike = onLike)
@@ -294,7 +292,7 @@ private fun LikeRowSmall(likes: Int, isLiked: Boolean, onLike: () -> Unit) {
         label = "likeScale"
     )
     val heartColor by animateColorAsState(
-        targetValue = if (isLiked) Color(0xFFE53935) else TextSecondary,
+        targetValue = if (isLiked) Color(0xFFE53935) else FoodTheme.colors.textSecondary,
         animationSpec = tween(200),
         label = "heartColor"
     )

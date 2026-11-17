@@ -23,10 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.app.foodranker.ui.theme.FoodTheme
 import com.app.foodranker.ui.theme.OrangePrimary
-import com.app.foodranker.ui.theme.SurfaceWhite
-import com.app.foodranker.ui.theme.TextPrimary
-import com.app.foodranker.ui.theme.TextSecondary
 import com.app.foodranker.viewmodel.ReferralViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +61,7 @@ fun ReferralScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         },
         containerColor = Color(0xFFF8F8F8)
@@ -145,7 +143,7 @@ fun ReferralScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
@@ -155,7 +153,7 @@ fun ReferralScreen(
                     Text(
                         stringResource(R.string.ref_your_code),
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = FoodTheme.colors.textSecondary,
                         fontWeight = FontWeight.Medium
                     )
 
@@ -229,7 +227,7 @@ private fun StatCard(emoji: String, value: String, label: String, modifier: Modi
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -238,8 +236,8 @@ private fun StatCard(emoji: String, value: String, label: String, modifier: Modi
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(emoji, fontSize = 24.sp)
-            Text(value, fontWeight = FontWeight.Black, fontSize = 18.sp, color = TextPrimary)
-            Text(label, fontSize = 11.sp, color = TextSecondary, textAlign = TextAlign.Center)
+            Text(value, fontWeight = FontWeight.Black, fontSize = 18.sp, color = FoodTheme.colors.textPrimary)
+            Text(label, fontSize = 11.sp, color = FoodTheme.colors.textSecondary, textAlign = TextAlign.Center)
         }
     }
 }
@@ -249,14 +247,14 @@ private fun HowItWorksCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(stringResource(R.string.ref_how), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+            Text(stringResource(R.string.ref_how), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = FoodTheme.colors.textPrimary)
 
             listOf(
                 Triple(
@@ -288,8 +286,8 @@ private fun HowItWorksCard() {
                         Text(emoji, fontSize = 16.sp)
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextPrimary)
-                        Text(desc, fontSize = 12.sp, color = TextSecondary)
+                        Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = FoodTheme.colors.textPrimary)
+                        Text(desc, fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
                     }
                 }
             }

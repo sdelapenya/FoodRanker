@@ -59,7 +59,11 @@ fun FoodRankerLogo(
             )
             Text(
                 text = "Ranker",
-                color = if (onDark) Color.White.copy(alpha = 0.94f) else TextPrimary,
+                // Las dos ramas son fijas a proposito: lo que manda aqui es onDark
+                // ("voy sobre fondo oscuro"), no el tema. Con el color del tema, un
+                // logo sobre fondo claro en modo oscuro salia claro sobre claro:
+                // "Ranker" desaparecia y quedaba solo "Food" (visto en el emulador).
+                color = if (onDark) Color.White.copy(alpha = 0.94f) else TextPrimary, // tema-fijo: lo decide onDark
                 fontSize = 42.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 0.sp

@@ -49,19 +49,19 @@ fun TrendingScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         stringResource(R.string.tr_title),
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = FoodTheme.colors.textPrimary
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = FoodTheme.colors.textPrimary)
                     }
                 },
                 actions = {
@@ -80,7 +80,7 @@ fun TrendingScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { paddingValues ->
@@ -257,8 +257,8 @@ private fun TrendingSectionTitle(emoji: String, title: String, subtitle: String)
             }
             Spacer(modifier = Modifier.width(10.dp))
             Column {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                Text(subtitle, fontSize = 12.sp, color = TextSecondary)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary)
+                Text(subtitle, fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
             }
         }
     }
@@ -271,7 +271,7 @@ private fun TrendingEmpty() {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
-        color = SurfaceWhite,
+        color = FoodTheme.colors.surface,
         shadowElevation = 1.dp
     ) {
         Column(
@@ -284,14 +284,14 @@ private fun TrendingEmpty() {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 stringResource(R.string.trd_not_enough),
-                color = TextPrimary,
+                color = FoodTheme.colors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 stringResource(R.string.tr_empty_hint),
-                color = TextSecondary,
+                color = FoodTheme.colors.textSecondary,
                 fontSize = 13.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )

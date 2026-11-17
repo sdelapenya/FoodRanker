@@ -146,7 +146,7 @@ fun AddPlateScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
                 // Solo el título: la TopAppBar tiene altura fija, así que con la fuente
@@ -154,7 +154,7 @@ fun AddPlateScreen(
                 // cortado por la mitad. El paso se indica ahora junto a la barra de
                 // progreso, que es donde puede crecer sin romper nada.
                 title = {
-                    Text(stringResource(R.string.add_title), fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 16.sp)
+                    Text(stringResource(R.string.add_title), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary, fontSize = 16.sp)
                 },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -164,10 +164,10 @@ fun AddPlateScreen(
                             else            -> onNavigateBack()
                         }
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back_cd), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back_cd), tint = FoodTheme.colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { paddingValues ->
@@ -181,12 +181,12 @@ fun AddPlateScreen(
                 progress = { if (currentStep == 1) 0.5f else 1f },
                 modifier = Modifier.fillMaxWidth().height(3.dp),
                 color = OrangePrimary,
-                trackColor = DividerColor
+                trackColor = FoodTheme.colors.divider
             )
             Text(
                 stringResource(R.string.add_step, currentStep),
                 fontSize = 12.sp,
-                color = TextSecondary,
+                color = FoodTheme.colors.textSecondary,
                 modifier = Modifier.padding(start = 16.dp, top = 6.dp)
             )
 
@@ -243,7 +243,7 @@ fun AddPlateScreen(
                                 showCounter = true
                             )
                             // Chips de categoría (más rápido que dropdown)
-                            Text(stringResource(R.string.add_category), fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.add_category), fontSize = 13.sp, color = FoodTheme.colors.textSecondary, fontWeight = FontWeight.Medium)
                             Row(
                                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -279,7 +279,7 @@ fun AddPlateScreen(
                     if (!step1Valid && imageUri == null && imageValidationError == null) {
                         Spacer(Modifier.height(4.dp))
                         Text(stringResource(R.string.add_need_photo_name),
-                            fontSize = 12.sp, color = TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            fontSize = 12.sp, color = FoodTheme.colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.fillMaxWidth())
                     }
                 }
@@ -333,7 +333,7 @@ fun AddPlateScreen(
 
                             Text(
                                 stringResource(R.string.add_order_again),
-                                fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary
+                                fontWeight = FontWeight.Bold, fontSize = 15.sp, color = FoodTheme.colors.textPrimary
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -347,10 +347,10 @@ fun AddPlateScreen(
                                         shape = RoundedCornerShape(14.dp),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = if (selected) OrangePrimary else Color.Transparent,
-                                            contentColor = if (selected) Color.White else TextSecondary
+                                            contentColor = if (selected) Color.White else FoodTheme.colors.textSecondary
                                         ),
                                         border = if (selected) null
-                                                 else androidx.compose.foundation.BorderStroke(1.dp, TextSecondary.copy(alpha = 0.4f))
+                                                 else androidx.compose.foundation.BorderStroke(1.dp, FoodTheme.colors.textSecondary.copy(alpha = 0.4f))
                                     ) {
                                         Text(label, fontWeight = FontWeight.Bold)
                                     }
@@ -368,7 +368,7 @@ fun AddPlateScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(stringResource(R.string.add_avg_score), fontWeight = FontWeight.Medium, color = TextPrimary)
+                                    Text(stringResource(R.string.add_avg_score), fontWeight = FontWeight.Medium, color = FoodTheme.colors.textPrimary)
                                     Text(
                                         "★ ${"%.1f".format(avg)}/10",
                                         fontWeight = FontWeight.ExtraBold,
@@ -464,7 +464,7 @@ fun AddPlateScreen(
                         } else if (!isValid) {
                             Text(
                                 text = stringResource(R.string.add_need_place),
-                                color = TextSecondary,
+                                color = FoodTheme.colors.textSecondary,
                                 fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
@@ -572,7 +572,7 @@ fun SectionCard(title: String, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -580,7 +580,7 @@ fun SectionCard(title: String, content: @Composable () -> Unit) {
                 text = title,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                color = TextPrimary,
+                color = FoodTheme.colors.textPrimary,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             content()
@@ -610,7 +610,7 @@ fun FoodTextField(
             else onValueChange(new.take(maxLength))
         },
         label = { Text(label) },
-        placeholder = { Text(placeholder, color = TextSecondary.copy(alpha = 0.5f)) },
+        placeholder = { Text(placeholder, color = FoodTheme.colors.textSecondary.copy(alpha = 0.5f)) },
         modifier = modifier.fillMaxWidth(),
         singleLine = singleLine,
         maxLines = maxLines,
@@ -618,10 +618,10 @@ fun FoodTextField(
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
         supportingText = when {
             supportingText != null -> {
-                { Text(supportingText, color = TextSecondary, fontSize = 11.sp) }
+                { Text(supportingText, color = FoodTheme.colors.textSecondary, fontSize = 11.sp) }
             }
             showCounter && maxLength != null -> {
-                { Text("${value.length}/$maxLength", color = TextSecondary, fontSize = 11.sp) }
+                { Text("${value.length}/$maxLength", color = FoodTheme.colors.textSecondary, fontSize = 11.sp) }
             }
             else -> null
         },
@@ -640,7 +640,7 @@ fun ScoreSlider(label: String, emoji: String, value: Float, onValueChange: (Floa
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("$emoji $label", fontWeight = FontWeight.Medium, color = TextPrimary)
+            Text("$emoji $label", fontWeight = FontWeight.Medium, color = FoodTheme.colors.textPrimary)
             Text("${"%.1f".format(value)}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = OrangePrimary)
         }
         Slider(
@@ -651,7 +651,7 @@ fun ScoreSlider(label: String, emoji: String, value: Float, onValueChange: (Floa
             colors = SliderDefaults.colors(
                 thumbColor = OrangePrimary,
                 activeTrackColor = OrangePrimary,
-                inactiveTrackColor = DividerColor
+                inactiveTrackColor = FoodTheme.colors.divider
             )
         )
     }

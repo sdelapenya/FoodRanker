@@ -106,7 +106,7 @@ fun LeagueScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = BackgroundLight
+        containerColor = FoodTheme.colors.background
     ) { padding ->
 
         LazyColumn(
@@ -214,7 +214,7 @@ fun LeagueScreen(
                         Spacer(Modifier.height(12.dp))
                         Text(
                             stringResource(R.string.lg_load_error),
-                            color = TextSecondary,
+                            color = FoodTheme.colors.textSecondary,
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center
                         )
@@ -242,7 +242,7 @@ fun LeagueScreen(
                         Spacer(Modifier.height(12.dp))
                         Text(
                             stringResource(R.string.lg_add_city),
-                            color = TextSecondary,
+                            color = FoodTheme.colors.textSecondary,
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center
                         )
@@ -270,7 +270,7 @@ fun LeagueScreen(
                         Spacer(Modifier.height(12.dp))
                         Text(
                             stringResource(R.string.lg_nobody_voted, uiState.city),
-                            color = TextSecondary,
+                            color = FoodTheme.colors.textSecondary,
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center
                         )
@@ -527,7 +527,7 @@ private fun LeagueRow(
     isCurrentUser: Boolean
 ) {
     val bgColor = if (isCurrentUser) Color(0xFFEAF7EE) else Color.White
-    val borderColor = if (isCurrentUser) Color(0xFFB9DEC6) else DividerColor
+    val borderColor = if (isCurrentUser) Color(0xFFB9DEC6) else FoodTheme.colors.divider
 
     Card(
         modifier = Modifier
@@ -557,7 +557,7 @@ private fun LeagueRow(
                 },
                 fontWeight = FontWeight.Bold,
                 fontSize = if (rank <= 3) 18.sp else 14.sp,
-                color = TextPrimary,
+                color = FoodTheme.colors.textPrimary,
                 modifier = Modifier.width(28.dp),
                 textAlign = TextAlign.Center
             )
@@ -573,7 +573,7 @@ private fun LeagueRow(
             } else {
                 Box(
                     modifier = Modifier.size(38.dp).clip(CircleShape)
-                        .background(DividerColor),
+                        .background(FoodTheme.colors.divider),
                     contentAlignment = Alignment.Center
                 ) { Text("👤", fontSize = 16.sp) }
             }
@@ -584,7 +584,7 @@ private fun LeagueRow(
                     entry.userName,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = TextPrimary,
+                    color = FoodTheme.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -596,7 +596,7 @@ private fun LeagueRow(
                 Text(
                     subtitle,
                     fontSize = 11.sp,
-                    color = if (isCurrentUser) Color(0xFF168963) else TextSecondary,
+                    color = if (isCurrentUser) Color(0xFF168963) else FoodTheme.colors.textSecondary,
                     fontWeight = FontWeight.Medium
                 )
             }

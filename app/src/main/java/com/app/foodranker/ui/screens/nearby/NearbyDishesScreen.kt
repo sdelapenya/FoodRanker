@@ -61,16 +61,16 @@ fun NearbyDishesScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.nb_title), fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = { Text(stringResource(R.string.nb_title), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.legal_back), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.legal_back), tint = FoodTheme.colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { paddingValues ->
@@ -116,7 +116,7 @@ fun NearbyDishesScreen(
                             stringResource(R.string.nrb_venues),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = TextPrimary,
+                            color = FoodTheme.colors.textPrimary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                         uiState.placesSuggestions.forEach { suggestion ->
@@ -128,8 +128,8 @@ fun NearbyDishesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(suggestion.name, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                                    Text(suggestion.address, fontSize = 12.sp, color = TextSecondary)
+                                    Text(suggestion.name, fontWeight = FontWeight.SemiBold, color = FoodTheme.colors.textPrimary)
+                                    Text(suggestion.address, fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
                                 }
                                 // Sin una pista visual, la lista parecía decorativa: los
                                 // testers informaron de que no se podía "hacer nada" con ella.
@@ -139,7 +139,7 @@ fun NearbyDishesScreen(
                                     tint = OrangePrimary
                                 )
                             }
-                            HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(color = FoodTheme.colors.divider, modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
                 }
@@ -155,12 +155,12 @@ fun NearbyDishesScreen(
                                     nearbyVenue.venue.name,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,
-                                    color = TextPrimary
+                                    color = FoodTheme.colors.textPrimary
                                 )
                                 Text(
                                     formatDistance(nearbyVenue.distanceMeters),
                                     fontSize = 12.sp,
-                                    color = TextSecondary
+                                    color = FoodTheme.colors.textSecondary
                                 )
                             }
                             nearbyVenue.dishes.take(3).forEachIndexed { index, plate ->

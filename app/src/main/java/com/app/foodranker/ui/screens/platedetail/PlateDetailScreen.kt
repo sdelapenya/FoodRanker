@@ -138,19 +138,19 @@ fun PlateDetailScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         uiState.plate?.name ?: stringResource(R.string.det_loading_title),
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = FoodTheme.colors.textPrimary
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.det_back), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.det_back), tint = FoodTheme.colors.textPrimary)
                     }
                 },
                 actions = {
@@ -159,7 +159,7 @@ fun PlateDetailScreen(
                         Icon(
                             imageVector = if (uiState.isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                             contentDescription = if (uiState.isSaved) stringResource(R.string.det_saved) else stringResource(R.string.det_save),
-                            tint = if (uiState.isSaved) OrangePrimary else TextPrimary
+                            tint = if (uiState.isSaved) OrangePrimary else FoodTheme.colors.textPrimary
                         )
                     }
                     Box {
@@ -242,7 +242,7 @@ fun PlateDetailScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         },
         floatingActionButton = {
@@ -292,7 +292,7 @@ fun PlateDetailScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(260.dp)
-                                        .background(DividerColor),
+                                        .background(FoodTheme.colors.divider),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (plate.imageUrl.isNotEmpty()) {
@@ -340,7 +340,7 @@ fun PlateDetailScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                                colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
@@ -348,7 +348,7 @@ fun PlateDetailScreen(
                                         plate.name,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 24.sp,
-                                        color = TextPrimary
+                                        color = FoodTheme.colors.textPrimary
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,7 +362,7 @@ fun PlateDetailScreen(
                                         Text(
                                             "${plate.restaurantName} · ${plate.city}, ${plate.country}",
                                             fontSize = 14.sp,
-                                            color = TextSecondary
+                                            color = FoodTheme.colors.textSecondary
                                         )
                                     }
                                     // Botón Ver en mapa
@@ -394,7 +394,7 @@ fun PlateDetailScreen(
                                         Text(
                                             plate.description,
                                             fontSize = 14.sp,
-                                            color = TextSecondary,
+                                            color = FoodTheme.colors.textSecondary,
                                             maxLines = if (descExpanded) Int.MAX_VALUE else 4,
                                             overflow = TextOverflow.Ellipsis,
                                             onTextLayout = { result ->
@@ -455,10 +455,10 @@ fun PlateDetailScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             repeatLabel?.let {
-                                                Text(it, color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                                Text(it, color = FoodTheme.colors.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                             }
                                             priceLabel?.let {
-                                                Text(it, color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                                Text(it, color = FoodTheme.colors.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                             }
                                         }
                                     }
@@ -498,7 +498,7 @@ fun PlateDetailScreen(
                         item {
                             Text(
                                 stringResource(R.string.det_comments_count, uiState.comments.size),
-                                fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary,
+                                fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                             )
                         }
@@ -506,7 +506,7 @@ fun PlateDetailScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+                                colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                             ) {
                                 Row(
@@ -521,19 +521,25 @@ fun PlateDetailScreen(
                                                 commentText = new
                                             }
                                         },
-                                        placeholder = { Text(stringResource(R.string.det_write_comment), color = TextSecondary.copy(alpha = 0.5f)) },
+                                        placeholder = { Text(stringResource(R.string.det_write_comment), color = FoodTheme.colors.textSecondary.copy(alpha = 0.5f)) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
                                         shape = RoundedCornerShape(20.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = OrangePrimary,
-                                            unfocusedBorderColor = DividerColor,
-                                            // Esta Card es SurfaceWhite fijo (no sigue el tema claro/oscuro),
-                                            // pero el color de texto por defecto del campo sí sigue el tema —
-                                            // en modo oscuro salía texto claro sobre fondo blanco, invisible
-                                            // mientras se escribe (reportado por el usuario).
-                                            focusedTextColor = TextPrimary,
-                                            unfocusedTextColor = TextPrimary,
+                                            unfocusedBorderColor = FoodTheme.colors.divider,
+                                            // Esto era un parche: la Card de alrededor estaba
+                                            // clavada en blanco y el color de texto por defecto
+                                            // del campo sí seguía el tema, así que en modo oscuro
+                                            // salía texto claro sobre fondo blanco, invisible
+                                            // mientras se escribía (reportado por el usuario).
+                                            // Desde el 2026-11-17 la Card también sigue el tema,
+                                            // así que ya no hace falta forzarlo; se deja escrito
+                                            // porque fijar el color del texto de un campo es
+                                            // justo lo que hay que NO hacer, y sin esta nota el
+                                            // siguiente que pase lo copiará a otro sitio.
+                                            focusedTextColor = FoodTheme.colors.textPrimary,
+                                            unfocusedTextColor = FoodTheme.colors.textPrimary,
                                             cursorColor = OrangePrimary
                                         )
                                     )
@@ -558,7 +564,7 @@ fun PlateDetailScreen(
                         if (uiState.comments.isEmpty()) {
                             item {
                                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                    Text(stringResource(R.string.det_first_comment), color = TextSecondary, fontSize = 14.sp)
+                                    Text(stringResource(R.string.det_first_comment), color = FoodTheme.colors.textSecondary, fontSize = 14.sp)
                                 }
                             }
                         } else {
@@ -604,7 +610,7 @@ fun PlateDetailScreen(
                         item {
                             Text(
                                 stringResource(R.string.det_ratings_count, uiState.ratings.size),
-                                fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary,
+                                fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                             )
                         }
@@ -618,7 +624,7 @@ fun PlateDetailScreen(
                                 ) {
                                     Text(
                                         stringResource(R.string.det_first_rating),
-                                        color = TextSecondary,
+                                        color = FoodTheme.colors.textSecondary,
                                         textAlign = TextAlign.Center
                                     )
                                 }
@@ -694,16 +700,16 @@ fun PlateDetailScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(stringResource(R.string.det_who_interacted), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text(stringResource(R.string.det_who_interacted), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary)
                 if (uiState.engagement.isLoading) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = OrangePrimary)
                     }
                 } else if (uiState.engagement.likedByUsers.isEmpty() && uiState.engagement.savedByUsers.isEmpty()) {
-                    Text(stringResource(R.string.det_nobody_yet), fontSize = 14.sp, color = TextSecondary)
+                    Text(stringResource(R.string.det_nobody_yet), fontSize = 14.sp, color = FoodTheme.colors.textSecondary)
                 } else {
                     if (uiState.engagement.likedByUsers.isNotEmpty()) {
-                        Text(stringResource(R.string.det_liked_by, uiState.engagement.likedByUsers.size), fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
+                        Text(stringResource(R.string.det_liked_by, uiState.engagement.likedByUsers.size), fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = FoodTheme.colors.textSecondary)
                         uiState.engagement.likedByUsers.forEach { EngagementUserRow(it) }
                     }
                     if (uiState.engagement.savedByUsers.isNotEmpty()) {
@@ -712,7 +718,7 @@ fun PlateDetailScreen(
                                 R.string.det_saved_by,
                                 uiState.engagement.savedByUsers.size
                             ),
-                            fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextSecondary)
+                            fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = FoodTheme.colors.textSecondary)
                         uiState.engagement.savedByUsers.forEach { EngagementUserRow(it) }
                     }
                 }
@@ -727,9 +733,9 @@ fun PlateDetailScreen(
         ModalBottomSheet(onDismissRequest = { showCollectionSheet = false }) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.det_add_to_list), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text(stringResource(R.string.det_add_to_list), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary)
                 if (uiState.collections.isEmpty()) {
-                    Text(stringResource(R.string.det_no_lists), fontSize = 14.sp, color = TextSecondary)
+                    Text(stringResource(R.string.det_no_lists), fontSize = 14.sp, color = FoodTheme.colors.textSecondary)
                 } else {
                     uiState.collections.forEach { col ->
                         val alreadyAdded = plateId in col.plateIds
@@ -745,8 +751,8 @@ fun PlateDetailScreen(
                         ) {
                             Text(col.emoji, fontSize = 24.sp)
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(col.name, fontWeight = FontWeight.Medium, color = if (alreadyAdded) TextSecondary else TextPrimary)
-                                Text(stringResource(R.string.det_list_plates, col.plateIds.size), fontSize = 12.sp, color = TextSecondary)
+                                Text(col.name, fontWeight = FontWeight.Medium, color = if (alreadyAdded) FoodTheme.colors.textSecondary else FoodTheme.colors.textPrimary)
+                                Text(stringResource(R.string.det_list_plates, col.plateIds.size), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
                             }
                             if (alreadyAdded) {
                                 Text(stringResource(R.string.det_already_added), fontSize = 12.sp, color = SuccessGreen, fontWeight = FontWeight.Medium)
@@ -754,7 +760,7 @@ fun PlateDetailScreen(
                                 Icon(Icons.Default.Add, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(20.dp))
                             }
                         }
-                        HorizontalDivider(color = DividerColor)
+                        HorizontalDivider(color = FoodTheme.colors.divider)
                     }
                 }
             }
@@ -943,7 +949,7 @@ fun EngagementUserRow(user: User) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(32.dp).clip(CircleShape).background(DividerColor),
+            modifier = Modifier.size(32.dp).clip(CircleShape).background(FoodTheme.colors.divider),
             contentAlignment = Alignment.Center
         ) {
             if (user.photoUrl.isNotEmpty()) {
@@ -954,11 +960,11 @@ fun EngagementUserRow(user: User) {
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Icon(Icons.Default.Person, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Person, contentDescription = null, tint = FoodTheme.colors.textSecondary, modifier = Modifier.size(18.dp))
             }
         }
         Spacer(modifier = Modifier.width(10.dp))
-        Text(user.name.ifBlank { stringResource(R.string.det_user_fallback) }, fontSize = 14.sp, color = TextPrimary)
+        Text(user.name.ifBlank { stringResource(R.string.det_user_fallback) }, fontSize = 14.sp, color = FoodTheme.colors.textPrimary)
     }
 }
 
@@ -967,12 +973,12 @@ fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit, onReport
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
             Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(DividerColor),
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(FoodTheme.colors.divider),
                 contentAlignment = Alignment.Center
             ) {
                 if (comment.userPhotoUrl.isNotEmpty()) {
@@ -983,22 +989,22 @@ fun CommentItem(comment: Comment, isOwn: Boolean, onDelete: () -> Unit, onReport
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(Icons.Default.Person, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Person, contentDescription = null, tint = FoodTheme.colors.textSecondary, modifier = Modifier.size(20.dp))
                 }
             }
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(comment.userName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                Text(comment.userName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FoodTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(comment.text, fontSize = 14.sp, color = TextSecondary)
+                Text(comment.text, fontSize = 14.sp, color = FoodTheme.colors.textSecondary)
             }
             if (isOwn) {
                 IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.det_delete), tint = TextSecondary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.det_delete), tint = FoodTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                 }
             } else {
                 IconButton(onClick = onReport, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.det_report), tint = TextSecondary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.det_report), tint = FoodTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -1014,12 +1020,12 @@ fun ReportReasonDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold, color = TextPrimary) },
+        title = { Text(title, fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 reasons.forEach { reason ->
                     TextButton(onClick = { onSelect(reason) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(reason, color = TextPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
+                        Text(reason, color = FoodTheme.colors.textPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
                     }
                 }
             }
@@ -1059,7 +1065,7 @@ fun LikeBadge(
         label = "likeBadgeScale"
     )
     val heartColor by animateColorAsState(
-        targetValue = if (isLiked) Color(0xFFE53935) else TextSecondary,
+        targetValue = if (isLiked) Color(0xFFE53935) else FoodTheme.colors.textSecondary,
         animationSpec = tween(200),
         label = "heartColor"
     )
@@ -1098,7 +1104,7 @@ fun LikeBadge(
             text = likes.formatCompact(),
             fontWeight = FontWeight.SemiBold,
             fontSize = 15.sp,
-            color = if (isLiked) heartColor else TextPrimary
+            color = if (isLiked) heartColor else FoodTheme.colors.textPrimary
         )
     }
     } // cierre Box
@@ -1109,12 +1115,12 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(DividerColor),
+                modifier = Modifier.size(40.dp).clip(CircleShape).background(FoodTheme.colors.divider),
                 contentAlignment = Alignment.Center
             ) {
                 if (rating.userPhotoUrl.isNotEmpty()) {
@@ -1125,7 +1131,7 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(Icons.Default.Person, contentDescription = null, tint = TextSecondary)
+                    Icon(Icons.Default.Person, contentDescription = null, tint = FoodTheme.colors.textSecondary)
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -1136,7 +1142,7 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(rating.userName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                        Text(rating.userName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FoodTheme.colors.textPrimary)
                         // Distintivo de "valorado en el local". No pondera nada: es solo una
                         // señal de confianza. Ver docs/RATINGS.md §1.1.
                         if (rating.verifiedAtVenue) {
@@ -1154,13 +1160,13 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
                         if (onEdit != null) {
                             Spacer(Modifier.width(8.dp))
                             IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.det_edit_rating), tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.det_edit_rating), tint = FoodTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                             }
                         }
                         if (onReport != null) {
                             Spacer(Modifier.width(4.dp))
                             IconButton(onClick = onReport, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.det_report_rating), tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.det_report_rating), tint = FoodTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -1180,7 +1186,7 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
                     Text(
                         rating.comment,
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = FoodTheme.colors.textSecondary,
                         maxLines = if (commentExpanded) Int.MAX_VALUE else 3,
                         overflow = TextOverflow.Ellipsis,
                         onTextLayout = { result ->
@@ -1208,7 +1214,7 @@ fun RatingItem(rating: Rating, onEdit: (() -> Unit)? = null, onReport: (() -> Un
 
 @Composable
 fun MiniScore(emoji: String, score: Float) {
-    Text("$emoji ${"%.1f".format(score)}", fontSize = 11.sp, color = TextSecondary)
+    Text("$emoji ${"%.1f".format(score)}", fontSize = 11.sp, color = FoodTheme.colors.textSecondary)
 }
 
 /**
@@ -1291,7 +1297,7 @@ fun RatingBottomSheet(
                 if (isEditMode) stringResource(R.string.det_edit_title)
                 else if (plateName.isNotEmpty()) stringResource(R.string.det_rate_title, plateName)
                 else stringResource(R.string.det_rate_generic),
-                fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary
+                fontWeight = FontWeight.Bold, fontSize = 20.sp, color = FoodTheme.colors.textPrimary
             )
 
             // Puerta de entrada: la nota de un plato es la de quien se lo ha comido. Quien no
@@ -1299,7 +1305,7 @@ fun RatingBottomSheet(
             if (!tastedConfirmed) {
                 Text(
                     stringResource(R.string.det_tasted_q),
-                    fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary
+                    fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FoodTheme.colors.textPrimary
                 )
                 // Ojo: aquí ponía "dale like", y el like NO es una lista de pendientes — es
                 // aprecio público, y no hay pantalla donde verlos. Lo que sí guarda para
@@ -1308,7 +1314,7 @@ fun RatingBottomSheet(
                 Text(
                     stringResource(R.string.det_tasted_intro) + " " +
                     stringResource(R.string.det_tasted_hint),
-                    color = TextSecondary, fontSize = 13.sp
+                    color = FoodTheme.colors.textSecondary, fontSize = 13.sp
                 )
                 Button(
                     onClick = { tastedConfirmed = true },
@@ -1322,7 +1328,7 @@ fun RatingBottomSheet(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.det_tasted_not_yet), color = TextSecondary)
+                    Text(stringResource(R.string.det_tasted_not_yet), color = FoodTheme.colors.textSecondary)
                 }
                 return@Column
             }
@@ -1389,7 +1395,7 @@ fun RatingBottomSheet(
 
             Text(
                 stringResource(R.string.det_order_again),
-                fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary
+                fontWeight = FontWeight.Bold, fontSize = 15.sp, color = FoodTheme.colors.textPrimary
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1403,10 +1409,10 @@ fun RatingBottomSheet(
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (selected) OrangePrimary else Color.Transparent,
-                            contentColor = if (selected) Color.White else TextSecondary
+                            contentColor = if (selected) Color.White else FoodTheme.colors.textSecondary
                         ),
                         border = if (selected) null
-                                 else androidx.compose.foundation.BorderStroke(1.dp, TextSecondary.copy(alpha = 0.4f))
+                                 else androidx.compose.foundation.BorderStroke(1.dp, FoodTheme.colors.textSecondary.copy(alpha = 0.4f))
                     ) {
                         Text(label, fontWeight = FontWeight.Bold)
                     }

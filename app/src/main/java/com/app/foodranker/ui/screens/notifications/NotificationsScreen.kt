@@ -44,13 +44,13 @@ fun NotificationsScreen(
     val context = LocalContext.current
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.ntf_title), fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = { Text(stringResource(R.string.ntf_title), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = FoodTheme.colors.textPrimary)
                     }
                 },
                 actions = {
@@ -59,12 +59,12 @@ fun NotificationsScreen(
                             Icon(
                                 Icons.Default.DeleteSweep,
                                 contentDescription = stringResource(R.string.ntf_clear),
-                                tint = TextSecondary
+                                tint = FoodTheme.colors.textSecondary
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { paddingValues ->
@@ -77,9 +77,9 @@ fun NotificationsScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🔔", fontSize = 56.sp)
                     Spacer(Modifier.height(12.dp))
-                    Text(stringResource(R.string.ntf_empty), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                    Text(stringResource(R.string.ntf_empty), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FoodTheme.colors.textPrimary)
                     Spacer(Modifier.height(6.dp))
-                    Text(stringResource(R.string.ntf_empty_hint), fontSize = 14.sp, color = TextSecondary,
+                    Text(stringResource(R.string.ntf_empty_hint), fontSize = 14.sp, color = FoodTheme.colors.textSecondary,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
@@ -169,14 +169,14 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
             Text(
                 bodyText,
                 fontSize = 14.sp,
-                color = TextPrimary,
+                color = FoodTheme.colors.textPrimary,
                 fontWeight = if (!notification.isRead) FontWeight.SemiBold else FontWeight.Normal
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 timeAgo(notification.createdAt),
                 fontSize = 12.sp,
-                color = TextSecondary
+                color = FoodTheme.colors.textSecondary
             )
         }
 
@@ -187,7 +187,7 @@ private fun NotificationItem(notification: FoodNotification, onClick: () -> Unit
             )
         }
     }
-    HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+    HorizontalDivider(color = FoodTheme.colors.divider, modifier = Modifier.padding(horizontal = 16.dp))
 }
 
 // Construye el texto de la notificación según el tipo.

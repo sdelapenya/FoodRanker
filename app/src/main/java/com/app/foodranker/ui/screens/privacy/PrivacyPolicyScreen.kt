@@ -19,16 +19,16 @@ import com.app.foodranker.ui.theme.*
 @Composable
 fun PrivacyPolicyScreen(onNavigateBack: () -> Unit) {
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.pp_title), fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = { Text(stringResource(R.string.pp_title), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.legal_back), tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.legal_back), tint = FoodTheme.colors.textPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         }
     ) { paddingValues ->
@@ -44,7 +44,7 @@ fun PrivacyPolicyScreen(onNavigateBack: () -> Unit) {
                 Text(
                     stringResource(R.string.pp_updated),
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = FoodTheme.colors.textSecondary
                 )
             }
             // El orden y el contenido salen de los recursos: el texto legal cambia por
@@ -76,8 +76,8 @@ fun PrivacyPolicyScreen(onNavigateBack: () -> Unit) {
 @Composable
 fun PrivacySection(title: String, content: String) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-        Text(content, fontSize = 14.sp, color = TextSecondary, lineHeight = 22.sp)
-        HorizontalDivider(color = DividerColor)
+        Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FoodTheme.colors.textPrimary)
+        Text(content, fontSize = 14.sp, color = FoodTheme.colors.textSecondary, lineHeight = 22.sp)
+        HorizontalDivider(color = FoodTheme.colors.divider)
     }
 }

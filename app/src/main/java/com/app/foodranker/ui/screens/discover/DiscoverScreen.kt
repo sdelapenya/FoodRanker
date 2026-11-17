@@ -164,7 +164,7 @@ fun DiscoverScreen(
                 )
             }
         },
-        containerColor = BackgroundLight,
+        containerColor = FoodTheme.colors.background,
         topBar = {
             RankingTopBar(
                 unreadCount   = uiState.unreadNotificationCount,
@@ -204,13 +204,13 @@ fun DiscoverScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text("🌍", fontSize = 52.sp)
-                        Text(stringResource(R.string.loading_plates), fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(stringResource(R.string.loading_plates), fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary)
                         LinearProgressIndicator(
                             progress = { if (seeding.second > 0) seeding.first.toFloat() / seeding.second else 0f },
                             modifier = Modifier.fillMaxWidth(0.7f),
                             color = OrangePrimary
                         )
-                        Text("${seeding.first} / ${seeding.second}", color = TextSecondary, fontSize = 13.sp)
+                        Text("${seeding.first} / ${seeding.second}", color = FoodTheme.colors.textSecondary, fontSize = 13.sp)
                     }
                 }
                 return@PullToRefreshBox
@@ -312,7 +312,7 @@ private fun RankingTopBar(
     onNearby: () -> Unit,
     onTabSelected: (Int) -> Unit
 ) {
-    Surface(shadowElevation = 2.dp, color = SurfaceWhite) {
+    Surface(shadowElevation = 2.dp, color = FoodTheme.colors.surface) {
         Column {
             if (!isOnline) {
                 Surface(color = Color(0xFFB71C1C), modifier = Modifier.fillMaxWidth()) {
@@ -344,18 +344,18 @@ private fun RankingTopBar(
                     "FoodRanker",
                     fontWeight = FontWeight.Black,
                     fontSize = 20.sp,
-                    color = TextPrimary,
+                    color = FoodTheme.colors.textPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onNearby) {
-                    Icon(Icons.Default.LocationOn, contentDescription = stringResource(R.string.cd_nearby_dishes), tint = TextSecondary)
+                    Icon(Icons.Default.LocationOn, contentDescription = stringResource(R.string.cd_nearby_dishes), tint = FoodTheme.colors.textSecondary)
                 }
                 IconButton(onClick = onSearch) {
-                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = TextSecondary)
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = FoodTheme.colors.textSecondary)
                 }
                 Box {
                     IconButton(onClick = onNotifications) {
-                        Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.cd_notifications), tint = TextSecondary)
+                        Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.cd_notifications), tint = FoodTheme.colors.textSecondary)
                     }
                     if (unreadCount > 0) {
                         Badge(
@@ -370,7 +370,7 @@ private fun RankingTopBar(
 
             TabRow(
                 selectedTabIndex = selectedTab,
-                containerColor   = SurfaceWhite,
+                containerColor   = FoodTheme.colors.surface,
                 contentColor     = OrangePrimary,
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
@@ -400,7 +400,7 @@ private fun RankingTopBar(
                                 fontSize = 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                color = if (selectedTab == index) OrangePrimary else TextSecondary
+                                color = if (selectedTab == index) OrangePrimary else FoodTheme.colors.textSecondary
                             )
                         }
                     )
@@ -418,7 +418,7 @@ private fun RankingNavBar(
     onLeague: () -> Unit,
     onProfile: () -> Unit
 ) {
-    NavigationBar(containerColor = SurfaceWhite, tonalElevation = 0.dp) {
+    NavigationBar(containerColor = FoodTheme.colors.surface, tonalElevation = 0.dp) {
         NavigationBarItem(
             selected = true,
             onClick  = {},
@@ -445,7 +445,7 @@ private fun RankingNavBar(
             },
             label  = { Text(stringResource(R.string.nav_upload), fontSize = 11.sp) },
             colors = NavigationBarItemDefaults.colors(
-                unselectedTextColor = TextSecondary,
+                unselectedTextColor = FoodTheme.colors.textSecondary,
                 indicatorColor      = Color.Transparent
             )
         )
@@ -455,8 +455,8 @@ private fun RankingNavBar(
             icon     = { Icon(Icons.Default.MilitaryTech, contentDescription = null) },
             label    = { Text(stringResource(R.string.nav_league), fontSize = 11.sp) },
             colors   = NavigationBarItemDefaults.colors(
-                unselectedIconColor = TextSecondary,
-                unselectedTextColor = TextSecondary
+                unselectedIconColor = FoodTheme.colors.textSecondary,
+                unselectedTextColor = FoodTheme.colors.textSecondary
             )
         )
         NavigationBarItem(
@@ -465,8 +465,8 @@ private fun RankingNavBar(
             icon     = { Icon(Icons.Default.Person, contentDescription = null) },
             label    = { Text(stringResource(R.string.nav_profile), fontSize = 11.sp) },
             colors   = NavigationBarItemDefaults.colors(
-                unselectedIconColor = TextSecondary,
-                unselectedTextColor = TextSecondary
+                unselectedIconColor = FoodTheme.colors.textSecondary,
+                unselectedTextColor = FoodTheme.colors.textSecondary
             )
         )
     }
@@ -547,7 +547,7 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
 
 @Composable
 private fun CountdownTickerRow(countdownText: String, tickerMessage: String, voteStreak: Int = 0) {
-    Surface(color = SurfaceWhite) {
+    Surface(color = FoodTheme.colors.surface) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -560,7 +560,7 @@ private fun CountdownTickerRow(countdownText: String, tickerMessage: String, vot
             ) {
                 // Decía "Reset semanal del ranking", pero el ranking no se reinicia nunca: lo
                 // que vuelve a empezar cada lunes es la liga, como dice la línea de abajo.
-                Text(stringResource(R.string.league_ends_in), color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.league_ends_in), color = FoodTheme.colors.textSecondary, fontSize = 12.sp)
                 Text(countdownText, color = OrangePrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 if (voteStreak >= 2) {
                     Spacer(Modifier.weight(1f))
@@ -596,7 +596,7 @@ private fun CountdownTickerRow(countdownText: String, tickerMessage: String, vot
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Canvas(modifier = Modifier.size(6.dp)) { drawCircle(Color(0xFF4CAF50)) }
-                    Text(msg, color = TextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(msg, color = FoodTheme.colors.textSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -619,7 +619,7 @@ private fun RankedPlateCard(
             .clickable { onClick() },
         shape     = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors    = CardDefaults.cardColors(containerColor = SurfaceWhite)
+        colors    = CardDefaults.cardColors(containerColor = FoodTheme.colors.surface)
     ) {
         Box(
             modifier = Modifier
@@ -752,7 +752,7 @@ private fun RankingEmptyState(tab: Int, onExplore: () -> Unit, onExploreUsers: (
                 tab == 2 -> stringResource(R.string.empty_following_hint)
                 else -> stringResource(R.string.empty_ranking)
             },
-            color = TextSecondary,
+            color = FoodTheme.colors.textSecondary,
             fontSize = 15.sp,
             textAlign = TextAlign.Center
         )
