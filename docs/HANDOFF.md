@@ -49,7 +49,43 @@ El `order by -xp` del error es descendente: es la del rango. Lleva rota desde qu
 **nadie se iba a enterar**, porque el `catch` devuelve `0` y un 0 se lee como "eres el
 primero de tu ciudad".
 
-**Arreglo preparado en `firestore.indexes.json`**: segundo índice `(city ASC, xp DESC)`.
+✅ **ARREGLADO Y VERIFICADO EL MISMO DÍA.** Índice desplegado a producción
+(`firebase deploy --only firestore:indexes`), y comprobado en el móvil: tras construirse,
+`FAILED_PRECONDITION` pasó de salir en cada carga de perfil a **0**, y el perfil pinta
+*"#1 en Casarrubios Del Monte · Ranking ciudad"* con la consulta corriendo de verdad.
+
+⏱️ **El índice tarda en construirse y el mensaje lo dice.** Primero sigue saliendo *"The
+query requires an index"*, luego cambia a ***"That index is currently building and cannot be
+used yet"***, y solo entonces desaparece. Unos 5 minutos con esta cantidad de datos. No dar
+el despliegue por fallido al primer reintento.
+
+🎯 **Qué veía el usuario**: el `catch` devolvía `0` y la pantalla pinta `0 + 1`, así que
+**a todo el mundo le salía "#1 en su ciudad"**, fuese verdad o no. Un trofeo falso para
+todos, y encima indistinguible del caso legítimo. Por eso no lo reportó nadie nunca.
+
+#### 🏁 Y con esto, la cadena de Crashlytics quedó cerrada de punta a punta
+
+No hizo falta fabricar un fallo: **lo trajo este bug real**. A las 10:29 llegó un correo de
+`firebase-noreply@google.com`:
+
+```
+Nuevo error no crítico: io.grpc.Status.asException - Android - com.app.foodranker 1.7
+```
+
+`io.grpc.Status.asException` es justo el tipo que lanza Firestore para `FAILED_PRECONDITION`.
+O sea que funcionó **todo** lo de ayer, en orden y por primera vez:
+
+1. El fallo real saltó en `ProfileViewModel`.
+2. `Fallos.reportar` se ejecutó (integrado por R8, como se verificó en el mapeo).
+3. `ErrorMapper.esDelEntorno` lo dejó pasar por no ser de red — el filtro distingue bien.
+4. `recordException` lo registró y subió a Firebase.
+5. **La alerta de "errores recuperables nuevos", configurada el 2026-11-16 y que hasta hoy
+   estaba conectada a nada, mandó el correo.**
+
+Es exactamente el ciclo que se quería montar, estrenado con un bug que llevaba escondido
+desde el principio.
+
+**El arreglo en `firestore.indexes.json`**: segundo índice `(city ASC, xp DESC)`.
 ⚠️ Desplegar el índice lo arregla **para todas las instalaciones de golpe, sin actualizar la
 app**, que es lo que importa con la v20 todavía en manos de la gente.
 
