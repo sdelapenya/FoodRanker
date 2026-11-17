@@ -150,6 +150,74 @@ está: ahí es donde se duplican.
 
 ---
 
+## v22 (1.8) — modo oscuro de verdad y la hoja de editar plato
+
+Lo que el usuario nota de la v22.
+
+⚠️ **No se mencionan los canales de avisos**, aunque van en esta versión. Los canales
+nuevos aparecen en los ajustes del móvil en cuanto se instala la v22, pero el reparto de
+verdad no empieza hasta que se despliegue `functions`, y eso es **después** de que la v22
+esté repartida. Anunciarlo ahora sería prometer algo que todavía no hace. Mismo criterio
+que con el arreglo de los avisos en la v21: lo que se hace del lado del servidor no se
+anuncia en las notas de una versión.
+
+Tampoco se menciona que `Fallos.reportar` ya no se traga las cancelaciones: es invisible
+para quien usa la app.
+
+### Castellano (es-ES) — v22
+
+```
+FoodRanker ya sigue el modo oscuro del móvil. Antes la app se quedaba en blanco aunque tuvieras el sistema en oscuro; ahora cambia entera, desde el arranque.
+
+Y al editar un plato tuyo: el botón de guardar ya no se esconde detrás de la barra de navegación, y el aviso en rojo desaparece en cuanto corriges el nombre.
+```
+*(316 caracteres)*
+
+### Inglés (en-GB) — v22
+
+```
+FoodRanker now follows your phone's dark mode. The app used to stay white even with your system set to dark; now the whole thing changes, right from startup.
+
+And when editing one of your dishes: the save button no longer hides behind the navigation bar, and the red warning clears as soon as you fix the name.
+```
+*(310 caracteres)*
+
+### Inglés (en-US) — v22
+
+**Idéntico** al de en-GB otra vez. Hay que pegarlo igual: si en-US se queda vacío, Play le
+sirve el del idioma por defecto, que es el castellano.
+
+```
+FoodRanker now follows your phone's dark mode. The app used to stay white even with your system set to dark; now the whole thing changes, right from startup.
+
+And when editing one of your dishes: the save button no longer hides behind the navigation bar, and the red warning clears as soon as you fix the name.
+```
+*(310 caracteres)*
+
+### Los tres de una vez — v22
+
+Para el camino de `Ctrl+A` + pegar encima, reemplazando todo lo que haya en la caja:
+
+```
+<es-ES>
+FoodRanker ya sigue el modo oscuro del móvil. Antes la app se quedaba en blanco aunque tuvieras el sistema en oscuro; ahora cambia entera, desde el arranque.
+
+Y al editar un plato tuyo: el botón de guardar ya no se esconde detrás de la barra de navegación, y el aviso en rojo desaparece en cuanto corriges el nombre.
+</es-ES>
+<en-GB>
+FoodRanker now follows your phone's dark mode. The app used to stay white even with your system set to dark; now the whole thing changes, right from startup.
+
+And when editing one of your dishes: the save button no longer hides behind the navigation bar, and the red warning clears as soon as you fix the name.
+</en-GB>
+<en-US>
+FoodRanker now follows your phone's dark mode. The app used to stay white even with your system set to dark; now the whole thing changes, right from startup.
+
+And when editing one of your dishes: the save button no longer hides behind the navigation bar, and the red warning clears as soon as you fix the name.
+</en-US>
+```
+
+---
+
 ## v21 (1.7) — selector de idioma, nombres de plato y enlaces raros
 
 Lo que el usuario nota de la v21. **No se menciona** el arreglo de los avisos que cerraban
