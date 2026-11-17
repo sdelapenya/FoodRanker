@@ -15,6 +15,76 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔔 ESTADO DE LOS AVISOS: EL DE "A QUIEN SIGUES" SÍ FUNCIONA (2026-11-17)
+
+Revisado a fondo porque surgió la duda de si al seguir a alguien te avisa cuando publica.
+**Sí avisa**, y con datos: hay **11 avisos `new_plate` en la base**, 8 de ellos para Sergio,
+el último del **2026-11-15** (de Miguel). No es teoría del código, son documentos.
+
+Los diagnósticos quedan en `functions/scripts/checkNotifs.js` y `checkNotifs2.js`
+(solo lectura, requieren ADC como `manageUser.js`).
+
+#### Por qué daba la sensación de que no funcionaba
+
+Tres cosas, y ninguna es un fallo:
+
+1. **El aviso va agrupado por autor y día, a propósito.** El id del documento es
+   `newplate_<autor>_<día>`: el primer plato del día lo **crea** —y eso dispara el push— y
+   los siguientes solo incrementan `plateCount`, que es una actualización y
+   `onDocumentCreated` no salta. Con una persona que lleva **37 platos publicados**, la
+   alternativa habría sido comerse 37 avisos seguidos.
+2. **La función se desplegó alrededor del 2026-10-08.** El `new_plate` más antiguo es de ese
+   día. Los platos de Sandra (3) y Dani (1), de septiembre, nunca pudieron avisar: la
+   función no existía. Eso explica los dos "huecos" que aparecen al cruzar seguidos con
+   platos.
+3. **El token FCM es uno por usuario** y se lo lleva el último móvil donde se inicie sesión.
+   Con el cambio del Note 10S al Redmi 14C, los push de esa época pudieron irse al otro.
+
+#### Fotografía del sistema (2026-11-17)
+
+```
+like 17 · comment 10 · new_plate 8 · league_result 2 · moderation_approved 1 · badge 1 · follow 1
+```
+(los de Sergio; en total hay 45 comment, 18 moderation_approved, 11 new_plate, 11
+moderation_rejected, 9 league_result, 8 rating, 4 follow, 2 badge, 1 level_up)
+
+- **17 seguimientos** entre 15 usuarios; **13 de 15 tienen `fcmToken`**.
+- Los tres canales existen en el móvil y **ninguno está silenciado**: `foodranker_social`
+  (importancia 3), `foodranker_moderation` (4), `foodranker_daily` (2).
+- Los logs del servidor enseñan pushes saliendo bien, incluido uno a Sergio el 2026-11-16.
+  ⚠️ `firebase functions:log` solo devuelve una ventana corta (unas horas), así que no sirve
+  para comprobar algo de hace dos días.
+
+#### 🟡 Lo que SÍ conviene cambiar: el canal "social" se llama como una de sus siete cosas
+
+`foodranker_social` se muestra al usuario como **"Likes y valoraciones"**, pero por ahí van
+**siete tipos**: `like`, `rating`, `comment`, `follow`, **`new_plate`**, `level_up`, `badge` y
+`league_result`.
+
+Dos consecuencias:
+
+- Quien silencie lo que cree que son "likes" **se queda también sin enterarse de que alguien
+  a quien sigue ha publicado**, sin saber que lo ha hecho.
+- No hay forma de quedarse con unos y no con otros, que es justo lo que uno querría.
+
+Y encaja con la decisión (buena) de que la fila "Notificaciones" del perfil **abra los
+ajustes del sistema** en vez de montar interruptores propios: si los canales son el único
+mando, tienen que estar bien partidos y bien nombrados. Propuesta: separar al menos
+`foodranker_social` en **"Interacciones"** (like, rating, comment, follow) y **"Gente que
+sigues"** (`new_plate`), y quizá un tercero para los logros (level_up, badge, league_result).
+
+⚠️ Al crear canales nuevos hay que tener en cuenta que **un canal ya creado no se puede
+modificar desde el código** (nombre sí, importancia no): si se renombra el actual, quien ya
+tenga la app conserva su ajuste; si se parte en varios, los nuevos nacen con la importancia
+por defecto.
+
+#### ✅ Falsa alarma que se investigó por el camino
+
+`onNotificationCreated` **no mira ninguna preferencia del usuario** antes de mandar el push.
+Parecía un agujero, pero no lo es: **no hay preferencias de app que mirar**. La fila de
+"Notificaciones" abre los ajustes de Android y todo el control vive en los canales, que es
+donde el sistema ya lo gestiona. Nada que arreglar.
+
 ### 📱 LA v21 PROBADA EN EL REDMI, Y LO QUE APARECIÓ DEBAJO (2026-11-17)
 
 Probada por adb sobre el **Redmi 14C, que lleva Android 16 (SDK 36)** — dato que no estaba
