@@ -23,10 +23,11 @@ class FoodRankerMessagingService : FirebaseMessagingService() {
         // android.notification.channelId del push, pero en primer plano pasa por aquí y
         // antes caía siempre en el social — un rechazo o una aprobación de moderación
         // acababa mezclado con los likes y con su misma prioridad.
-        val channelId = when (message.data["type"]) {
-            "moderation_approved", "moderation_rejected" -> NotificationHelper.CHANNEL_MODERATION
-            else -> NotificationHelper.CHANNEL_SOCIAL
-        }
+        // El reparto completo vive en NotificationHelper.canalDe, junto a la definición de
+        // los canales: tenerlo aquí hacía fácil olvidarse de un tipo nuevo y que acabara
+        // en el canal de interacciones por descarte, que es como "platos de gente que
+        // sigues" pasó dos meses mezclado con los likes.
+        val channelId = NotificationHelper.canalDe(message.data["type"])
         NotificationHelper.show(this, title, body, plateId, channelId)
     }
 

@@ -1206,6 +1206,17 @@ export const onNotificationCreated = onDocumentCreated(
 
     let title: string;
     let body: string;
+    // Canal por defecto: interacciones (like, rating, comment, follow). Los que salen de
+    // aqui lo dicen en su propio `case`.
+    //
+    // ⚠️ Este reparto tiene que coincidir con `NotificationHelper.canalDe` del cliente: el
+    // mismo aviso lo pinta el servidor si la app esta cerrada y el cliente si esta abierta,
+    // y si no coinciden acaba en un canal distinto segun por donde haya entrado.
+    //
+    // ⚠️ Y no desplegar esto antes de que la v22 este repartida: "foodranker_following" y
+    // "foodranker_achievements" no existen en la v21 ni anteriores, y en esos moviles FCM
+    // los manda a su canal inventado ("fcm_fallback_notification_channel"), con un nombre
+    // generico. No se pierde ningun aviso, pero se ve peor que ahora.
     let channelId = "foodranker_social";
 
     switch (type) {
@@ -1248,17 +1259,20 @@ export const onNotificationCreated = onDocumentCreated(
         // onDocumentCreated no salta), así que aquí el contador siempre vale 1.
         title = t("newplate_t");
         body = t("newplate_b", { from: fromUserName, plate: plateName });
+        channelId = "foodranker_following";
         break;
       case "level_up": {
         const nivel: number = (notif.level as number) ?? 0;
         title = t("level_t");
         body = t("level_b", { level: NOMBRES_I18N[lang].niveles[nivel] ?? String(nivel) });
+        channelId = "foodranker_achievements";
         break;
       }
       case "badge": {
         const id = (notif.badgeId as string) ?? "";
         title = t("badge_t");
         body = t("badge_b", { badge: NOMBRES_I18N[lang].logros[id] ?? id });
+        channelId = "foodranker_achievements";
         break;
       }
       case "league_result": {
@@ -1266,6 +1280,7 @@ export const onNotificationCreated = onDocumentCreated(
         const medalla = puesto === 1 ? "🥇" : puesto === 2 ? "🥈" : "🥉";
         title = t("league_t", { medal: medalla, pos: puesto });
         body = puesto === 1 ? t("league_b_win") : t("league_b_other", { pos: puesto });
+        channelId = "foodranker_achievements";
         break;
       }
       default:

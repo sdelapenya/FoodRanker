@@ -513,8 +513,12 @@
     <string name="notif_league_b_other">Terminaste %1$dº esta semana. La liga vuelve a empezar hoy.</string>
 
     <!-- Canales de notificacion y recordatorio diario -->
-    <string name="chan_social_t">Likes y valoraciones</string>
-    <string name="chan_social_d">Alguien ha valorado o dado like a tus platos</string>
+    <string name="chan_social_t">Interacciones</string>
+    <string name="chan_social_d">Likes, valoraciones, comentarios y seguidores nuevos</string>
+    <string name="chan_follow_t">Gente que sigues</string>
+    <string name="chan_follow_d">Cuando alguien a quien sigues publica un plato</string>
+    <string name="chan_achiev_t">Logros y liga</string>
+    <string name="chan_achiev_d">Subidas de nivel, logros y resultados de la liga semanal</string>
     <string name="chan_moder_t">Moderación de platos</string>
     <string name="chan_moder_d">Estado de tus platos enviados</string>
     <string name="chan_daily_t">Recordatorio diario</string>

@@ -147,11 +147,11 @@ class NotificationRepository @Inject constructor(
                             }
                             else -> return@forEach
                         }
-                        val channelId = when (type) {
-                            "moderation_approved", "moderation_rejected" ->
-                                NotificationHelper.CHANNEL_MODERATION
-                            else -> NotificationHelper.CHANNEL_SOCIAL
-                        }
+                        // Mismo reparto que el push (NotificationHelper.canalDe): este
+                        // listener y FCM pintan los mismos avisos por caminos distintos, y
+                        // si cada uno elegía canal por su cuenta el mismo hecho podía caer
+                        // en dos sitios según por dónde hubiera entrado.
+                        val channelId = NotificationHelper.canalDe(type)
                         NotificationHelper.show(context, title, body, plateId, channelId)
                     }
             }

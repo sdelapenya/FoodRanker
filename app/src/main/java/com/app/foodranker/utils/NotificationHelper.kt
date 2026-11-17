@@ -13,9 +13,50 @@ import com.app.foodranker.R
 
 object NotificationHelper {
 
+    /**
+     * Interacciones: likes, valoraciones, comentarios y seguidores nuevos.
+     *
+     * ⚠️ El id sigue siendo `foodranker_social` **a propósito**, aunque de cara al usuario
+     * ahora se llame "Interacciones". Hasta el 2026-11-17 este canal llevaba SIETE tipos de
+     * aviso (estos cuatro, más platos de gente seguida, logros y liga) y se mostraba como
+     * "Likes y valoraciones": quien silenciaba lo que creía que eran likes se quedaba
+     * también sin saber que alguien a quien sigue había publicado, sin enterarse de que lo
+     * había hecho.
+     *
+     * Conservar el id es lo que hace que la migración no pise a nadie: **un canal ya creado
+     * no se puede modificar desde el código** —el nombre y la descripción sí, la importancia
+     * no—, así que quien lo tuviera silenciado lo conserva silenciado, que es justo lo que
+     * quería para los likes. Y lo que se saca de aquí ([CHANNEL_FOLLOWING] y
+     * [CHANNEL_ACHIEVEMENTS]) nace como canal nuevo con la importancia por defecto, así que
+     * vuelve a llegarle. Cambiar el id habría reseteado también los likes.
+     */
     const val CHANNEL_SOCIAL      = "foodranker_social"
+
+    /** Alguien a quien sigues ha publicado. Separado del resto desde la v22. */
+    const val CHANNEL_FOLLOWING   = "foodranker_following"
+
+    /** Subidas de nivel, logros y resultados de la liga semanal. */
+    const val CHANNEL_ACHIEVEMENTS = "foodranker_achievements"
+
     const val CHANNEL_MODERATION  = "foodranker_moderation"
     const val CHANNEL_DAILY       = "foodranker_daily"
+
+    /**
+     * De qué canal es cada tipo de aviso.
+     *
+     * Vive aquí y no en quien lo llama para que el reparto sea uno solo: lo necesitan tanto
+     * `FoodRankerMessagingService` (push en primer plano) como el listener de Firestore, y
+     * el servidor manda el mismo reparto en `android.notification.channelId` para cuando la
+     * app está cerrada (ver `onNotificationCreated` en functions/src/index.ts). Si los dos
+     * lados dejan de coincidir, el mismo aviso cae en un canal distinto según si la app
+     * estaba abierta, que es exactamente el tipo de incoherencia que nadie reproduce.
+     */
+    fun canalDe(tipo: String?): String = when (tipo) {
+        "moderation_approved", "moderation_rejected" -> CHANNEL_MODERATION
+        "new_plate"                                  -> CHANNEL_FOLLOWING
+        "level_up", "badge", "league_result"         -> CHANNEL_ACHIEVEMENTS
+        else                                         -> CHANNEL_SOCIAL
+    }
 
     // Legacy alias kept for DailyReminderWorker compatibility
     const val CHANNEL_ID = CHANNEL_DAILY
@@ -28,6 +69,23 @@ object NotificationHelper {
                 context.getString(R.string.chan_social_t),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply { description = context.getString(R.string.chan_social_d) }
+        )
+        // Los dos que salieron de "social" el 2026-11-17. Nacen con IMPORTANCE_DEFAULT, la
+        // misma que tenía el canal del que vienen: la idea es poder silenciarlos por
+        // separado, no silenciarlos de oficio.
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_FOLLOWING,
+                context.getString(R.string.chan_follow_t),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply { description = context.getString(R.string.chan_follow_d) }
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_ACHIEVEMENTS,
+                context.getString(R.string.chan_achiev_t),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply { description = context.getString(R.string.chan_achiev_d) }
         )
         nm.createNotificationChannel(
             NotificationChannel(
@@ -135,9 +193,11 @@ object NotificationHelper {
     }
 
     private fun tituloDeCanal(context: Context, channelId: String) = when (channelId) {
-        CHANNEL_MODERATION -> context.getString(R.string.chan_moder_t)
-        CHANNEL_DAILY      -> context.getString(R.string.chan_daily_t)
-        else               -> context.getString(R.string.app_name)
+        CHANNEL_MODERATION   -> context.getString(R.string.chan_moder_t)
+        CHANNEL_DAILY        -> context.getString(R.string.chan_daily_t)
+        CHANNEL_FOLLOWING    -> context.getString(R.string.chan_follow_t)
+        CHANNEL_ACHIEVEMENTS -> context.getString(R.string.chan_achiev_t)
+        else                 -> context.getString(R.string.app_name)
     }
 
     private fun manager(context: Context) =

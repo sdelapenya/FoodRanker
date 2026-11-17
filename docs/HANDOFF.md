@@ -15,6 +15,74 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔀 LOS AVISOS, REPARTIDOS EN TRES CANALES (2026-11-17) — ⚠️ SERVIDOR SIN DESPLEGAR
+
+Sale de la revisión de arriba: `foodranker_social` se le enseñaba al usuario como **"Likes y
+valoraciones"** pero llevaba **siete tipos** de aviso. Quien silenciaba lo que creía que eran
+likes se quedaba también sin saber que alguien a quien sigue había publicado — y sin
+enterarse de que se lo había hecho.
+
+| Canal | Id | Qué lleva |
+|---|---|---|
+| **Interacciones** | `foodranker_social` *(id de siempre)* | like, rating, comment, follow |
+| **Gente que sigues** | `foodranker_following` **nuevo** | new_plate |
+| **Logros y liga** | `foodranker_achievements` **nuevo** | level_up, badge, league_result |
+| Moderación de platos | `foodranker_moderation` | sin cambios (importancia alta) |
+| Recordatorio diario | `foodranker_daily` | sin cambios |
+
+#### Por qué el canal de interacciones conserva el id viejo
+
+Porque **un canal ya creado no se puede modificar desde el código**: el nombre y la
+descripción sí, la importancia **no**. Conservando `foodranker_social`:
+
+- quien lo tuviera **silenciado lo conserva silenciado**, que es justo lo que quería para
+  los likes;
+- lo que se saca de ahí nace como canal nuevo con la importancia por defecto, así que
+  **vuelve a llegarle** lo de la gente a la que sigue.
+
+Cambiar el id habría reseteado también el ajuste de los likes, que es lo único que la gente
+sí había decidido a conciencia.
+
+#### El reparto vive en UN sitio
+
+`NotificationHelper.canalDe(tipo)`. Lo usan los dos caminos del cliente —
+`FoodRankerMessagingService` (push en primer plano) y el listener de Firestore
+(`NotificationRepository`)—, que antes elegían canal cada uno por su cuenta con un `when`
+copiado. **5 tests** en `NotificationChannelsTest` fijan el reparto.
+
+⚠️ Y tiene que coincidir con el del servidor (`onNotificationCreated`, un `channelId` por
+`case`): el mismo aviso lo pinta el servidor con la app cerrada y el cliente con la app
+abierta. Si dejan de coincidir, el mismo hecho cae en un canal distinto según por dónde
+entró, y eso no lo reproduce nadie a mano.
+
+#### 🛑 LO QUE FALTA, Y EL ORDEN IMPORTA
+
+**El cambio del servidor está escrito y compilado, pero NO desplegado.** A propósito.
+
+`foodranker_following` y `foodranker_achievements` **no existen en la v21 ni anteriores**, que
+es lo que lleva todo el mundo. Si se despliega el servidor antes de repartir la v22, en esos
+móviles FCM manda esos avisos a su canal inventado
+(`fcm_fallback_notification_channel`), con un nombre genérico que el usuario no reconoce.
+**No se pierde ningún aviso** —comprobado en la documentación, no supuesto— pero se ve peor
+que ahora.
+
+**Orden correcto:** publicar la v22 → esperar a que esté repartida → desplegar
+`functions`. Hasta entonces el servidor sigue mandando todo por `foodranker_social`, que es
+exactamente el comportamiento de hoy.
+
+#### De paso: `default_notification_channel_id` en el manifest
+
+Añadido apuntando a `foodranker_social`. Es lo que decide a dónde va un push cuyo canal no
+exista en ese móvil; sin él, FCM usa el suyo inventado.
+
+⚠️ **No arregla el caso de la v21**: la línea viaja en el manifest, así que solo la tiene
+quien instale la versión que la incluye. Lo que protege es el caso futuro — cada vez que se
+añada un canal, el servidor lo mandará antes de que el cliente que lo crea esté repartido.
+
+✅ Compila (app y functions) y pasan los tests. ⚠️ **Sin probar en un móvil**: no se puede
+instalar un build local encima del de Play. Los canales nuevos aparecerán en Ajustes →
+Notificaciones la primera vez que se abra la v22.
+
 ### 🔔 ESTADO DE LOS AVISOS: EL DE "A QUIEN SIGUES" SÍ FUNCIONA (2026-11-17)
 
 Revisado a fondo porque surgió la duda de si al seguir a alguien te avisa cuando publica.

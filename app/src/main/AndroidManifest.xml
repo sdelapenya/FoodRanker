@@ -107,6 +107,23 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_color" />
+        <!-- A que canal van los push cuyo channelId no exista en ESTE dispositivo.
+             Sin esto, FCM se inventa uno propio ("fcm_fallback_notification_channel"),
+             con un nombre generico que el usuario no reconoce y que no puede silenciar
+             junto al resto.
+
+             Deja de ser teorico desde que los avisos se repartieron en varios canales
+             (2026-11-17): el servidor manda "foodranker_following" y
+             "foodranker_achievements", y un cliente que no los tenga creados caeria ahi.
+
+             OJO CON LO QUE ESTO **NO** ARREGLA: esta linea viaja en el manifest, asi que
+             solo la tiene quien instale la version que la incluye. A quien siga en la v21
+             o anterior NO le sirve de nada. Lo que protege es el caso futuro de que el
+             servidor empiece a mandar un canal antes de que el cliente que lo crea este
+             repartido, que es exactamente lo que pasa cada vez que se anade uno. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="foodranker_social" />
 
         <!-- singleTop no es cosmetico: es la unica actividad de la app y recibe TODOS
              los enlaces y TODAS las notificaciones. Con el "standard" de por defecto,

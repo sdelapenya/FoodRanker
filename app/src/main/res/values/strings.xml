@@ -511,8 +511,12 @@
     <string name="notif_league_b_other">You finished %1$d this week. The league starts again today.</string>
 
     <!-- Canales de notificacion y recordatorio diario -->
-    <string name="chan_social_t">Likes and ratings</string>
-    <string name="chan_social_d">Someone rated or liked your dishes</string>
+    <string name="chan_social_t">Interactions</string>
+    <string name="chan_social_d">Likes, ratings, comments and new followers</string>
+    <string name="chan_follow_t">People you follow</string>
+    <string name="chan_follow_d">When someone you follow posts a dish</string>
+    <string name="chan_achiev_t">Achievements and league</string>
+    <string name="chan_achiev_d">Level ups, achievements and weekly league results</string>
     <string name="chan_moder_t">Dish moderation</string>
     <string name="chan_moder_d">The status of the dishes you submit</string>
     <string name="chan_daily_t">Daily reminder</string>
