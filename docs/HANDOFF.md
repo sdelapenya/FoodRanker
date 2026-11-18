@@ -174,7 +174,7 @@ abren sitios nuevos, no cambian ninguno existente.
 
 ---
 
-### 📦 LA v22 (1.8), LISTA PARA SUBIR (2026-11-17)
+### 📦 LA v22 (1.8), SUBIDA A LOS DOS CANALES (2026-11-18)
 
 Es la versión que **desbloquea los canales de avisos**: hasta que esté repartida no se
 puede desplegar `functions` (ver la sección siguiente). Lleva, además del reparto de
@@ -182,6 +182,18 @@ canales, el modo oscuro y dos arreglos de la hoja de editar plato.
 
 AAB construido en `app/build/outputs/bundle/release/app-release.aab` (16,0 MB),
 `versionCode = 22`, `versionName = "1.8"`.
+
+**Estado en Play (2026-11-18):**
+
+| Canal | Estado |
+|---|---|
+| **Prueba interna** | ✅ Activo desde las **10:09**, sin revisión — *"Disponible para testers internos"*. Como siempre, **no aparece en "Cambios en revisión"**. |
+| **Prueba cerrada - Alpha** | ⏳ **Enviada a revisión el 2026-11-18.** Es la que llega al Redmi. Las comprobaciones previas de Play no la pararon: el bloqueo de `READ_MEDIA_IMAGES` que frenó a la v19 sigue resuelto desde la v20. |
+| **Producción** | Sin tocar. |
+
+⏳ **Esperando la aprobación del canal cerrado.** En cuanto llegue: instalar en el Redmi y
+**darse la vuelta en oscuro por las 18 pantallas** (ver más abajo), que es lo único que
+queda sin verificar de esta versión.
 
 #### 1. El modo oscuro no existía — existía el tema, no el uso
 
@@ -293,8 +305,12 @@ instalar la v22 por prueba interna, darse una vuelta con el móvil en oscuro.**
 
 #### Pendiente de esta sección
 
-- Subir la v22 a **prueba interna** → esperar a que esté repartida → **entonces** desplegar
-  `functions`.
+- ✅ ~~Subir la v22 a prueba interna~~ — hecha el 2026-11-18, y enviada también a revisión
+  en el canal cerrado. Queda **esperar la aprobación** → instalar en el Redmi → la vuelta
+  en oscuro → **entonces** desplegar `functions`.
+- Las reglas (`firestore.rules`) se pueden desplegar **ya**, sin esperar a nada: los dos
+  bloques nuevos (`dispositivos`, `borradosIncompletos`) solo abren sitios nuevos y no
+  cambian ninguno existente.
 - El pie del logo (`FoodRankerMark`) es azul marino y sobre fondo oscuro casi no se ve. Es
   el activo de marca, no un color de tema; se deja como está a propósito.
 
