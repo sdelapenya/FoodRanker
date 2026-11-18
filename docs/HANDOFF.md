@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-17
+**Actualizado:** 2026-11-18
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,165 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🛡️ LA AUDITORÍA DE CODEX, REVISADA UNA A UNA (2026-11-18)
+
+Codex pasó una auditoría sobre el repo y devolvió 6 hallazgos. **Se comprobaron todos
+contra el código y contra producción antes de tocar nada**, y el resultado no coincide con
+las prioridades que traía. Lo que sigue es el veredicto, porque el valor está tanto en lo
+que se arregló como en lo que NO hay que arreglar.
+
+Datos de producción el 2026-11-18 (leídos con Admin SDK, solo lectura): **59 platos, los 59
+`approved` y ninguno sin el campo. 40 locales. 15 usuarios.** Esos números deciden dos de
+los hallazgos.
+
+#### ✅ ARREGLADO — platos sin moderar visibles en todos los listados
+
+Real, pero por un motivo distinto al que decía Codex, y el matiz importa en las dos
+direcciones.
+
+**Más pequeño:** no hay cola de revisión humana. `moderatePlateImage` es un trigger
+`onCreate` que pasa la foto por Vision y **borra** lo que rechaza. `pending` dura lo que
+tarde Vision, segundos.
+
+**Más grande:** Codex señalaba Explorar y Cerca de ti. En realidad **no filtraba nadie**:
+Inicio, Descubrir, Tendencias, "de a quien sigo", recientes… El único sitio de toda la app
+que exigía `approved` era el contador de puesto en la ciudad de `PlateDetailViewModel`.
+
+**Por qué importa aunque dure segundos:** los listados que ordenan por `createdAt` ponen el
+plato recién subido **el primero** — justo el que todavía no ha mirado nadie. Y si la
+función no llega a correr (cuota, caída de Vision, despliegue a medias), el plato se queda
+en `pending` y visible **para siempre**.
+
+Arreglado con un único punto de decisión, `Plate.esPublico` / `List<Plate>.soloPublicos()`
+en `data/model/Plate.kt`, aplicado en los **11** sitios que listan platos. Mismo criterio
+que `Fallos.reportar`: la condición que se copia once veces es la que alguien olvida en la
+doce. Cubierto por `VisibilidadDePlatoTest` (8 tests).
+
+**Dos sitios NO lo usan, a propósito:**
+
+- **Tu propio perfil** — tu plato recién subido tiene que verse aunque esté en moderación, o
+  parece que la publicación se ha perdido. En el perfil de **otro** sí se filtra, o sería la
+  puerta de atrás por la que ver lo que los listados ya no enseñan.
+- **Guardados y colecciones** — listas montadas a mano; solo pudieron guardar lo visible.
+
+Los índices compuestos `status + …` ya estaban en `firestore.indexes.json` desde el rediseño
+del ranking y **nunca se usaron desde el cliente**. No hizo falta ninguno, porque el filtro
+es de cliente igual que el de denuncias que ya existía.
+
+#### ✅ ARREGLADO — el XP de liga se podía pagar dos veces
+
+Confirmado leyendo el código: `addLeagueXP` hacía `FieldValue.increment()` sin ninguna
+guarda, y además corría **antes** de la comprobación de `processed` que protege al resto de
+`onRatingCreated`. Los triggers de Firestore son *at-least-once*: un reintento pagaba dos
+veces. En una clasificación semanal eso es la diferencia entre ganar y no ganar.
+
+Ahora el sello `leagueCity/leagueWeekKey/leagueXpAmount` se escribe en una **transacción
+antes** del incremento y es la marca de idempotencia: si ya está, no se concede nada. Si el
+incremento falla después, se quita el sello para que el reintento pueda reclamarlo limpio —
+si no, un clawback posterior restaría un XP que nunca se dio.
+
+Es seguro porque cada valoración recibe XP de liga por **un solo camino**: la del autor desde
+`approveplate`, las demás desde `onRatingCreated`, que descarta la del autor con
+`raterId === ownerId` antes de llegar. ⚠️ Si eso deja de ser cierto, esta guarda se tragaría
+la segunda concesión y haría falta una clave por motivo.
+
+#### ✅ ARREGLADO A MEDIAS, Y ESTÁ BIEN ASÍ — el borrado de cuenta
+
+Codex lo daba como fallo. **No lo es**: que los pasos 1-5 sigan adelante tras un error es
+deliberado y estaba comentado justo ahí — los pasos 6 y 7 (perfil y cuenta de Auth) son los
+que exige Play, y un fallo limpiando valoraciones no puede dejar la cuenta viva.
+
+Lo que sí faltaba: **enterarse**. Devolvía `{ success: true }` igual, así que un borrado a
+medias era indistinguible de uno completo salvo leyendo los logs en ese momento. Ahora los
+pasos fallidos se anotan en `borradosIncompletos/{uid}` (cerrada a cal y canto en las
+reglas) **antes** de borrar la cuenta — después ya no hay a quién preguntar — y se vacían
+con `functions/scripts/retryDeletions.js` (simulación por defecto, `--confirm` para ir en
+serio), al estilo de `manageUser.js`.
+
+⚠️ Las etiquetas de paso son la clave que une la función y el script. Si se renombra un paso
+en `deleteUserAccount` y no en `retryDeletions.js`, ese paso deja de reintentarse en
+silencio; por eso el script avisa de etiquetas que no reconoce en vez de ignorarlas.
+
+#### 🟡 MEDIO ARREGLADO, A PROPÓSITO — el token FCM
+
+Codex lo ponía en "Alta" por estar legible (`users/{uid}` es `allow read: if isSignedIn()`).
+**Exagerado**: con un token no se puede mandar un push, hace falta la credencial de servidor
+de FCM. Es minimización de datos, no un agujero explotable.
+
+Lo que sí era un fallo de verdad, y Codex colaba de pasada: `fcmToken` es un **campo único**,
+así que un segundo móvil pisa el token del primero y cerrar sesión en uno deja al otro sin
+avisos.
+
+**Por qué la mitad y no entero:** un token **no se puede rellenar desde el servidor** — solo
+el móvil conoce el suyo. Si las funciones cambiaran de sitio antes de que la app escriba en
+el nuevo, todo el que siguiera en v21 se queda sin avisos. Misma trampa que los canales. Así
+que:
+
+- **v22 (hecho):** la app escribe en **los dos sitios**. Nuevo:
+  `users/{uid}/dispositivos/{idInstalacion}`, privado (`isOwner`), un documento por móvil,
+  con el **Installation ID** como id — no el token, que rota y dejaría un documento muerto
+  por rotación y avisos duplicados. Al cerrar sesión se borra solo el de **este** móvil.
+- **Después, con la v22 repartida:** las funciones leen de ahí (todos los dispositivos, no
+  uno), y se quita `fcmToken` del perfil y de su `hasOnly`.
+
+Es **puramente aditivo**: si la escritura nueva falla, los avisos siguen por la vieja. Se
+hizo así porque **no se ha podido probar con una sesión real** — el emulador no tiene cuenta
+de Google. Un cambio no testeable que toca los avisos tiene que ser incapaz de romper nada.
+
+#### 🟡 PARCHE CONSCIENTE — la búsqueda
+
+Real: Explorar baja los mejores por `rankingScore` y busca **dentro** de ellos, así que un
+plato que existe pero no entra en el recorte no aparece **aunque lo escribas entero**.
+
+Subido el tope de 100 a **500** (`ExploreViewModel.TOPE_CATALOGO`), con el KDoc diciendo sin
+rodeos que es un parche. Con 59 platos el fallo queda lejos. **No se arregló de verdad porque
+es una decisión de producto, no un detalle:** Firestore no busca subcadenas, solo prefijos
+sobre un campo indexado, y hoy "pizza" encuentra "La Pizzería" — por prefijo dejaría de
+hacerlo.
+
+Y hay un segundo fallo **peor de lo que decía Codex**: Cerca de ti hace
+`whereGreaterThan("lat")` con `limit(50)`, y Firestore ordena por el campo del rango, así que
+se queda con los 50 **más al sur** de la banda, no con los 50 más cercanos. Con 40 locales no
+se nota. El arreglo de verdad es un geohash.
+
+**Cuando el catálogo se acerque a 500, esto hay que hacerlo en serio.**
+
+#### ⚪ NO TOCADO, CON MOTIVO
+
+- **Recompensa de anuncios sin verificar en servidor.** Cierto. Verificarlo de verdad exige
+  SSV de AdMob (configuración en consola + endpoint + callback). Infla XP, nada más.
+- **Imagen huérfana en Cloudinary.** El código ya comprueba la existencia del plato **antes**
+  de subir, con su comentario. Queda la ventana de que falle la escritura, y ahí solo se
+  loguea la URL. Borrarla exige el secreto de Cloudinary → tiene que ser servidor.
+
+#### De paso: `check_listing.py` daba un falso positivo permanente
+
+Contaba el bloque "Los tres de una vez" (las tres notas con sus etiquetas `<es-ES>`…) como
+una sola nota de ~950 caracteres y marcaba `SE PASA` en **cada ejecución**, con las tres de
+dentro holgadamente bajo el límite. Un aviso siempre encendido no avisa de nada. Ahora mide
+cada etiqueta por separado y el check da OK.
+
+#### Verificado
+
+- `tsc --noEmit` limpio · **84 tests, 0 fallos** (8 nuevos de visibilidad)
+- Las 5 comprobaciones de `tools/i18n/` + `tools/ui/check_theme_colors.py`, todas OK
+- `check_apk.py`: 9 solo-por-defecto (de librería) y 0 solo-castellano
+- Emulador API 35 en **oscuro**: arranque en frío con splash negro, login legible, sin crash
+- ⚠️ **Nada de lo de dentro de la sesión está probado** — el emulador no tiene cuenta de
+  Google y un build local no se instala sobre el de Play. Sigue pendiente la vuelta en oscuro
+  por las 18 pantallas al instalar la v22 desde prueba interna.
+
+#### El orden no cambia
+
+1. Subir la **v22** a prueba interna → 2. esperar a que esté repartida → 3. **entonces**
+   desplegar `functions` (canales de avisos + estos dos arreglos de servidor) y las reglas.
+
+⚠️ Las reglas (`firestore.rules`) llevan dos bloques nuevos (`dispositivos`,
+`borradosIncompletos`). **Se pueden desplegar antes que las funciones sin problema**: solo
+abren sitios nuevos, no cambian ninguno existente.
+
+---
 
 ### 📦 LA v22 (1.8), LISTA PARA SUBIR (2026-11-17)
 
