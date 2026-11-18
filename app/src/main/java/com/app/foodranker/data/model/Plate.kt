@@ -127,3 +127,53 @@ val Plate.categoryType: PlateCategory get() = PlateCategory.fromId(category)
 /** Nombre de la categoria en el idioma activo. */
 @Composable
 fun PlateCategory.categoryName(): String = stringResource(nameRes)
+
+/**
+ * Umbral de denuncias a partir del cual un plato deja de enseñarse.
+ *
+ * Es el mismo número que usan las denuncias de valoraciones y comentarios, pero vive
+ * aquí porque el de platos es el único que decide si algo sale en los listados.
+ */
+const val UMBRAL_DENUNCIAS = 3
+
+/**
+ * ¿Se le puede enseñar este plato a cualquiera?
+ *
+ * ## Por qué hace falta el estado y no basta con las denuncias
+ *
+ * Un plato nace con `status = "pending"` y lo aprueba `moderatePlateImage`, un trigger
+ * `onCreate` que pasa la foto por Vision (SafeSearch + detección de comida) y **borra**
+ * lo que rechaza. No hay cola de revisión humana: lo normal es que `pending` dure los
+ * segundos que tarde Vision.
+ *
+ * Aun así hay que filtrarlo, por dos motivos que no se ven leyendo solo el camino feliz:
+ *
+ *  1. Los listados que ordenan por `createdAt` ("recientes", "de a quien sigo") ponen el
+ *     plato recién subido **el primero**. O sea, justo el que todavía no ha mirado nadie
+ *     queda arriba del todo mientras se modera.
+ *  2. Si la función no llega a correr — cuota agotada, caída de Vision, un despliegue a
+ *     medias — el plato se queda en `pending` para siempre, y sin este filtro, visible
+ *     para siempre.
+ *
+ * Hasta el 2026-11-18 no lo comprobaba **ningún** listado: ni Inicio, ni Descubrir, ni
+ * Explorar, ni Tendencias, ni Cerca de ti. El único sitio de toda la app que exigía
+ * `approved` era el contador de puesto en la ciudad de PlateDetailViewModel.
+ *
+ * ## Dónde NO se usa esto, a propósito
+ *
+ * - **Tu propio perfil.** Tu plato recién subido tiene que verse aunque esté pendiente,
+ *   o parece que se ha perdido al publicarlo. En el perfil de otro sí se filtra.
+ * - **Guardados y colecciones.** Son listas que el usuario ha montado a mano, y solo
+ *   pudo guardar lo que ya podía ver.
+ */
+val Plate.esPublico: Boolean
+    get() = status == PlateStatus.APPROVED && reportCount < UMBRAL_DENUNCIAS
+
+/**
+ * Deja solo los platos que se pueden enseñar. Ver [esPublico].
+ *
+ * Existe como función y no como una condición repetida en cada pantalla por lo mismo
+ * que `Fallos.reportar`: la línea que se copia en once sitios es la que alguien olvida
+ * en el doce. Si cambia el umbral o se añade otro estado, se cambia aquí.
+ */
+fun List<Plate>.soloPublicos(): List<Plate> = filter { it.esPublico }

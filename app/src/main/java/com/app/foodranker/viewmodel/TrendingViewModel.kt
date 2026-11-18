@@ -1,5 +1,6 @@
 package com.app.foodranker.viewmodel
 
+import com.app.foodranker.data.model.soloPublicos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
@@ -44,14 +45,14 @@ class TrendingViewModel @Inject constructor(
                             .orderBy("likes", com.google.firebase.firestore.Query.Direction.DESCENDING)
                             .limit(20).get().await()
                             .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                            .filter { it.reportCount < 3 }
+                            .soloPublicos()
                     }
                     val ratedJob = async {
                         firestore.collection("plates")
                             .orderBy("rankingScore", com.google.firebase.firestore.Query.Direction.DESCENDING)
                             .limit(30).get().await()
                             .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                            .filter { it.reportCount < 3 }
+                            .soloPublicos()
                     }
                     Pair(likedJob.await(), ratedJob.await())
                 }

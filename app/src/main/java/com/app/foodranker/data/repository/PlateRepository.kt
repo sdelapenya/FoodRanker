@@ -1,5 +1,6 @@
 package com.app.foodranker.data.repository
 
+import com.app.foodranker.data.model.soloPublicos
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.app.foodranker.data.model.Plate
@@ -18,12 +19,12 @@ class PlateRepository @Inject constructor(
         return try {
             val snapshot = platesCollection
                 .orderBy("rankingScore", Query.Direction.DESCENDING)
-                .limit(limit + 5)  // over-fetch para compensar los filtrados por reportCount
+                .limit(limit + 5)  // over-fetch para compensar los que quite soloPublicos()
                 .get()
                 .await()
             val plates = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                .filter { it.reportCount < 3 }
+                .soloPublicos()
                 .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
@@ -37,12 +38,12 @@ class PlateRepository @Inject constructor(
             val snapshot = platesCollection
                 .whereEqualTo("category", category.name)
                 .orderBy("rankingScore", Query.Direction.DESCENDING)
-                .limit(limit + 5) // over-fetch para compensar los filtrados por reportCount
+                .limit(limit + 5) // over-fetch para compensar los que quite soloPublicos()
                 .get()
                 .await()
             val plates = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                .filter { it.reportCount < 3 }
+                .soloPublicos()
                 .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
@@ -59,7 +60,7 @@ class PlateRepository @Inject constructor(
                 .await()
             val plates = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                .filter { it.reportCount < 3 }
+                .soloPublicos()
             Result.success(plates)
         } catch (e: Exception) {
             Result.failure(e)

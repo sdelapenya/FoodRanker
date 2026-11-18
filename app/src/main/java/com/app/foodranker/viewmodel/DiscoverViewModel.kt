@@ -1,5 +1,6 @@
 package com.app.foodranker.viewmodel
 
+import com.app.foodranker.data.model.soloPublicos
 import com.app.foodranker.BuildConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -133,7 +134,7 @@ class DiscoverViewModel @Inject constructor(
                     .orderBy("rankingScore", Query.Direction.DESCENDING)
                     .limit(30).get().await()
                     .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                    .filter { it.reportCount < 3 }
+                    .soloPublicos()
                 _uiState.value = _uiState.value.copy(nearbyPlates = plates)
             } catch (e: Exception) {
                 Fallos.reportar(e, "descubrir: platos cercanos")
@@ -168,7 +169,7 @@ class DiscoverViewModel @Inject constructor(
                                 .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                         }
                     }.flatMap { it.await() }
-                }.filter { it.reportCount < 3 }
+                }.soloPublicos()
                     .sortedByDescending { it.createdAt }
                     .take(90)
                 _uiState.value = _uiState.value.copy(followingPlates = plates, isLoadingFollowing = false)
@@ -193,7 +194,7 @@ class DiscoverViewModel @Inject constructor(
                 val docs = snapshot.documents
                 lastDocument = docs.lastOrNull() ?: cursor
                 val more = docs.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                    .filter { it.reportCount < 3 }
+                    .soloPublicos()
                 // Seguimos paginando mientras Firestore devuelva páginas completas,
                 // aunque todos los docs de esta página estén filtrados por reportCount.
                 val hasMore = docs.size >= PAGE_SIZE
@@ -254,7 +255,7 @@ class DiscoverViewModel @Inject constructor(
                 lastDocument = docs.lastOrNull()
                 val plates = docs
                     .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                    .filter { it.reportCount < 3 }
+                    .soloPublicos()
 
                 _uiState.value = _uiState.value.copy(
                     plates = plates,

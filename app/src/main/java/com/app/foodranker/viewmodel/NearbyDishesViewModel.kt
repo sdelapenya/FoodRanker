@@ -1,5 +1,6 @@
 package com.app.foodranker.viewmodel
 
+import com.app.foodranker.data.model.soloPublicos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.foodranker.data.model.Plate
@@ -110,7 +111,7 @@ class NearbyDishesViewModel @Inject constructor(
                     .get().await()
                 val platesByVenue = platesSnap.documents
                     .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                    .filter { it.reportCount < 3 }
+                    .soloPublicos()
                     .groupBy { it.venueId }
 
                 val results = nearby.mapNotNull { (venue, distance) ->

@@ -1,5 +1,6 @@
 package com.app.foodranker.viewmodel
 
+import com.app.foodranker.data.model.soloPublicos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -115,9 +116,15 @@ class ProfileViewModel @Inject constructor(
                         }
                     }
                     val platesDeferred = async {
-                        firestore.collection("plates")
+                        val suyos = firestore.collection("plates")
                             .whereEqualTo("addedByUserId", userId).limit(100).get().await()
                             .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                        // En TU perfil se ven todos, incluido el que acabas de subir y
+                        // sigue en moderación: filtrarlo aquí haría parecer que la
+                        // publicación se ha perdido. En el de otro, solo los públicos
+                        // — si no, el perfil del autor sería la puerta de atrás por la
+                        // que ver justo lo que los listados ya no enseñan.
+                        (if (isOwnProfile) suyos else suyos.soloPublicos())
                             .sortedByDescending { it.createdAt }
                     }
                     val ratingsDeferred = async {
