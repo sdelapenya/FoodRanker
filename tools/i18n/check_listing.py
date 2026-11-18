@@ -22,10 +22,25 @@ for m in re.finditer(r'```\n(.*?)```', s, re.S):
                     idioma[-1] if idioma else "?",
                     m.group(1).rstrip("\n")))
 
+# Los bloques "Los tres de una vez" llevan las tres notas dentro de <es-ES>, <en-GB> y
+# <en-US>, que es como Play pide pegarlas de golpe. El limite de 500 es POR IDIOMA, no
+# del bloque entero: medir el bloque daba ~950 y marcaba "SE PASA" en cada ejecucion,
+# con las tres notas de dentro holgadamente por debajo. Un aviso que siempre esta
+# encendido no avisa de nada, asi que aqui se mide cada etiqueta por separado.
+ETIQUETA = re.compile(r'<(\w\w-\w\w)>\n(.*?)</\1>', re.S)
+
+
+def partes(campo, idioma, texto):
+    """Cada trozo que hay que medir por separado, como (idioma, texto)."""
+    tramos = ETIQUETA.findall(texto)
+    if not tramos:
+        return [(idioma, texto)]
+    return [("%s %s" % (idioma, tag), cuerpo.strip("\n")) for tag, cuerpo in tramos]
+
+
 problemas = 0
 print("%-22s %-18s %6s %6s" % ("campo", "idioma", "chars", "limite"))
 for campo, idioma, texto in bloques:
-    n = len(texto)
     limite = LIMITES.get(campo)
     if limite is None:
         # Las novedades van bajo encabezados de idioma, no de campo.
@@ -33,10 +48,12 @@ for campo, idioma, texto in bloques:
         campo_m = "Novedades"
     else:
         campo_m = campo
-    marca = "" if n <= limite else "  <<< SE PASA"
-    if n > limite:
-        problemas += 1
-    print("%-22s %-18s %6d %6d%s" % (campo_m, idioma, n, limite, marca))
+    for idioma_m, trozo in partes(campo, idioma, texto):
+        n = len(trozo)
+        marca = "" if n <= limite else "  <<< SE PASA"
+        if n > limite:
+            problemas += 1
+        print("%-22s %-18s %6d %6d%s" % (campo_m, idioma_m, n, limite, marca))
 
 print()
 if problemas:
