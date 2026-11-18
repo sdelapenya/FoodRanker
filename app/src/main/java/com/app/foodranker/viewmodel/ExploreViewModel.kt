@@ -1,5 +1,6 @@
 package com.app.foodranker.viewmodel
 
+import com.app.foodranker.data.model.soloPublicos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
@@ -90,7 +91,7 @@ class ExploreViewModel @Inject constructor(
     private fun applyFilters() {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            val cacheStale = System.currentTimeMillis() - cacheLoadedAt > 60_000L
+            val cacheStale = System.currentTimeMillis() - cacheLoadedAt > CACHE_TTL_MS
             if (allPlatesCache.isEmpty() || cacheStale) {
                 _uiState.value = _uiState.value.copy(isLoading = true)
                 delay(300)
@@ -158,13 +159,13 @@ class ExploreViewModel @Inject constructor(
         try {
             val snapshot = firestore.collection("plates")
                 .orderBy("rankingScore", Query.Direction.DESCENDING)
-                .limit(100)
+                .limit(TOPE_CATALOGO)
                 .get()
                 .await()
 
             allPlatesCache = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
-                .filter { it.reportCount < 3 }
+                .soloPublicos()
             cacheLoadedAt = System.currentTimeMillis()
 
             applyLocalFilters()
@@ -194,5 +195,37 @@ class ExploreViewModel @Inject constructor(
             SortOption.LIKES   -> plates.sortedByDescending { it.likes }
         }
         _uiState.value = _uiState.value.copy(results = plates, isLoading = false)
+    }
+
+    companion object {
+        /**
+         * Cuántos platos se bajan para buscar dentro de ellos.
+         *
+         * ⚠️ **Esto es un parche, no el arreglo.** Buscar aquí funciona al revés de como
+         * debería: primero se recorta el catálogo a los mejores por `rankingScore` y
+         * *luego* se filtra por nombre, local o ciudad. O sea, un plato que existe pero
+         * no está entre los [TOPE_CATALOGO] mejores **no aparece aunque lo escribas
+         * entero**. Subir el tope no lo arregla, solo mueve el punto donde se rompe.
+         *
+         * Está así porque Firestore no sabe buscar subcadenas: lo que sabe hacer es
+         * prefijo sobre un campo indexado, y eso cambiaría lo que encuentra la búsqueda
+         * (hoy "pizza" encuentra "La Pizzería"; por prefijo, no). Esa es una decisión de
+         * producto, no un detalle de implementación, así que no se toma de pasada.
+         *
+         * Mientras tanto: el 2026-11-18 había 59 platos en producción, así que con 500 el
+         * fallo queda lejos. **Cuando el catálogo se acerque a esta cifra hay que hacer la
+         * búsqueda de verdad** — campo normalizado en el plato e índice, o un servicio de
+         * búsqueda. Coste de subirlo: son lecturas de Firestore por cada carga de
+         * Explorar, y hay caché ([CACHE_TTL_MS]) para no repetirlas en cada tecla.
+         */
+        private const val TOPE_CATALOGO = 500L
+
+        /**
+         * Cuánto vale la copia local del catálogo antes de volver a pedirla.
+         *
+         * Importa más desde que [TOPE_CATALOGO] es 500: cada recarga son hasta 500
+         * lecturas de Firestore, y sin esto se pagarían al teclear en el buscador.
+         */
+        private const val CACHE_TTL_MS = 60_000L
     }
 }
