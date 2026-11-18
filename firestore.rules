@@ -87,6 +87,36 @@ service cloud.firestore {
       // referralCount y XP solo los escribe onReferralCreated Cloud Function via Admin SDK
 
       allow delete: if isOwner(userId);
+
+      // Token de avisos, uno por móvil. SOLO el dueño, a diferencia del documento de
+      // perfil de arriba, que lo lee cualquiera con sesión iniciada (`isSignedIn`) —
+      // y ahí es justo donde vive hoy el `fcmToken`, al alcance de cualquier cuenta.
+      //
+      // El plan de migración, en dos versiones, porque un token NO se puede rellenar
+      // desde el servidor: solo el móvil conoce el suyo. Si el servidor cambiara de
+      // sitio antes de que la app escriba aquí, todo el que siguiera en una versión
+      // anterior se quedaría sin avisos.
+      //   v22 (esta): la app escribe en los DOS sitios. El servidor sigue leyendo el
+      //               campo del perfil y no se entera de nada.
+      //   después:    con la v22 repartida, las Cloud Functions pasan a leer de aquí
+      //               (todos los dispositivos, no uno) y se borra `fcmToken` del
+      //               perfil, con su línea del `hasOnly` de arriba.
+      //
+      // De paso arregla lo de los dos móviles: `fcmToken` es un campo único, así que
+      // el segundo teléfono pisaba el token del primero y cerrar sesión en uno dejaba
+      // al otro sin avisos. Aquí cada instalación tiene su documento.
+      match /dispositivos/{deviceId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // ── BORRADOS INCOMPLETOS ───────────────────────────────────
+    // Lo que deleteUserAccount no consiguió limpiar, anotado para reintentarlo a mano
+    // con functions/scripts/retryDeletions.js. Cerrado del todo: lo escribe y lo lee
+    // solo el Admin SDK, que no pasa por estas reglas. Tiene uids de cuentas ya
+    // borradas, así que no hay nadie a quien dárselo ni motivo para enseñarlo.
+    match /borradosIncompletos/{uid} {
+      allow read, write: if false;
     }
 
     // ── VENUES ─────────────────────────────────────────────────

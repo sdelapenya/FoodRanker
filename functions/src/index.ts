@@ -352,14 +352,16 @@ function leagueScopeKey(city: string): string | null {
  * Looks up the user's city fresh each time so league placement always
  * reflects the current profile city. No-op if the user has no city set.
  *
- * If sourceRatingRef is given, the city/weekKey actually used are stamped onto
- * that rating doc right after (best-effort, separate write — NOT atomic with the
- * league increment above, deliberately: if the rating was concurrently deleted,
- * the stamp write failing must not roll back the XP already granted) as
- * leagueCity/leagueWeekKey/leagueXpAmount. This lets a future clawback (e.g.
- * if the plate this rating belongs to is later rejected by moderation) reverse
- * the exact league entry/amount, even if the user's city changes meanwhile or
- * the clawback happens to fall on a different ISO week.
+ * If sourceRatingRef is given, the city/weekKey actually used are stamped onto that
+ * rating doc as leagueCity/leagueWeekKey/leagueXpAmount. This lets a future clawback
+ * (e.g. if the plate this rating belongs to is later rejected by moderation) reverse
+ * the exact league entry/amount, even if the user's city changes meanwhile or the
+ * clawback happens to fall on a different ISO week.
+ *
+ * Ese sello es además la marca de idempotencia: se escribe en una transacción ANTES
+ * del incremento y, si ya estaba, no se concede nada. Ver el comentario de dentro —
+ * hasta el 2026-11-18 se escribía después y en best-effort, y un reintento del
+ * trigger pagaba el XP de liga dos veces.
  */
 async function addLeagueXP(
   userId: string,
@@ -381,29 +383,32 @@ async function addLeagueXP(
       .collection("entries")
       .doc(userId);
 
-    // El incremento de liga es el efecto que importa de verdad: se escribe siempre,
-    // sin depender de que el rating de origen siga existiendo en este momento.
-    await leagueEntryRef.set(
-      {
-        userId,
-        userName,
-        userPhotoUrl,
-        city,
-        weekKey: wk,
-        xp: admin.firestore.FieldValue.increment(xpDelta),
-        updatedAt: Date.now(),
-      },
-      { merge: true }
-    );
-
+    // El sello va ANTES del incremento, y es lo que hace esto idempotente.
+    //
+    // Los triggers de Firestore son at-least-once: el mismo onRatingCreated puede
+    // ejecutarse dos veces por la misma valoración (reintento tras un fallo, un
+    // redespliegue a medias...). Hasta el 2026-11-18 el incremento era un
+    // FieldValue.increment() sin ninguna guarda y corría ADEMÁS antes de la
+    // comprobación de `processed` que protege al resto de la función, así que un
+    // reintento pagaba el XP de liga dos veces. En una clasificación semanal eso no
+    // es un redondeo: es la diferencia entre ganar y no ganar.
+    //
+    // La reclamación es una transacción sobre el propio rating: si ya lleva
+    // `leagueXpAmount`, este XP ya se concedió y no se vuelve a conceder. Funciona
+    // porque cada valoración recibe XP de liga por un solo camino — la del autor
+    // desde approveplate, las demás desde onRatingCreated, que descarta la del autor
+    // con `raterId === ownerId` antes de llegar aquí. Si eso dejara de ser cierto,
+    // esta guarda se tragaría la segunda concesión y haría falta una clave por motivo.
     if (sourceRatingRef) {
-      // Best-effort y separado del incremento anterior: si el rating ya no existe
-      // (borrado de forma concurrente por deleteRejectedPlate o deleteUserAccount
-      // mientras esto corría), no hay nada que estampar ni clawback futuro posible
-      // para él — pero eso no debe tirar abajo el XP de liga ya concedido arriba
-      // (un único batch atómico haría justo eso si el update() fallase).
-      try {
-        await sourceRatingRef.update({
+      const reclamado = await db.runTransaction(async (tx) => {
+        const ratingSnap = await tx.get(sourceRatingRef);
+        // Sin rating no hay nada que sellar ni clawback posible para él. Antes aquí se
+        // concedía el XP igual; ahora no. Es deliberado: un XP que nadie puede revertir
+        // es peor que un XP que no se da, y el rating solo desaparece si lo borró
+        // deleteRejectedPlate o deleteUserAccount, que es justo cuando no se merece.
+        if (!ratingSnap.exists) return false;
+        if (ratingSnap.get("leagueXpAmount") !== undefined) return false;
+        tx.update(sourceRatingRef, {
           // Se estampa el PREFIJO de la liga donde realmente se escribió, no la ciudad del
           // perfil: con LEAGUE_SCOPE="global" son cosas distintas, y los clawbacks
           // (deleteRejectedPlate, revertAuthorXP) reconstruyen el id con este valor. Los
@@ -413,9 +418,44 @@ async function addLeagueXP(
           leagueWeekKey: wk,
           leagueXpAmount: xpDelta,
         });
-      } catch (err) {
-        logger.warn(`addLeagueXP: no se pudo estampar leagueCity/leagueWeekKey en el rating (probablemente ya borrado):`, err);
+        return true;
+      });
+      if (!reclamado) {
+        logger.info(`addLeagueXP: ${userId} ya tenía sellado el XP de liga de esta valoración (o ya no existe), no se repite`);
+        return;
       }
+    }
+
+    try {
+      await leagueEntryRef.set(
+        {
+          userId,
+          userName,
+          userPhotoUrl,
+          city,
+          weekKey: wk,
+          xp: admin.firestore.FieldValue.increment(xpDelta),
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      // El sello ya está puesto y el XP no ha llegado a darse. Si se queda así, un
+      // clawback posterior restaría un XP que nunca se concedió, que es peor que el
+      // problema original. Se borra el sello para que el reintento del trigger pueda
+      // volver a reclamarlo limpiamente.
+      if (sourceRatingRef) {
+        try {
+          await sourceRatingRef.update({
+            leagueCity: admin.firestore.FieldValue.delete(),
+            leagueWeekKey: admin.firestore.FieldValue.delete(),
+            leagueXpAmount: admin.firestore.FieldValue.delete(),
+          });
+        } catch (err2) {
+          logger.error(`addLeagueXP: falló el incremento y además no se pudo quitar el sello de ${userId} — puede quedar un clawback de más:`, err2);
+        }
+      }
+      throw err;
     }
   } catch (err) {
     logger.warn(`addLeagueXP failed for ${userId}:`, err);
@@ -2350,11 +2390,18 @@ export const deleteUserAccount = onCall(
     // la cuenta de Auth (pasos 6-7, los críticos para el derecho al olvido). El peor
     // caso pasa de "cuenta a medio borrar que sigue activa" a "algún dato huérfano de
     // bajo impacto" — ya documentado como limitación conocida de Firestore.
+    // Los pasos que fallen se apuntan aquí. Antes solo se logueaban: la función seguía,
+    // borraba la cuenta y devolvía `{ success: true }` igual, así que un borrado a medias
+    // era indistinguible de uno completo salvo que a alguien se le ocurriera leer los logs
+    // de Cloud Functions en ese momento. Quedaban valoraciones y comentarios públicos de
+    // una cuenta ya inexistente y nadie se enteraba.
+    const fallidos: string[] = [];
     const step = async (label: string, fn: () => Promise<void>) => {
       try {
         await fn();
       } catch (err) {
         logger.warn(`deleteUserAccount step "${label}" failed for ${uid}:`, err);
+        fallidos.push(label);
       }
     };
 
@@ -2400,6 +2447,28 @@ export const deleteUserAccount = onCall(
       await db.collection("notifications").doc(uid).delete();
     });
 
+    // Antes de tocar la cuenta de Auth, dejar constancia de lo que no se pudo limpiar.
+    // Va primero porque después del paso 7 ya no hay a quién preguntarle: el uid deja de
+    // existir y los datos huérfanos no tienen nada que los enlace de vuelta.
+    //
+    // Es una colección aparte y no un campo del perfil porque el perfil se borra justo
+    // debajo. Nadie la lee desde la app (ver firestore.rules): la vacía
+    // `functions/scripts/retryDeletions.js`, al estilo de manageUser.js — mecanismo a
+    // mano, que es el que hay hoy para todo lo administrativo.
+    if (fallidos.length > 0) {
+      try {
+        await db.collection("borradosIncompletos").doc(uid).set({
+          uid,
+          pasosFallidos: fallidos,
+          creadoEn: Date.now(),
+          intentos: admin.firestore.FieldValue.increment(1),
+        }, { merge: true });
+      } catch (err) {
+        // Si ni esto se puede escribir, al menos que el log lo diga con todas las letras.
+        logger.error(`deleteUserAccount: ${uid} queda con datos huérfanos (${fallidos.join(", ")}) y NO se ha podido registrar para reintento:`, err);
+      }
+    }
+
     try {
       // 6. User document
       await db.collection("users").doc(uid).delete();
@@ -2407,8 +2476,15 @@ export const deleteUserAccount = onCall(
       // 7. Delete Firebase Auth account (Admin SDK bypasses rules)
       await admin.auth().deleteUser(uid);
 
-      logger.info(`Account deleted: ${uid}`);
-      return { success: true };
+      if (fallidos.length > 0) {
+        logger.warn(`Account deleted with leftovers: ${uid} — pendiente: ${fallidos.join(", ")}`);
+      } else {
+        logger.info(`Account deleted: ${uid}`);
+      }
+      // `success` sigue siendo true: la cuenta SÍ se ha borrado, que es lo que la app le
+      // promete al usuario y lo que exige Play. `pendiente` es para quien llame a esto
+      // desde un script y quiera saber la verdad completa; la app no lo mira.
+      return { success: true, pendiente: fallidos };
     } catch (err) {
       logger.error(`deleteUserAccount error for ${uid}:`, err);
       throw new HttpsError("internal", "Failed to delete account");
