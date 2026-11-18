@@ -3,6 +3,7 @@ package com.app.foodranker.utils
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -69,13 +70,65 @@ class FoodRankerMessagingService : FirebaseMessagingService() {
                 }
         }
 
+        /**
+         * Nombre de la subcolección privada donde va el token de cada móvil.
+         * El reparto entre este sitio y el campo del perfil está explicado en
+         * `firestore.rules`, en la regla de `users/{userId}/dispositivos`.
+         */
+        const val COLECCION_DISPOSITIVOS = "dispositivos"
+
         private fun saveTokenForUser(firestore: FirebaseFirestore, userId: String, token: String) {
+            // 1) Donde ha estado siempre. El servidor sigue leyendo de aquí, así que esto
+            //    NO se puede quitar hasta que la v22 esté repartida y las funciones lean
+            //    de la subcolección. Ver firestore.rules.
             firestore
                 .collection("users")
                 .document(userId)
                 .update("fcmToken", token)
                 .addOnFailureListener { e ->
                     Log.w(TAG, "Error guardando token FCM: ${e.message}")
+                }
+
+            // 2) El sitio nuevo: privado y uno por móvil. Es puramente aditivo — si esto
+            //    falla, los avisos siguen funcionando por (1). Se hace así a propósito:
+            //    este cambio no se ha podido probar con una sesión real (el emulador no
+            //    tiene cuenta de Google), así que tenía que ser incapaz de romper nada.
+            guardarTokenDelDispositivo(firestore, userId, token)
+        }
+
+        /**
+         * Escribe el token en `users/{uid}/dispositivos/{idInstalacion}`.
+         *
+         * El id del documento es el **Installation ID** de Firebase, que es estable para
+         * esta instalación de la app. Se usa ese y no el propio token porque el token
+         * rota (reinstalar, borrar datos, a veces solo con el tiempo): con el token como
+         * id se iría acumulando un documento muerto por cada rotación, y el servidor
+         * acabaría mandando cada aviso varias veces al mismo móvil. Con el id de
+         * instalación, una rotación simplemente reescribe el mismo documento.
+         */
+        private fun guardarTokenDelDispositivo(
+            firestore: FirebaseFirestore,
+            userId: String,
+            token: String
+        ) {
+            FirebaseInstallations.getInstance().id
+                .addOnSuccessListener { idInstalacion ->
+                    firestore
+                        .collection("users").document(userId)
+                        .collection(COLECCION_DISPOSITIVOS).document(idInstalacion)
+                        .set(
+                            mapOf(
+                                "token" to token,
+                                "plataforma" to "android",
+                                "actualizadoEn" to System.currentTimeMillis()
+                            )
+                        )
+                        .addOnFailureListener { e ->
+                            Log.w(TAG, "Error guardando el token del dispositivo: ${e.message}")
+                        }
+                }
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "Error obteniendo el id de instalación: ${e.message}")
                 }
         }
     }

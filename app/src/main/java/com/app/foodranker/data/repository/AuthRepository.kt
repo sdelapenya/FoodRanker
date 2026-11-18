@@ -14,8 +14,10 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.installations.FirebaseInstallations
 import com.app.foodranker.R
 import com.app.foodranker.data.model.User
+import com.app.foodranker.utils.FoodRankerMessagingService
 import com.app.foodranker.utils.InputLimits
 import com.app.foodranker.utils.InputLimits.sanitized
 import kotlinx.coroutines.tasks.await
@@ -221,6 +223,20 @@ class AuthRepository @Inject constructor(
                 firestore.collection("users").document(userId)
                     .update("fcmToken", "").await()
             } catch (e: Exception) { /* sin red u otro fallo: no bloquear el logout */ }
+
+            // Y el documento de ESTE móvil. Que sea solo el de este es la diferencia con
+            // la línea de arriba: `fcmToken` es un campo único del perfil, así que
+            // vaciarlo deja sin avisos también al otro teléfono de quien use dos. Aquí
+            // se borra la instalación que cierra sesión y las demás siguen recibiendo.
+            // Mientras el servidor lea del perfil esto no cambia nada todavía; ver
+            // firestore.rules, regla de users/{userId}/dispositivos.
+            try {
+                val idInstalacion = FirebaseInstallations.getInstance().id.await()
+                firestore.collection("users").document(userId)
+                    .collection(FoodRankerMessagingService.COLECCION_DISPOSITIVOS)
+                    .document(idInstalacion)
+                    .delete().await()
+            } catch (e: Exception) { /* igual que arriba: nunca bloquear el logout */ }
         }
         auth.signOut()
         signedOutSinceLastAttempt = true

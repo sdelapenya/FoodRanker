@@ -185,6 +185,11 @@ dependencies {
     // Notificaciones push
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-functions")
+    // Id estable de esta instalación: es el id del documento de cada móvil en
+    // users/{uid}/dispositivos. Viene de serie con firebase-messaging, pero se declara
+    // explícito porque lo usamos directamente — si algún día messaging deja de
+    // arrastrarlo, mejor que falle aquí y no en tiempo de ejecución.
+    implementation("com.google.firebase:firebase-installations")
 
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.0.0")
