@@ -130,22 +130,65 @@ REVIEWER_PASSWORD='...' GOOGLE_APPLICATION_CREDENTIALS=adc_tmp.json \
   node scripts/reviewerAccount.js foodrankerreview2@gmail.com --confirm
 ```
 
-#### El orden, que ahora tiene dos cosas esperando
+#### ⚠️ ESTADO REAL DE LOS CANALES (2026-11-19, leído en la consola)
 
-1. **Activar el proveedor** en Firebase Console (sin esto no hay nada que probar).
+| Canal | Versión | Estado |
+|---|---|---|
+| **Producción** | **20 (1.6)** | Activo · 2 países · 16 descargas |
+| Prueba cerrada — Alpha | 22 (1.8) | ✅ activa, última actualización 18 nov |
+| Prueba interna | 22 (1.8) | ✅ disponible para testers, 18 nov 10:09 |
+
+*Resumen de publicación* está **vacío**: no queda nada esperando revisión.
+
+❗ **Lo que esto corrige, y es lo más importante de esta nota:** la regla de "desplegar
+`functions` cuando la v22 esté repartida" significa **repartida en PRODUCCIÓN**, no
+disponible en un canal de pruebas. **Producción sigue en la 20 (1.6)**, así que todos los
+usuarios reales son clientes pre-v22. Desplegar `functions` hoy les rompería los avisos.
+Que la v22 esté verde en los dos canales de prueba **no desbloquea nada**.
+
+✅ Y una buena: la v22 pasó la revisión del canal cerrado. O los revisores entraron, o
+ese canal no se mira con la misma lupa que producción. En cualquier caso **la revisión
+dura es la de producción**, que es donde el login de correo hará falta de verdad.
+
+⚠️ **Publicación gestionada desactivada**: cuando Google apruebe producción, **sale
+sola**. No hay segundo botón. Así que el despliegue de `functions` hay que tenerlo
+pensado ANTES de darle a publicar, no después.
+
+#### El orden, que ahora tiene tres cosas esperando
+
+1. **Activar el proveedor** Email/Password en Firebase Console (sin esto no hay nada que
+   probar).
 2. Poner la contraseña con `reviewerAccount.js` y comprobar que entra **en el emulador**.
-3. Subir la **v23**, y con ella reescribir *Datos de inicio de sesión* en Play.
-4. ⚠️ Sigue pendiente de antes: **desplegar `functions` solo cuando la v22 esté
-   repartida** (canales de avisos, idempotencia del XP de liga).
+3. Probar la v23 en el Redmi, y de paso **la vuelta en oscuro por las 18 pantallas** que
+   sigue pendiente desde la v22.
+4. Subir la **v23** y promocionarla **a producción**, reescribiendo a la vez *Datos de
+   inicio de sesión* en Play. Aquí es donde importa el login nuevo.
+5. Esperar a que la v23 esté **repartida en producción** — no antes.
+6. **Entonces** desplegar `functions` (canales de avisos, idempotencia del XP de liga,
+   borrado reintentable) y las reglas.
 
-#### Sobre la v22, que está en revisión
+Las reglas (`firestore.rules`) se pueden desplegar cuando sea: solo abren sitios nuevos.
 
-**No se toca la cuenta de Google mientras tanto.** Cambiarle la contraseña a media
-revisión garantiza que fallen los intentos que lleguen con la vieja.
+#### Lo demás que sigue abierto en la consola
 
-Si rechazan la v22 por no poder entrar, **no pasa nada grave**: producción está aprobada
-y viva desde el 16, y un rechazo del canal cerrado no la tumba. Se retrasa la
-actualización y la v23 lo arregla de raíz.
+- **3 acciones recomendadas** en producción, todas etiquetadas `20 (1.6)`: las dos de
+  vista de extremo a extremo (ya analizadas — **no son nuestras**, ver la sección del
+  2026-11-16) y la de **R8**, que sigue sin mirarse.
+- **Banner permanente "Declara tu estado de operador"**, con fecha límite **1 de febrero
+  de 2027**. No es de código: va a la consulta con la gestoría, porque con AdMob
+  sirviendo Google te considera operador y un particular que lo declara **publica su
+  teléfono y su dirección**.
+
+#### Sobre la cuenta de Google de revisión
+
+La v22 **ya pasó** el canal cerrado (ver la tabla de estado de arriba), así que la prisa
+se fue. Pero la cuenta sigue bloqueando logins, y **la revisión de producción de la v23
+es la que de verdad se mira**.
+
+A partir de ahora se puede tocar sin riesgo de pisar una revisión en curso: cambiarle la
+contraseña mientras hay intentos de revisor en vuelo es lo único que hay que evitar, y
+ya no lo hay. Aun así, la cuenta de Google **deja de ser el camino**: la credencial que
+va en Play a partir de la v23 es la de Firebase.
 
 #### El texto nuevo de *Datos de inicio de sesión* (Play Console)
 
