@@ -209,12 +209,43 @@ This account has full access to all content, including premium. The credentials 
 ⚠️ La última frase no es un adorno: la dirección sigue teniendo cuenta de Google, y si
 el revisor pulsa el botón de Google volvemos exactamente al bloqueo de siempre.
 
+#### ✅ Probado corriendo en el emulador (2026-11-19)
+
+El proveedor se activó en la consola y se comprobó **contra la API**, no solo en pantalla:
+la misma llamada que daba `PASSWORD_LOGIN_DISABLED` pasó a dar `INVALID_LOGIN_CREDENTIALS`.
+
+Recorrido completo con una cuenta desechable (`prueba-v23@foodranker.invalid`), **borrada
+después de Auth y de Firestore**:
+
+| Paso | Resultado |
+|---|---|
+| Crear cuenta | entra a Inicio; el perfil muestra **PruebaV23**, no el nombre de respaldo |
+| Cerrar sesión | vuelve al login |
+| Contraseña incorrecta | *"The email or password is not correct"*, no el genérico |
+| Contraseña correcta | entra |
+| "He olvidado la contraseña" sin correo | *"Enter your email first."* |
+| "He olvidado la contraseña" con correo | *"We've sent you an email to reset your password."* |
+
+Eso valida de paso `ErrorMapper.authCodeRes` y que `syncUserDocument` recibe el nombre
+antes de escribir el documento.
+
+#### 🐛 Un fallo encontrado por probarlo, que habría llegado a Play
+
+**Con el teclado abierto, el botón de entrar y los enlaces de "crear cuenta" y "he
+olvidado la contraseña" quedaban debajo, y la columna no hacía scroll.** En modo alta son
+tres campos: no caben de ninguna manera. Arreglado con `imePadding()` +
+`verticalScroll()`.
+
+Es el mismo fallo de familia que el botón de guardar que se escondía tras la barra de
+navegación en la v22. **Compilaba, pasaba los tests y las comprobaciones, y la pantalla
+se veía perfecta en la captura sin teclado.**
+
 #### Verificado
 
 - `:app:compileDebugKotlin` limpio · **84 tests, 0 fallos**
 - Las 5 comprobaciones de `tools/i18n/` + `tools/ui/check_theme_colors.py`, todas OK
-- ⚠️ **La hoja no se ha probado corriendo**: el proveedor está desactivado, así que no
-  hay nada contra lo que entrar hasta que se active (paso 1).
+- Arranque en frío con **splash negro** correcto, y la hoja sigue el tema oscuro
+- ⚠️ Sigue pendiente la vuelta en oscuro por las **18 pantallas** al instalar en el Redmi
 
 [ayuda 15748846]: https://support.google.com/googleplay/android-developer/answer/15748846
 
