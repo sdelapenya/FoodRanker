@@ -1,7 +1,9 @@
 package com.app.foodranker.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -71,6 +73,14 @@ fun EmailAuthSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Las dos líneas siguientes no son decoración. Sin `imePadding` el
+                // teclado tapa el botón de entrar y los enlaces de "crear cuenta" y
+                // "he olvidado la contraseña", y sin el scroll no hay forma de
+                // alcanzarlos: en modo alta son tres campos y no caben. Visto en el
+                // emulador antes de subir nada, mismo fallo que el botón de guardar
+                // que se escondía tras la barra de navegación en la v22.
+                .verticalScroll(rememberScrollState())
+                .imePadding()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
