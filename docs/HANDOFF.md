@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-18
+**Actualizado:** 2026-11-19
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,168 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🔑 LA CUENTA DE REVISIÓN DEJA DE SER UNA CUENTA DE GOOGLE (2026-11-19)
+
+**Tercera cuenta de revisión muerta por el mismo motivo.** Esta vez se encontró la causa
+de verdad, y no era la configuración de ninguna de las tres.
+
+#### Lo que estaba pasando
+
+Avisos en el móvil de Sergio sobre intentos de entrar en `foodrankerreview2@gmail.com`,
+pidiendo autorizar desde el teléfono y un código que al revisor no se le puede dar.
+
+Se miró la actividad de la cuenta antes de tocar nada, y el correo de Google lo dice sin
+rodeos: **"Se ha bloqueado un intento de inicio de sesión — Alguien acaba de usar tu
+contraseña para intentar iniciar sesión. Google lo ha impedido."** Dos veces: **17 nov
+0:51 y 18 nov 11:23**. Ninguno entró.
+
+**Eran los revisores, no un ataque.** Lo dice la propia frase: *usó tu contraseña*, o sea
+que la tenía bien, y quien la tiene es Play Console. Y el ritmo —dos intentos en dos
+días, no doscientos— no es fuerza bruta.
+
+#### La causa real, que no es de configuración
+
+La página oficial de Play ([ayuda 15748846]) pide, literal:
+
+> *"Si tu aplicación normalmente requiere un código de verificación en dos pasos o una
+> contraseña de un solo uso, asegúrate de proporcionar credenciales de inicio de sesión
+> **reutilizables que puedan saltarse esos requisitos**."*
+
+Y una cuenta de Google **no puede ser eso, por diseño**. No hay ningún ajuste que apague
+el motor de riesgo. La cuenta 2 estaba configurada exactamente como mandaba el manual de
+la sesión anterior (sin 2FA, sin llaves de acceso, sin "saltar contraseña") y la
+bloquearon igual.
+
+⚠️ **Por eso se descartó el apaño que parecía obvio:** activar la verificación en dos
+pasos y pasarle códigos de respaldo al revisor. Va en contra del texto de arriba por dos
+sitios — los códigos son **de un solo uso** (no reutilizables) y **satisfacen** el
+segundo factor en vez de **saltárselo** — y además son consumibles: diez, y te enteras de
+que se acabaron por un rechazo. Se llegó a recomendar y se retiró al leer la página
+oficial.
+
+#### La solución: correo y contraseña con Firebase Auth
+
+Una credencial de Firebase no pasa por Google: **no hay desafío, ni aviso al móvil de
+nadie, ni caducidad**. Es exactamente lo que describe la página de Play.
+
+De paso resuelve otras dos cosas que llevaban tiempo ahí:
+
+- Quien no tiene cuenta de Google no podía entrar en FoodRanker.
+- **Google Sign-In ya se rompió dos veces en producción** (ver el aviso histórico en
+  `AuthRepository.signInWithGoogle`). Hasta hoy, eso dejaba la app sin ninguna entrada.
+- Es el **primer camino de login que se puede probar en el emulador**, que no tiene
+  cuenta de Google. Hasta ahora nada de dentro de la sesión era testeable en local.
+
+#### Qué se ha tocado (v23 / 1.9)
+
+| Fichero | Qué |
+|---|---|
+| `AuthRepository.kt` | `signInWithEmail`, `signUpWithEmail`, `sendPasswordReset` |
+| `AuthViewModel.kt` | los tres, más `passwordResetSent` aparte de `AuthState` |
+| `EmailAuthSheet.kt` | **nuevo** — hoja inferior con entrar / crear cuenta / recuperar |
+| `AuthScreen.kt` | el acceso discreto bajo el botón de Google, y la hoja |
+| `ErrorMapper.kt` | los `errorCode` de FirebaseAuth, **antes** que el resto |
+| `strings.xml` ×2 | 17 cadenas nuevas en inglés y castellano |
+| `reviewerAccount.js` | **nuevo** — crea o actualiza la cuenta de revisión |
+
+**Decisiones que conviene no deshacer sin leer esto:**
+
+- **No se exige verificar el correo** antes de entrar. Hacerlo reconstruiría el problema
+  que este camino viene a resolver: otro paso que depende de un buzón ajeno.
+- **`signUpWithEmail` no reutiliza `completeSignIn`.** Firebase crea la cuenta *sin*
+  nombre y `syncUserDocument` lee `displayName`; sincronizar antes de escribir el perfil
+  haría que todos los registros por correo nacieran con el nombre de respaldo.
+- **Los códigos de Auth se miran antes que el resto en `ErrorMapper`.** El resto decide
+  por el **texto** del mensaje, y un `ERROR_USER_NOT_FOUND` acabaría en "no encontrado".
+- **Contraseña incorrecta y usuario inexistente comparten mensaje.** Con la protección
+  contra enumeración de correos Firebase devuelve el mismo `ERROR_INVALID_CREDENTIAL`
+  para los dos, y distinguirlos diría quién tiene cuenta.
+- **La hoja va en `ModalBottomSheet`, no en pantalla propia**, para no tocar el grafo de
+  navegación: el camino de Google, que es el que usa todo el mundo, queda intacto.
+
+⚠️ **Trampa de "una cuenta por dirección de correo"** (activado por defecto en Firebase):
+quien se registre por correo con la misma dirección que usa en Google verá fallar el
+botón de Google con `ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL`. No pierde la
+cuenta —entra por correo— y el mensaje se lo dice (`err_auth_use_email_login`). Es un
+mensaje distinto del de registrarse con un correo ya usado, a propósito: son los dos
+sentidos del mismo choque y confundirlos deja al usuario igual de atascado.
+
+#### ⛔ BLOQUEANTE: el proveedor está DESACTIVADO en Firebase
+
+Comprobado contra la API, no supuesto:
+
+```
+POST identitytoolkit.googleapis.com/v1/accounts:signInWithPassword
+→ PASSWORD_LOGIN_DISABLED
+```
+
+**Sin esto el código no hace nada.** Hay que activarlo a mano en
+**Firebase Console → Authentication → Sign-in method → Email/Password → Habilitar**
+(solo el primer interruptor; "Enlace de correo sin contraseña" NO).
+
+⚠️ Al activarlo, la API key pública del APK permite crear cuentas por REST, y **App
+Check sigue sin estar forzado** (está en los pendientes de siempre). No es distinto de
+cómo está hoy el proveedor de Google, pero conviene saberlo antes de darle.
+
+#### La cuenta de revisión, ya mirada
+
+`foodrankerreview2@gmail.com` **ya existe en Firebase**: uid
+`B8V8uOZyazcTnumJo6mvMzjriXo2`, proveedor `google.com`, no deshabilitada. El script le
+**añade** la contraseña al mismo usuario, así que conserva uid, XP y el Premium que
+tuviera. No crea una cuenta nueva.
+
+```
+REVIEWER_PASSWORD='...' GOOGLE_APPLICATION_CREDENTIALS=adc_tmp.json \
+  node scripts/reviewerAccount.js foodrankerreview2@gmail.com --confirm
+```
+
+#### El orden, que ahora tiene dos cosas esperando
+
+1. **Activar el proveedor** en Firebase Console (sin esto no hay nada que probar).
+2. Poner la contraseña con `reviewerAccount.js` y comprobar que entra **en el emulador**.
+3. Subir la **v23**, y con ella reescribir *Datos de inicio de sesión* en Play.
+4. ⚠️ Sigue pendiente de antes: **desplegar `functions` solo cuando la v22 esté
+   repartida** (canales de avisos, idempotencia del XP de liga).
+
+#### Sobre la v22, que está en revisión
+
+**No se toca la cuenta de Google mientras tanto.** Cambiarle la contraseña a media
+revisión garantiza que fallen los intentos que lleguen con la vieja.
+
+Si rechazan la v22 por no poder entrar, **no pasa nada grave**: producción está aprobada
+y viva desde el 16, y un rechazo del canal cerrado no la tumba. Se retrasa la
+actualización y la v23 lo arregla de raíz.
+
+#### El texto nuevo de *Datos de inicio de sesión* (Play Console)
+
+Se **edita la entrada que ya existe**, no se crea una segunda — duplicarlas fue un
+problema en agosto. Usuario y contraseña van en sus campos; esto es el cuadro de
+instrucciones, en inglés porque lo exige el formulario. **457/500**.
+
+```
+FoodRanker requires a sign-in. There are two ways in; please use the second one.
+
+1. Open the app.
+2. On the welcome screen, below “Continue with Google”, tap “Sign in with email”.
+3. Enter the email address and password given above, then tap “Sign in”.
+
+This account has full access to all content, including premium. The credentials are reusable, have no two-step verification and do not expire. Please do not use “Continue with Google” with this address.
+```
+
+⚠️ La última frase no es un adorno: la dirección sigue teniendo cuenta de Google, y si
+el revisor pulsa el botón de Google volvemos exactamente al bloqueo de siempre.
+
+#### Verificado
+
+- `:app:compileDebugKotlin` limpio · **84 tests, 0 fallos**
+- Las 5 comprobaciones de `tools/i18n/` + `tools/ui/check_theme_colors.py`, todas OK
+- ⚠️ **La hoja no se ha probado corriendo**: el proveedor está desactivado, así que no
+  hay nada contra lo que entrar hasta que se active (paso 1).
+
+[ayuda 15748846]: https://support.google.com/googleplay/android-developer/answer/15748846
+
+---
 
 ### 🛡️ LA AUDITORÍA DE CODEX, REVISADA UNA A UNA (2026-11-18)
 

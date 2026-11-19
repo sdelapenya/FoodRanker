@@ -150,6 +150,68 @@ está: ahí es donde se duplican.
 
 ---
 
+## v23 (1.9) — entrar con correo y contraseña
+
+Lo que el usuario nota de la v23.
+
+⚠️ **No se menciona el motivo de verdad**, que es que la revisión de Play no podía
+entrar con una cuenta de Google (ver `docs/HANDOFF.md`). A quien usa la app eso no le dice
+nada; lo que le importa es que hay otra forma de entrar.
+
+### Castellano (es-ES) — v23
+
+```
+Ya puedes entrar en FoodRanker con tu correo y una contraseña, sin necesidad de una cuenta de Google. Si ya entrabas con Google, no tienes que hacer nada: sigue funcionando igual que siempre.
+
+¿Se te olvida la contraseña? Desde la misma pantalla te mandamos un correo para poner una nueva.
+```
+*(289 caracteres)*
+
+### Inglés (en-GB) — v23
+
+```
+You can now sign in to FoodRanker with your email and a password — no Google account needed. If you already sign in with Google, there is nothing to do: it keeps working exactly as before.
+
+Forgotten your password? From the same screen we’ll email you a link to set a new one.
+```
+*(276 caracteres)*
+
+### Inglés (en-US) — v23
+
+**Idéntico** al de en-GB. Hay que pegarlo igual: si en-US se queda vacío, Play le sirve el
+del idioma por defecto, que es el castellano.
+
+```
+You can now sign in to FoodRanker with your email and a password — no Google account needed. If you already sign in with Google, there is nothing to do: it keeps working exactly as before.
+
+Forgotten your password? From the same screen we’ll email you a link to set a new one.
+```
+*(276 caracteres)*
+
+### Los tres de una vez — v23
+
+Para el camino de `Ctrl+A` + pegar encima, reemplazando todo lo que haya en la caja:
+
+```
+<es-ES>
+Ya puedes entrar en FoodRanker con tu correo y una contraseña, sin necesidad de una cuenta de Google. Si ya entrabas con Google, no tienes que hacer nada: sigue funcionando igual que siempre.
+
+¿Se te olvida la contraseña? Desde la misma pantalla te mandamos un correo para poner una nueva.
+</es-ES>
+<en-GB>
+You can now sign in to FoodRanker with your email and a password — no Google account needed. If you already sign in with Google, there is nothing to do: it keeps working exactly as before.
+
+Forgotten your password? From the same screen we’ll email you a link to set a new one.
+</en-GB>
+<en-US>
+You can now sign in to FoodRanker with your email and a password — no Google account needed. If you already sign in with Google, there is nothing to do: it keeps working exactly as before.
+
+Forgotten your password? From the same screen we’ll email you a link to set a new one.
+</en-US>
+```
+
+---
+
 ## v22 (1.8) — modo oscuro de verdad y la hoja de editar plato
 
 Lo que el usuario nota de la v22.
