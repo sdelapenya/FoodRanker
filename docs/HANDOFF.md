@@ -130,6 +130,71 @@ REVIEWER_PASSWORD='...' GOOGLE_APPLICATION_CREDENTIALS=adc_tmp.json \
   node scripts/reviewerAccount.js foodrankerreview2@gmail.com --confirm
 ```
 
+#### 📦 LA v23 (1.9), COMPILADA Y PROBADA EN RELEASE
+
+| | |
+|---|---|
+| AAB | `app/build/outputs/bundle/release/app-release.aab` · 16,1 MB |
+| Verificado sobre el binario | `versionCode='23' versionName='1.9'` (aapt2 badging) |
+| `check_apk.py` | 860 cadenas en los dos idiomas · 9 solo-por-defecto (de librería) · **0 solo-castellano** |
+
+⚠️ **`check_apk.py` lee `$TEMP/res.txt`, que hay que regenerar antes**, o audita la build
+anterior sin decir nada:
+
+```
+aapt2 dump resources app/build/outputs/apk/release/app-release.apk > "$TEMP/res.txt"
+```
+
+Había también un `app-release.apk` del 9 de octubre tirado en `outputs/`, que hizo creer
+por un momento que el AAB era la v17. Si `aapt2 dump badging` dice una versión rara,
+mirar la fecha del fichero antes que el código.
+
+**Probado el APK de release firmado, con R8 activo** (lo anterior era debug sin minificar):
+instalación limpia → consentimiento → permiso de avisos → onboarding → entrar con
+`foodrankerreview2@gmail.com` → Inicio, feed cargado y **sin banner de anuncios**, que es
+el Premium funcionando. R8 no se ha comido nada.
+
+#### 🔑 La cuenta de revisión, lista
+
+| | |
+|---|---|
+| uid | `B8V8uOZyazcTnumJo6mvMzjriXo2` (el de siempre, no se creó otro) |
+| Proveedores | `google.com` **+ `password`** |
+| Nombre | **Play reviewer** (antes "Sergio", en Auth y en Firestore) |
+| Premium | **true** — lo pedía la casilla de Play y estaba en `false` |
+
+La contraseña **no se guarda aquí** (repo público): está en Play Console y en quien la
+generó. Comprobada con una llamada real a `accounts:signInWithPassword`.
+
+⚠️ **La declaración de Play se cambia AL SUBIR la v23, no antes.** Las instrucciones
+nuevas mandan al revisor a pulsar "Sign in with email", y ese botón no existe en la 20
+que está en producción ni en la 22 de pruebas.
+
+#### ⛔ Las reglas de Firestore siguen SIN DESPLEGAR, y ya se nota
+
+Lo cazó el logcat del build de release:
+
+```
+W Firestore: Write failed at users/{uid}/dispositivos/{id}: PERMISSION_DENIED
+W FCM     : Error guardando el token del dispositivo: PERMISSION_DENIED
+```
+
+El bloque `dispositivos` está en `firestore.rules` desde el commit `e574df5` pero **nunca
+se ejecutó `firebase deploy --only firestore:rules`**. Firestore deniega por defecto lo
+que no tiene regla.
+
+**No rompe los avisos**: la escritura vieja de `fcmToken` en el perfil sí pasa, que es
+justo por lo que el cambio se diseñó aditivo. Pero mientras no se despliegue, cada login
+deja ese error en el log y la mitad nueva no guarda nada.
+
+```
+firebase deploy --only firestore:rules
+```
+
+Se puede hacer cuando sea: solo abre sitios nuevos.
+
+---
+
 #### ⚠️ ESTADO REAL DE LOS CANALES (2026-11-19, leído en la consola)
 
 | Canal | Versión | Estado |
