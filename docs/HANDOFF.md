@@ -47,55 +47,68 @@ la mitad de lo que añade la v23.
 *Entrar*, que está en `[308,1377][412,1430]`, muy por encima de la barra. Por eso la v23
 sirve para dar acceso a los revisores aunque tenga este fallo.
 
-#### El arreglo que NO funcionó (v24 / 1.9.1) — y por qué
+#### Tres intentos hasta dar con la causa (v24, v25 y por fin la v26)
 
-El primer intento fue cambiar `.imePadding()` por:
+**La causa de verdad no era de insets.** `ModalBottomSheet` se abre en estado
+**parcialmente expandido**, a media pantalla, y el formulario **no cabe en esa mitad**. Lo
+que sobra queda fuera de la parte visible y solo se alcanza **arrastrando la hoja hacia
+arriba**, cosa que nadie adivina. Por eso todo padding que se añadiera al final no movía
+nada: se sumaba al final de un contenido que ya estaba cortado.
 
-```kotlin
-.windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
-```
-
-**No sirvió de nada.** Se subió la v24 al interno, se instaló en el Redmi y los bounds
-salieron **idénticos**: `[146,1572][574,1626]`. Al tocar, la app volvió al escritorio.
-
-⚠️ **La causa, que conviene no olvidar: `ModalBottomSheet` CONSUME los insets de la
-barra de navegación.** Dentro de su contenido `WindowInsets.navigationBars` vale cero, y
-`windowInsetsPadding` resta lo ya consumido, así que añadió exactamente nada. El inset del
-teclado **no** está consumido — por eso `imePadding` sí hacía efecto y este no.
-
-#### El arreglo que sí funciona (v25 / 1.9.2)
-
-Leer el inset **crudo**, que el consumo del sheet no toca:
+| Intento | Qué se hizo | Resultado |
+|---|---|---|
+| **v24** | `windowInsetsPadding(ime union navigationBars)` | ❌ bounds idénticos |
+| **v25** | inset crudo con `asPaddingValues()`, dentro del scroll | ❌ bounds idénticos |
+| **v26** | `skipPartiallyExpanded = true` + el hueco fuera del scroll | ✅ |
 
 ```kotlin
-val huecoBarra   = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-val huecoTeclado = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-val huecoAbajo   = maxOf(huecoBarra, huecoTeclado)
+val estadoHoja = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+val huecoBarra = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+ModalBottomSheet(sheetState = estadoHoja, ...) {
+    Box(modifier = Modifier.padding(bottom = huecoBarra)) {   // FUERA del scroll
+        Column(modifier = Modifier.verticalScroll(...).imePadding()...) { ... }
+    }
+}
 ```
 
-y `.padding(bottom = 32.dp + huecoAbajo)` en el `Column`. El **mayor**, no la suma: con el
-teclado abierto el IME ya cubre la barra.
+Dos cosas que conviene no deshacer:
 
-**Verificado en el emulador con barra de tres botones**, no deducido:
+- **`ModalBottomSheet` CONSUME los insets de la barra**, así que dentro de su contenido
+  `WindowInsets.navigationBars` vale cero y `windowInsetsPadding` no añade nada. Medido
+  con un log: `navCrudo=96px` pero el `windowInsetsPadding` no movía la vista. El inset
+  del teclado **no** está consumido, por eso `imePadding` sí funciona.
+- **El hueco de la barra va fuera del `verticalScroll`.** Dentro se convierte en espacio
+  al final del contenido desplazable y no sube nada.
 
-| Caso | Resultado |
-|---|---|
-| Entrada, sin teclado — *el fallo real* | ✅ el enlace queda sobre la barra y responde al toque |
-| Alta, sin teclado | ⚠️ el enlace de volver cae bajo la barra, pero el scroll lo sube y responde |
-| Con teclado abierto | ✅ alcanzable con scroll, igual que antes: sin regresión |
+Verificado sobre la **build de release con R8**: enlace en `[175,1312][545,1360]` con la
+barra desde `1544`, y al tocarlo se abre el modo alta. En modo alta con el teclado abierto
+el formulario entero queda visible sin necesidad de desplazar.
 
-#### ⚠️ EL EMULADOR ESTABA EN NAVEGACIÓN POR GESTOS
+#### ⚠️ CÓMO PROBAR ESTO BIEN — dos errores de método que costaron dos versiones
 
-**Por eso nunca cazó esta familia de fallos.** Con gestos el inset inferior es mínimo y
-nada se solapa. Se ha pasado a tres botones y ahí sí se reproduce:
+**1. El emulador estaba en navegación por gestos.** Con gestos el inset inferior es mínimo
+y nada se solapa, por eso nunca cazó esta familia de fallos:
 
 ```
 adb shell cmd overlay enable  com.android.internal.systemui.navbar.threebutton
 adb shell cmd overlay disable com.android.internal.systemui.navbar.gestural
 ```
 
-Conviene **dejarlo así** y comprobar cualquier hoja o pantalla nueva en ese modo antes de
-subir nada. Los tres fallos de insets de la v22, v23 y v24 se habrían visto en local.
+**2. El emulador era más alto que el móvil, y eso invalidó una verificación entera.**
+2400px a 420dpi son **571dp**; el Redmi tiene 1640px a 320dpi, o sea **512dp**. Con 59dp
+más el formulario cabía y el fallo no salía. Se dio por bueno un arreglo que no lo era.
+
+```
+adb shell wm size 720x1640
+adb shell wm density 320
+```
+
+Así la barra queda en `[0,1544][720,1640]` frente a `[0,1546][720,1640]` del Redmi, y el
+fallo **sí** se reproduce. **Antes de dar por bueno un arreglo de layout, hay que ver el
+fallo reproducido en el banco de pruebas** — si no, no se está midiendo nada.
+
+Para restaurar el emulador: `wm size reset` y `wm density reset`.
 
 #### Pendiente, cosmético y sin verificar
 
