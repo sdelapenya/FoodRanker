@@ -170,7 +170,7 @@ generó. Comprobada con una llamada real a `accounts:signInWithPassword`.
 nuevas mandan al revisor a pulsar "Sign in with email", y ese botón no existe en la 20
 que está en producción ni en la 22 de pruebas.
 
-#### ⛔ Las reglas de Firestore siguen SIN DESPLEGAR, y ya se nota
+#### ✅ Reglas de Firestore DESPLEGADAS (2026-11-19) — y así se encontró
 
 Lo cazó el logcat del build de release:
 
@@ -191,7 +191,19 @@ deja ese error en el log y la mitad nueva no guarda nada.
 firebase deploy --only firestore:rules
 ```
 
-Se puede hacer cuando sea: solo abre sitios nuevos.
+**Desplegado y comprobado el 2026-11-19.** No basta con que deje de dar error: se miró
+que el documento se escribe de verdad.
+
+```
+documentos en /dispositivos: 1
+  id: f-NQy2I_RnKTGTUcCUQcpg | plataforma: android | token: f-NQy2I_RnKTGTUcCU...
+```
+
+⚠️ Ese id es el **Installation ID** del emulador, no el token: por eso un móvil deja un
+único documento aunque el token rote. Era el motivo de elegirlo como id.
+
+⚠️ **El servidor sigue leyendo `fcmToken` del perfil.** Esto solo rellena la mitad nueva;
+cambiar las funciones de sitio es lo que va DESPUÉS de que la v23 esté repartida.
 
 ---
 
