@@ -47,20 +47,55 @@ la mitad de lo que añade la v23.
 *Entrar*, que está en `[308,1377][412,1430]`, muy por encima de la barra. Por eso la v23
 sirve para dar acceso a los revisores aunque tenga este fallo.
 
-#### El arreglo (v24 / 1.9.1)
+#### El arreglo que NO funcionó (v24 / 1.9.1) — y por qué
+
+El primer intento fue cambiar `.imePadding()` por:
 
 ```kotlin
 .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
 ```
 
-en lugar de `.imePadding()`. **La unión, no la suma**: con el teclado abierto el IME ya
-cubre la barra, así que encadenar `.imePadding().navigationBarsPadding()` dejaría un hueco
-doble. `union` resulta ser estable — no pide ningún `@OptIn`.
+**No sirvió de nada.** Se subió la v24 al interno, se instaló en el Redmi y los bounds
+salieron **idénticos**: `[146,1572][574,1626]`. Al tocar, la app volvió al escritorio.
 
-**Es el tercer fallo de la misma familia**: el botón de guardar tras la barra en la v22, el
-botón de entrar bajo el teclado en la v23, y ahora este. Los tres se vieron solo al
-ejecutar en un aparato de verdad, ninguno lo cazó un test. Conviene revisar los insets de
-cualquier hoja o pantalla nueva **antes** de subirla.
+⚠️ **La causa, que conviene no olvidar: `ModalBottomSheet` CONSUME los insets de la
+barra de navegación.** Dentro de su contenido `WindowInsets.navigationBars` vale cero, y
+`windowInsetsPadding` resta lo ya consumido, así que añadió exactamente nada. El inset del
+teclado **no** está consumido — por eso `imePadding` sí hacía efecto y este no.
+
+#### El arreglo que sí funciona (v25 / 1.9.2)
+
+Leer el inset **crudo**, que el consumo del sheet no toca:
+
+```kotlin
+val huecoBarra   = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+val huecoTeclado = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+val huecoAbajo   = maxOf(huecoBarra, huecoTeclado)
+```
+
+y `.padding(bottom = 32.dp + huecoAbajo)` en el `Column`. El **mayor**, no la suma: con el
+teclado abierto el IME ya cubre la barra.
+
+**Verificado en el emulador con barra de tres botones**, no deducido:
+
+| Caso | Resultado |
+|---|---|
+| Entrada, sin teclado — *el fallo real* | ✅ el enlace queda sobre la barra y responde al toque |
+| Alta, sin teclado | ⚠️ el enlace de volver cae bajo la barra, pero el scroll lo sube y responde |
+| Con teclado abierto | ✅ alcanzable con scroll, igual que antes: sin regresión |
+
+#### ⚠️ EL EMULADOR ESTABA EN NAVEGACIÓN POR GESTOS
+
+**Por eso nunca cazó esta familia de fallos.** Con gestos el inset inferior es mínimo y
+nada se solapa. Se ha pasado a tres botones y ahí sí se reproduce:
+
+```
+adb shell cmd overlay enable  com.android.internal.systemui.navbar.threebutton
+adb shell cmd overlay disable com.android.internal.systemui.navbar.gestural
+```
+
+Conviene **dejarlo así** y comprobar cualquier hoja o pantalla nueva en ese modo antes de
+subir nada. Los tres fallos de insets de la v22, v23 y v24 se habrían visto en local.
 
 #### Pendiente, cosmético y sin verificar
 

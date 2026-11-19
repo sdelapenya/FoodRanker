@@ -66,6 +66,17 @@ fun EmailAuthSheet(
         password.length >= MIN_PASSWORD &&
         (!modoAlta || nombre.isNotBlank())
 
+    // `ModalBottomSheet` CONSUME los insets de la barra de navegación, así que dentro
+    // de su contenido `WindowInsets.navigationBars` vale cero y cualquier
+    // `windowInsetsPadding` sobre él no añade nada — intentado en la v24 y el enlace
+    // de crear cuenta siguió cayendo bajo la barra. `asPaddingValues()` lee el inset
+    // crudo de la ventana, que el consumo del sheet no toca, y por eso sí sirve.
+    // Se toma el MAYOR de barra y teclado, no la suma: con el teclado abierto el IME
+    // ya cubre la barra y sumarlos dejaría un hueco doble.
+    val huecoBarra = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val huecoTeclado = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    val huecoAbajo = maxOf(huecoBarra, huecoTeclado)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = FoodTheme.colors.surface
@@ -73,20 +84,13 @@ fun EmailAuthSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                // Nada de esto es decoración. Sin el scroll no hay forma de alcanzar
-                // el botón ni los enlaces con el teclado abierto: en modo alta son tres
-                // campos y no caben. Y el inset tiene que ser la UNIÓN de teclado y
-                // barra de navegación, no sólo `imePadding`: con el teclado cerrado y
-                // navegación de tres botones, «¿Aún no tienes cuenta? Créala» cae
-                // dentro de la franja de la barra y deja de ser pulsable — comprobado
-                // en el Redmi con la v23 ya firmada por Play, donde el toque se lo
-                // comió el botón de inicio. Unirlos en vez de sumarlos evita el hueco
-                // doble cuando el teclado sí está abierto, porque entonces el IME ya
-                // cubre la barra. Mismo fallo que el botón de guardar de la v22.
+                // Sin el scroll no hay forma de alcanzar el botón ni los enlaces con
+                // el teclado abierto: en modo alta son tres campos y no caben. El hueco
+                // de abajo se calcula arriba, a mano, por lo del consumo de insets.
+                // Mismo fallo que el botón de guardar de la v22.
                 .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
+                .padding(bottom = 32.dp + huecoAbajo),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
