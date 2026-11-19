@@ -15,6 +15,82 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 📱 LA v23 PROBADA EN EL MÓVIL REAL — Y UN FALLO QUE OBLIGA A LA v24 (2026-11-19)
+
+**Las dos pruebas críticas de la v23, superadas sobre la build firmada por Play**, en el
+Redmi 2409BRN2CY (Android 16, 720x1640, navegación de tres botones):
+
+| Prueba | Resultado |
+|---|---|
+| **Entrar con correo** (`foodrankerreview2@gmail.com`) | ✅ entra, llega al ranking |
+| **Google Sign-In** (el que se rompió dos veces solo en builds de Play) | ✅ entra |
+| Perfil de la cuenta de revisión | ✅ "Play reviewer" con la estrella de Premium |
+| `users/{uid}/dispositivos` | ✅ 2 documentos (emulador + Redmi) — la regla desplegada funciona |
+| logcat | ✅ ni `PERMISSION_DENIED`, ni error de Firebase, ni crash |
+
+Comprobado con Admin SDK, no supuesto: proveedores `google.com, password` **en el mismo
+uid**, `premium: true`, `name: "Play reviewer"`. La trampa de "una cuenta por dirección"
+está resuelta como se diseñó.
+
+#### ⛔ El fallo: el alta por correo es inalcanzable con navegación de tres botones
+
+En la hoja de correo, **«¿Aún no tienes cuenta? Créala» cae dentro de la franja de la
+barra de navegación**. No es que se vea mal: **no se puede pulsar**. Medido, no deducido —
+`uiautomator` da el enlace en `[146,1572][574,1626]` sobre una pantalla de 1640 de alto, y
+al tocar (360,1599) **respondió el botón de inicio del sistema y la app se fue al
+escritorio**.
+
+Consecuencia: en un móvil con tres botones **nadie puede registrarse por correo**, que es
+la mitad de lo que añade la v23.
+
+⚠️ **A la revisión de Play no le afecta**: el revisor rellena los dos campos y pulsa
+*Entrar*, que está en `[308,1377][412,1430]`, muy por encima de la barra. Por eso la v23
+sirve para dar acceso a los revisores aunque tenga este fallo.
+
+#### El arreglo (v24 / 1.9.1)
+
+```kotlin
+.windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+```
+
+en lugar de `.imePadding()`. **La unión, no la suma**: con el teclado abierto el IME ya
+cubre la barra, así que encadenar `.imePadding().navigationBarsPadding()` dejaría un hueco
+doble. `union` resulta ser estable — no pide ningún `@OptIn`.
+
+**Es el tercer fallo de la misma familia**: el botón de guardar tras la barra en la v22, el
+botón de entrar bajo el teclado en la v23, y ahora este. Los tres se vieron solo al
+ejecutar en un aparato de verdad, ninguno lo cazó un test. Conviene revisar los insets de
+cualquier hoja o pantalla nueva **antes** de subirla.
+
+#### Pendiente, cosmético y sin verificar
+
+En la pantalla de login, la tercera pastilla sale truncada como **"Comp"** en lugar de
+"Compartir" a 720px de ancho. No se ha tocado: para verlo arreglado hay que medir en una
+pantalla de ese ancho, y el emulador tiene otra. No afecta a la revisión.
+
+#### Cómo se desatascó Play, por si vuelve a pasar
+
+El móvil tenía la v22 **del canal cerrado** y Play se negaba a ofrecer la 23 del interno:
+botón *Abrir* en vez de *Actualizar* y el mensaje *"Eliminado tu cuenta del programa de
+pruebas beta. Desinstala la versión de prueba beta e instala la versión pública."*
+**Desinstalar y reinstalar desde Play lo resolvió**: sin nada instalado, Play sirvió
+directamente *FoodRanker (beta interna)*, versionCode 24 no, **23 (1.9)**, instalador
+`com.android.vending`.
+
+#### Trampas de manejar el móvil por adb, apuntadas
+
+- El **WebView del consentimiento (UMP) ignora `input tap`**. Hay que mandar un gesto con
+  duración: `input swipe x y x y 120`. Con el tap seco parece que la app está colgada.
+- `screencap -p /sdcard/x.png` falla desde Git Bash porque reescribe la ruta del aparato.
+  Usar `exec-out screencap -p > fichero_local`.
+- Las coordenadas van en el espacio de la pantalla **tal y como está girada**. Con el móvil
+  tumbado son 1640x720, no 720x1640.
+- Para el ADC de los scripts de Admin SDK, el `client_id` bueno es el de **firebase-tools**
+  (`563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6...`), que sale de `lib/api.js` del
+  paquete global. El de gcloud da `invalid_client`.
+
+---
+
 ### 🔑 LA CUENTA DE REVISIÓN DEJA DE SER UNA CUENTA DE GOOGLE (2026-11-19)
 
 **Tercera cuenta de revisión muerta por el mismo motivo.** Esta vez se encontró la causa

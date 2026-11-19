@@ -73,14 +73,18 @@ fun EmailAuthSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                // Las dos líneas siguientes no son decoración. Sin `imePadding` el
-                // teclado tapa el botón de entrar y los enlaces de "crear cuenta" y
-                // "he olvidado la contraseña", y sin el scroll no hay forma de
-                // alcanzarlos: en modo alta son tres campos y no caben. Visto en el
-                // emulador antes de subir nada, mismo fallo que el botón de guardar
-                // que se escondía tras la barra de navegación en la v22.
+                // Nada de esto es decoración. Sin el scroll no hay forma de alcanzar
+                // el botón ni los enlaces con el teclado abierto: en modo alta son tres
+                // campos y no caben. Y el inset tiene que ser la UNIÓN de teclado y
+                // barra de navegación, no sólo `imePadding`: con el teclado cerrado y
+                // navegación de tres botones, «¿Aún no tienes cuenta? Créala» cae
+                // dentro de la franja de la barra y deja de ser pulsable — comprobado
+                // en el Redmi con la v23 ya firmada por Play, donde el toque se lo
+                // comió el botón de inicio. Unirlos en vez de sumarlos evita el hueco
+                // doble cuando el teclado sí está abierto, porque entonces el IME ya
+                // cubre la barra. Mismo fallo que el botón de guardar de la v22.
                 .verticalScroll(rememberScrollState())
-                .imePadding()
+                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
