@@ -30,6 +30,14 @@ class AuthViewModel @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
+    // El "te hemos mandado un correo" va aparte de AuthState a propósito: un
+    // AuthState.Success hace que la pantalla navegue a Home, y restablecer la
+    // contraseña no es haber entrado.
+    private val _passwordResetSent = MutableStateFlow(false)
+    val passwordResetSent: StateFlow<Boolean> = _passwordResetSent
+
+    fun clearPasswordResetNotice() { _passwordResetSent.value = false }
+
     val isLoggedIn: Boolean get() = authRepository.isLoggedIn
     val currentUser get() = authRepository.currentUser
 
@@ -39,6 +47,33 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             applyResult(authRepository.signInWithGoogle(activity))
+        }
+    }
+
+    fun signInWithEmail(email: String, password: String) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            applyResult(authRepository.signInWithEmail(email, password))
+        }
+    }
+
+    fun signUpWithEmail(name: String, email: String, password: String) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            applyResult(authRepository.signUpWithEmail(name, email, password))
+        }
+    }
+
+    fun sendPasswordReset(email: String) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            val result = authRepository.sendPasswordReset(email)
+            if (result.isSuccess) {
+                _authState.value = AuthState.Idle
+                _passwordResetSent.value = true
+            } else {
+                applyResult(Result.failure(result.exceptionOrNull() ?: Exception()))
+            }
         }
     }
 

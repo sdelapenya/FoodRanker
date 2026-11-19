@@ -13,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.installations.FirebaseInstallations
 import com.app.foodranker.R
@@ -138,6 +139,85 @@ class AuthRepository @Inject constructor(
             .setScopes(listOf("email", "profile"))
             .build()
         return completeSignIn(auth.startActivityForSignInWithProvider(activity, provider))
+    }
+
+    /**
+     * Entrada con correo y contraseña.
+     *
+     * ## Por qué existe esto, además de Google
+     *
+     * Dos motivos, y el segundo es el que la hizo urgente:
+     *
+     * 1. El login solo-Google deja fuera a quien no tiene cuenta de Google, y deja a todo
+     *    el mundo tirado si Google Sign-In se rompe — que ya ha pasado **dos veces** en
+     *    producción (ver el aviso histórico de [signInWithGoogle] más arriba).
+     * 2. La revisión de Google Play exige credenciales *reutilizables y que se salten los
+     *    desafíos de identidad*. Una cuenta de Google no puede ser eso: su motor de riesgo
+     *    bloquea al revisor por entrar desde sitios cambiantes, y **ya tumbó tres cuentas
+     *    de revisión seguidas**. Esta credencial no pasa por Google, así que no hay
+     *    desafío, ni aviso al móvil de nadie, ni caducidad. Detalle en docs/HANDOFF.md.
+     *
+     * ⚠️ Firebase viene con "una cuenta por dirección de correo" activado. Si alguien se
+     * registra aquí con la misma dirección que usa en Google, el botón de Google dejará de
+     * funcionarle (`ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL`). No se pierde la
+     * cuenta —entra por aquí— y el mensaje se lo dice; ver `ErrorMapper.authCodeRes`.
+     */
+    suspend fun signInWithEmail(email: String, password: String): Result<FirebaseUser> {
+        signedOutSinceLastAttempt = false
+        return completeSignIn(auth.signInWithEmailAndPassword(email.trim(), password))
+    }
+
+    /**
+     * Alta con correo y contraseña.
+     *
+     * No reutiliza [completeSignIn] porque el orden importa: Firebase crea la cuenta **sin
+     * nombre**, y [syncUserDocument] lee `displayName` para montar el documento del
+     * usuario. Si se sincronizara antes de escribir el perfil, todos los registros por
+     * correo nacerían llamándose como el nombre de respaldo.
+     *
+     * No se exige verificar el correo antes de entrar, y es deliberado: hacerlo
+     * reconstruiría justo el problema que este camino viene a resolver — un paso más que
+     * depende de un buzón ajeno, que es lo que bloquea al revisor de Play.
+     */
+    suspend fun signUpWithEmail(
+        name: String,
+        email: String,
+        password: String
+    ): Result<FirebaseUser> {
+        signedOutSinceLastAttempt = false
+        return try {
+            val result = auth.createUserWithEmailAndPassword(email.trim(), password).await()
+            val firebaseUser = result.user
+                ?: return Result.failure(Exception("Error de autenticación: usuario nulo"))
+
+            val displayName = name.sanitized(InputLimits.USER_NAME)
+                .ifBlank { appContext.getString(R.string.user_fallback_name) }
+            firebaseUser.updateProfile(
+                UserProfileChangeRequest.Builder().setDisplayName(displayName).build()
+            ).await()
+
+            // El mapa de respaldo va aunque updateProfile ya haya refrescado el objeto en
+            // memoria: syncUserDocument mira ahí si displayName viniera vacío, y así el
+            // nombre llega igual sin depender de ese detalle del SDK.
+            syncUserDocument(firebaseUser, mapOf("name" to displayName))
+            Result.success(firebaseUser)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Correo para restablecer la contraseña.
+     *
+     * Devuelve éxito **también** cuando la dirección no está registrada: Firebase lo hace
+     * así a propósito con la protección contra enumeración de correos, y responder "ese
+     * correo no existe" le diría a cualquiera quién tiene cuenta.
+     */
+    suspend fun sendPasswordReset(email: String): Result<Unit> = try {
+        auth.sendPasswordResetEmail(email.trim()).await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
     // Si la Activity se recrea mientras el navegador está abierto (giro de pantalla, poca

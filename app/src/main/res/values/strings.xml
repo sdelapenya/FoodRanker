@@ -35,6 +35,25 @@
     <string name="auth_feature_global">Global</string>
     <string name="auth_feature_rate">Rate</string>
     <string name="auth_feature_share">Share</string>
+    <!-- Entrada con correo y contraseña. Existe porque el login solo-Google deja
+         fuera a quien no tiene cuenta de Google y, sobre todo, porque la revisión de
+         Play necesita una credencial reutilizable y sin desafíos: ver docs/HANDOFF.md. -->
+    <string name="auth_email_option">Sign in with email</string>
+    <string name="auth_sheet_title_signin">Sign in with email</string>
+    <string name="auth_sheet_title_signup">Create an account</string>
+    <string name="auth_field_name">Name</string>
+    <string name="auth_field_email">Email</string>
+    <string name="auth_field_password">Password</string>
+    <string name="auth_password_hint">At least 8 characters</string>
+    <string name="auth_action_signin">Sign in</string>
+    <string name="auth_action_signup">Create account</string>
+    <string name="auth_switch_to_signup">No account yet? Create one</string>
+    <string name="auth_switch_to_signin">Already have an account? Sign in</string>
+    <string name="auth_forgot_password">Forgot your password?</string>
+    <string name="auth_reset_sent">We\'ve sent you an email to reset your password.</string>
+    <string name="auth_reset_need_email">Enter your email first.</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
     <string name="auth_terms">Terms</string>
     <string name="auth_privacy">Privacy</string>
 
@@ -219,6 +238,12 @@
     <string name="err_not_found">That content no longer exists</string>
     <string name="err_upload">Could not upload the image. Try again</string>
     <string name="err_cancelled">Cancelled</string>
+    <string name="err_auth_credentials">The email or password is not correct</string>
+    <string name="err_auth_email_in_use">There is already an account with that email. Try signing in instead</string>
+    <string name="err_auth_use_email_login">You already have an account with that email. Sign in with email and password</string>
+    <string name="err_auth_weak_password">Choose a longer password, at least 8 characters</string>
+    <string name="err_auth_invalid_email">That email does not look valid</string>
+    <string name="err_auth_too_many">Too many attempts. Try again in a few minutes</string>
     <string name="err_generic2">Something went wrong. Try again</string>
 
     <!-- Perfil y liga -->

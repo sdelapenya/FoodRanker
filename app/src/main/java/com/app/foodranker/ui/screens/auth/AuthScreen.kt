@@ -52,6 +52,8 @@ fun AuthScreen(
         viewModel.checkPendingGoogleSignIn()
     }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var mostrarHojaCorreo by remember { mutableStateOf(false) }
+    val resetEnviado by viewModel.passwordResetSent.collectAsState()
 
     LaunchedEffect(authState) {
         when (authState) {
@@ -205,7 +207,9 @@ fun AuthScreen(
                 }
             }
 
-            errorMessage?.let { msg ->
+            // Con la hoja abierta el error se pinta DENTRO de ella: aquí quedaría
+            // tapado y el usuario no vería por qué no ha entrado.
+            errorMessage?.takeIf { !mostrarHojaCorreo }?.let { msg ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = msg,
@@ -216,7 +220,27 @@ fun AuthScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(tween(800, delayMillis = 750))
+            ) {
+                TextButton(
+                    onClick = {
+                        errorMessage = null
+                        viewModel.clearPasswordResetNotice()
+                        mostrarHojaCorreo = true
+                    },
+                    enabled = authState !is AuthState.Loading
+                ) {
+                    Text(
+                        stringResource(R.string.auth_email_option),
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             AnimatedVisibility(
                 visible = visible,
@@ -232,6 +256,33 @@ fun AuthScreen(
                     }
                 }
             }
+        }
+
+        if (mostrarHojaCorreo) {
+            EmailAuthSheet(
+                cargando = authState is AuthState.Loading,
+                mensajeError = errorMessage,
+                avisoResetEnviado = resetEnviado,
+                onEntrar = { correo, clave ->
+                    errorMessage = null
+                    viewModel.clearPasswordResetNotice()
+                    viewModel.signInWithEmail(correo, clave)
+                },
+                onRegistrar = { nombre, correo, clave ->
+                    errorMessage = null
+                    viewModel.clearPasswordResetNotice()
+                    viewModel.signUpWithEmail(nombre, correo, clave)
+                },
+                onRestablecer = { correo ->
+                    errorMessage = null
+                    viewModel.sendPasswordReset(correo)
+                },
+                onDismiss = {
+                    mostrarHojaCorreo = false
+                    errorMessage = null
+                    viewModel.clearPasswordResetNotice()
+                }
+            )
         }
     }
 }

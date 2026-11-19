@@ -34,6 +34,25 @@
     <string name="auth_feature_global">Global</string>
     <string name="auth_feature_rate">Valorar</string>
     <string name="auth_feature_share">Compartir</string>
+    <!-- Entrada con correo y contraseña. Existe porque el login solo-Google deja
+         fuera a quien no tiene cuenta de Google y, sobre todo, porque la revisión de
+         Play necesita una credencial reutilizable y sin desafíos: ver docs/HANDOFF.md. -->
+    <string name="auth_email_option">Entrar con correo</string>
+    <string name="auth_sheet_title_signin">Entrar con correo</string>
+    <string name="auth_sheet_title_signup">Crear una cuenta</string>
+    <string name="auth_field_name">Nombre</string>
+    <string name="auth_field_email">Correo electrónico</string>
+    <string name="auth_field_password">Contraseña</string>
+    <string name="auth_password_hint">Al menos 8 caracteres</string>
+    <string name="auth_action_signin">Entrar</string>
+    <string name="auth_action_signup">Crear cuenta</string>
+    <string name="auth_switch_to_signup">¿Aún no tienes cuenta? Créala</string>
+    <string name="auth_switch_to_signin">¿Ya tienes cuenta? Entra</string>
+    <string name="auth_forgot_password">¿Has olvidado la contraseña?</string>
+    <string name="auth_reset_sent">Te hemos enviado un correo para restablecer la contraseña.</string>
+    <string name="auth_reset_need_email">Escribe antes tu correo.</string>
+    <string name="auth_show_password">Mostrar contraseña</string>
+    <string name="auth_hide_password">Ocultar contraseña</string>
     <string name="auth_terms">Términos</string>
     <string name="auth_privacy">Privacidad</string>
 
@@ -221,6 +240,12 @@
     <string name="err_not_found">El contenido ya no existe</string>
     <string name="err_upload">Error al subir la imagen. Inténtalo de nuevo</string>
     <string name="err_cancelled">Operación cancelada</string>
+    <string name="err_auth_credentials">El correo o la contraseña no son correctos</string>
+    <string name="err_auth_email_in_use">Ya hay una cuenta con ese correo. Prueba a entrar en vez de crearla</string>
+    <string name="err_auth_use_email_login">Ya tienes una cuenta con ese correo. Entra con correo y contraseña</string>
+    <string name="err_auth_weak_password">Elige una contraseña más larga, de al menos 8 caracteres</string>
+    <string name="err_auth_invalid_email">Ese correo no parece válido</string>
+    <string name="err_auth_too_many">Demasiados intentos. Vuelve a probar en unos minutos</string>
     <string name="err_generic2">Algo salió mal. Inténtalo de nuevo</string>
 
     <!-- Perfil y liga -->

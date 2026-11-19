@@ -27,8 +27,15 @@ object ErrorMapper {
      * salir de los recursos.
      */
     @StringRes
-    fun toUserMessageRes(e: Exception): Int = when {
-            isDisabledAccountError(e) -> R.string.err_account_disabled
+    fun toUserMessageRes(e: Exception): Int {
+        // Los códigos de FirebaseAuth se miran ANTES que el resto, porque el resto
+        // decide por el texto del mensaje y puede coincidir por casualidad: un
+        // ERROR_USER_NOT_FOUND acabaría en "no encontrado", que no le dice nada a nadie.
+        // El de cuenta suspendida va el primero porque también es de Auth y tiene
+        // mensaje propio desde antes.
+        if (isDisabledAccountError(e)) return R.string.err_account_disabled
+        authCodeRes(e)?.let { return it }
+        return when {
             isNetworkError(e)     -> R.string.err_no_internet
             isPermissionError(e)  -> R.string.err_permission
             isUnavailableError(e) -> R.string.err_unavailable
@@ -37,6 +44,7 @@ object ErrorMapper {
             isStorageError(e)     -> R.string.err_upload
             isCancelledError(e)   -> R.string.err_cancelled
             else                  -> R.string.err_generic2
+        }
     }
 
     /**
@@ -59,7 +67,38 @@ object ErrorMapper {
      * encontrado (datos incoherentes), subidas fallidas y cualquier cosa inesperada.
      */
     fun esDelEntorno(e: Exception): Boolean =
-        isNetworkError(e) || isTimeoutError(e) || isCancelledError(e)
+        isNetworkError(e) || isTimeoutError(e) || isCancelledError(e) ||
+        // Escribir mal la contraseña es del usuario, no un bug: si no, cada dedazo en
+        // el login de correo entraría en Crashlytics como no fatal.
+        authCodeRes(e) != null
+
+    /**
+     * Los fallos del login con correo y contraseña, por `errorCode`.
+     *
+     * Devuelve null si no es uno de esos, para que [toUserMessageRes] siga mirando.
+     *
+     * ⚠️ Con la protección contra enumeración de correos activada (lo normal hoy en
+     * Firebase), una contraseña incorrecta y un usuario que no existe devuelven **el
+     * mismo** `ERROR_INVALID_CREDENTIAL`. Por eso los dos casos comparten mensaje: no es
+     * pereza, es que distinguirlos le diría a cualquiera qué correos están registrados.
+     */
+    @StringRes
+    private fun authCodeRes(e: Exception): Int? =
+        when ((e as? com.google.firebase.auth.FirebaseAuthException)?.errorCode) {
+            "ERROR_INVALID_CREDENTIAL",
+            "ERROR_WRONG_PASSWORD",
+            "ERROR_USER_NOT_FOUND"      -> R.string.err_auth_credentials
+            "ERROR_EMAIL_ALREADY_IN_USE" -> R.string.err_auth_email_in_use
+            // Este sale por el camino CONTRARIO: alguien que ya se registró con correo
+            // y ahora pulsa Google con esa misma dirección. Firebase trae activada por
+            // defecto "una cuenta por dirección", así que no entra — y decirle "ya hay
+            // una cuenta con ese correo" le dejaría igual de atascado que antes.
+            "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL" -> R.string.err_auth_use_email_login
+            "ERROR_WEAK_PASSWORD"       -> R.string.err_auth_weak_password
+            "ERROR_INVALID_EMAIL"       -> R.string.err_auth_invalid_email
+            "ERROR_TOO_MANY_REQUESTS"   -> R.string.err_auth_too_many
+            else -> null
+        }
 
     // Comprueba el código, no el mensaje (a diferencia del resto de este mapper): el
     // mensaje de FirebaseAuthException varía por locale, el errorCode no.
