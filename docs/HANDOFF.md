@@ -15,6 +15,67 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔔 LA CAMPANA SE QUEDABA CONGELADA PARA SIEMPRE (2026-11-20)
+
+Salió de una auditoría de Codex sobre el estado de la app, **y es real**: comprobado
+leyendo el código, no aceptado por venir de otro agente.
+
+#### El fallo
+
+`NotificationRepository.startListening` empieza con:
+
+```kotlin
+if (userId == activeUserId && listener != null) return
+```
+
+y el callback hacía `if (error != null || snapshot == null) return@addSnapshotListener`.
+
+**Firestore TERMINA la suscripción cuando entrega un error**, pero la referencia se quedaba
+ahí no-nula: viva y muerta a la vez. A partir de ese momento, el `return` de arriba hacía
+que **ningún reintento volviera a suscribirse**. Y los reintentos existen: `ON_RESUME` y
+`LaunchedEffect(currentUserId)`, los dos en `DiscoverScreen`. **No hay `stopListening`.**
+
+Resultado: **la campana se quedaba congelada el resto de la vida del proceso**, ni siquiera
+volviendo de segundo plano. Solo se arreglaba matando la app.
+
+**Pasa de verdad**: el 20 nov, a las 08:19:34, salió un `PERMISSION_DENIED` sobre
+`notifications/{uid}/items` **en el instante del login**, porque el listener se suscribe
+antes de que el token de Firestore haya propagado.
+
+#### El arreglo
+
+Soltar `activeUserId` en la rama de error. La siguiente llamada ya no coincide, entra, hace
+`remove()` del registro muerto y se vuelve a suscribir.
+
+⚠️ **No se anula `listener` ahí dentro a propósito.** Si el error llegara antes de que
+termine la asignación de arriba, anularlo lo dejaría colgado igual: la asignación posterior
+volvería a guardar el registro muerto. Con `activeUserId = ""` no hay carrera posible.
+
+⚠️ **Queda la causa raíz**: el listener se sigue suscribiendo antes de que propague el
+token. Con esto se recupera en el siguiente `ON_RESUME`, no al instante. Atacarla de verdad
+sería no arrancarlo hasta que Auth esté listo.
+
+⚠️ **Sin test.** `GuardiaDeAvisosTest` cubre la clase pura; esta rama vive dentro del
+lambda de `addSnapshotListener` y testearla pide mockear Firestore o sacar el estado del
+listener a su propia clase. Se dejó el cambio mínimo porque la v26 estaba en revisión.
+
+⚠️ **No lleva `versionCode`**: entra en la **v27**, junto con el `uses-feature` de wifi y
+location, y la pastilla "Comp".
+
+#### El resto de la auditoría de Codex, con veredicto
+
+| Hallazgo | Veredicto |
+|---|---|
+| La campana tras el login | ✅ **confirmado y arreglado** (arriba) |
+| Las Cloud Functions siguen en versiones de octubre | ✅ correcto, **es el plan**: se despliegan cuando la v26 esté repartida en producción |
+| Desplegar no completa la migración FCM | ✅ cierto: el cliente ya registra cada instalación, pero la función de envío usa un único `fcmToken`. Ya estaba en pendientes |
+| `plates` se puede leer sin importar el estado | ✅ **confirmado**: `firestore.rules:135` dice `allow read: if true`. El filtro de moderación es solo del cliente, y **App Check sigue sin forzarse** |
+| Contador de denuncias sin ligar a la denuncia | ⚠️ **sin verificar** |
+| La edición de valoraciones aplica delta sin deduplicar | ⚠️ **sin verificar** |
+| Los topes de búsqueda no aprietan (59 platos, 40 locales) | ✅ coherente con lo ya apuntado |
+
+---
+
 ### 🚀 LA v26 ENVIADA A REVISIÓN PARA PRODUCCIÓN (2026-11-20)
 
 **Estado: esperando a Google.** Enviado el 20 nov desde *Resumen de publicación*.

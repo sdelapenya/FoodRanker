@@ -78,7 +78,27 @@ class NotificationRepository @Inject constructor(
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(50)
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+                if (error != null) {
+                    // Firestore **termina** la suscripción cuando entrega un error, pero la
+                    // referencia de arriba se queda aquí no-nula: viva y muerta a la vez. Sin
+                    // soltar `activeUserId`, el `return` del principio de `startListening`
+                    // hace que NINGÚN reintento vuelva a suscribirse —ni el de `ON_RESUME` ni
+                    // el de `LaunchedEffect(currentUserId)` en DiscoverScreen— y la campana se
+                    // queda congelada el resto de la vida del proceso. Solo se arreglaba
+                    // matando la app.
+                    //
+                    // Pasa de verdad: el 20 nov salió un `PERMISSION_DENIED` sobre
+                    // `notifications/{uid}/items` en el instante del login, porque el listener
+                    // se suscribe antes de que el token de Firestore haya propagado.
+                    //
+                    // Basta con soltar `activeUserId`: la siguiente llamada ya no coincide,
+                    // entra, hace `remove()` del registro muerto y se vuelve a suscribir. No se
+                    // toca `listener` aquí a propósito — si el error llegara antes de que
+                    // termine la asignación de arriba, anularlo lo dejaría colgado igual.
+                    activeUserId = ""
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) return@addSnapshotListener
                 // El contador sí se actualiza con la caché: la campana tiene que ser correcta
                 // sin red. Lo que no puede dispararse con la caché son los avisos.
                 _unreadCount.value = snapshot.documents.count { it.get("isRead") != true }
