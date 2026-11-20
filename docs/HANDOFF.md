@@ -76,6 +76,73 @@ location, y la pastilla "Comp".
 
 ---
 
+### 🔒 LOS DOS HALLAZGOS QUE QUEDABAN DE CODEX, CONFIRMADOS Y ARREGLADOS (2026-11-20)
+
+Eran los dos que en su momento se marcaron como **sin verificar**. Comprobados leyendo el
+código: **los dos eran reales**. Ninguno es regresión reciente.
+
+#### 1. El contador de denuncias no estaba atado a la denuncia — explotable
+
+El cliente hacía lo correcto: una transacción que crea `reports/{uid}_{docId}` y solo
+entonces incrementa. **Pero la regla no exigía nada de eso**, solo que el delta fuera +1:
+
+```
+changedKeys().hasOnly(['reportCount'])
+&& request.resource.data.reportCount == resource.data.reportCount + 1
+```
+
+La API key va dentro del APK, así que **cualquier usuario autenticado podía llamar a REST
+e incrementar `reportCount` las veces que quisiera, sin crear ninguna denuncia**. Con el
+umbral en 3, tres llamadas hundían cualquier plato — y sin rastro en `reports` que
+permitiera auditarlo.
+
+Arreglado con un helper aplicado a los **tres** sitios (plates, ratings, comments):
+
+```
+function denunciaCreadaAhora(docId) {
+  let ref = /databases/$(database)/documents/reports/$(request.auth.uid + '_' + docId);
+  return existsAfter(ref) && !exists(ref);
+}
+```
+
+`existsAfter` obliga a que la denuncia se cree en la misma transacción; `!exists` impide
+que el mismo usuario vuelva a sumar. Es la garantía que el comentario de la regla de
+ratings ya daba por hecha (*"el id determinista del reporte impide contarlo dos veces"*)
+pero que solo cumplía el cliente.
+
+#### 2. `onRatingUpdated` aplicaba el delta sin idempotencia
+
+Recalcula `(currentAvg * totalRatings - oldAvg + newAvg) / totalRatings` y suma a los
+contadores de "lo volvería a pedir", **sin marca de procesado**. Los triggers son
+**at-least-once**: una entrega duplicada aplicaba el delta dos veces y dejaba el promedio
+del plato corrupto, sin forma de detectarlo después.
+
+Es **el mismo patrón que ya se arregló en el XP de liga** el 18 de noviembre; la lección no
+se había aplicado aquí. Ahora lleva sello `aggregatedEventId = event.id`, escrito en la
+misma transacción que el delta.
+
+⚠️ **Antes de añadir el campo se comprobó que no rompe la edición de valoraciones.** La
+regla del autor usa `changedKeys().hasOnly([...])`, así que un cliente que reenviara el
+data class entero borraría el campo y se quedaría sin poder editar. No pasa: la edición usa
+`update(mapOf(...))` con campos concretos (`PlateDetailViewModel:650`), que es también por
+lo que `leagueXpAmount` ya convivía sin problema.
+
+#### ⏳ PENDIENTE: los dos necesitan despliegue
+
+```
+firebase deploy --only firestore:rules      # el arreglo de las denuncias
+firebase deploy --only functions            # el sello de idempotencia
+```
+
+El código compila (`npm run build` limpio) pero **no está en producción**. El emulador de
+Firestore no sirvió para validar las reglas en local: pide **Java 21+** y aquí no hay.
+
+⚠️ **Al desplegar las reglas, probar que denunciar sigue funcionando**, no solo que ya no
+se pueda hacer trampa: si `existsAfter` no se comportara como se espera dentro de la
+transacción del SDK cliente, el efecto sería dejar a todo el mundo sin poder denunciar.
+
+---
+
 ### ✅ `functions` DESPLEGADO — Y LA ESPERA ERA INNECESARIA (2026-11-20)
 
 **Desplegadas las 18 funciones** en `europe-west1`, todas con *Successful update operation*

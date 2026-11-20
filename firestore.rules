@@ -7,6 +7,24 @@ service cloud.firestore {
     function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
     function changedKeys() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
+    // Una denuncia de verdad detrás de cada incremento de `reportCount`.
+    //
+    // ⚠️ Antes esto solo comprobaba que el delta fuera +1, y eso NO basta: la API key va
+    // dentro del APK, así que cualquiera autenticado podía llamar a REST e incrementar el
+    // contador las veces que quisiera **sin crear ninguna denuncia**. Con el umbral en 3,
+    // eran tres llamadas para hundir cualquier plato, y sin rastro en `reports` que
+    // permitiera auditarlo. El cliente sí hacía lo correcto (crear la denuncia y subir el
+    // contador en una transacción), pero la regla no obligaba a nada de eso.
+    //
+    // `existsAfter` mira el estado DESPUÉS de la transacción: obliga a que la denuncia se
+    // cree en la misma. `!exists` mira el de antes: impide que el mismo usuario vuelva a
+    // sumar. El id es `{uid}_{docId}`, el mismo que construyen los tres `report*` del
+    // cliente (DiscoverViewModel y PlateDetailViewModel).
+    function denunciaCreadaAhora(docId) {
+      let ref = /databases/$(database)/documents/reports/$(request.auth.uid + '_' + docId);
+      return existsAfter(ref) && !exists(ref);
+    }
+
     // Ejes de una valoración: 1..10. Ver docs/RATINGS.md.
     function scoreOk(v) { return v is number && v >= 1 && v <= 10; }
     // Campo opcional durante la convivencia de formatos: si no viene (cliente v12) o viene
@@ -201,6 +219,7 @@ service cloud.firestore {
         (
           changedKeys().hasOnly(['reportCount'])
           && request.resource.data.reportCount == resource.data.reportCount + 1
+          && denunciaCreadaAhora(plateId)
         )
         // Los agregados los escribe solo Cloud Functions via Admin SDK: averageScore,
         // totalRatings, rankingScore, wouldOrderAgainCount y los tres campos de precio.
@@ -239,7 +258,8 @@ service cloud.firestore {
       // inflar un plato, esto es lo único que permite señalarlo.
       allow update: if isSignedIn()
                     && changedKeys().hasOnly(['reportCount'])
-                    && request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1;
+                    && request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1
+                    && denunciaCreadaAhora(ratingId);
       // El autor puede actualizar sus puntuaciones y comentario (no userId/plateId/createdAt)
       allow update: if isSignedIn()
                     && resource.data.userId == request.auth.uid
@@ -270,7 +290,8 @@ service cloud.firestore {
       // más antiguo (y más probable que necesite reportarse primero).
       allow update: if isSignedIn()
                     && changedKeys().hasOnly(['reportCount'])
-                    && request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1;
+                    && request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1
+                    && denunciaCreadaAhora(commentId);
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 

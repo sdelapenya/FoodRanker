@@ -1424,7 +1424,28 @@ export const onRatingUpdated = onDocumentUpdated(
     try {
       await db.runTransaction(async (tx) => {
         const plateDoc = await tx.get(plateRef);
+        // Las dos lecturas van juntas y antes de cualquier escritura: una transacción de
+        // Firestore no admite leer después de escribir.
+        const ratingSnap = await tx.get(event.data!.after.ref);
         if (!plateDoc.exists) return;
+
+        // ⚠️ Sello de idempotencia, mismo patrón que `leagueXpAmount` en addLeagueXP.
+        //
+        // Esto aplica un DELTA sobre los agregados del plato (`currentAvg * totalRatings
+        // - oldAvg + newAvg`, y los contadores de "lo volvería a pedir"). Los triggers de
+        // Firestore son **at-least-once**: si el mismo evento se entrega dos veces, el
+        // delta se aplica dos veces y el promedio del plato queda corrupto, sin forma de
+        // notarlo después. `RETRY_POLICY_DO_NOT_RETRY` baja la probabilidad pero no la
+        // quita: Eventarc puede duplicar la entrega igualmente. Es exactamente lo que
+        // pagaba el XP de liga dos veces hasta el 2026-11-18.
+        //
+        // El sello se escribe en la MISMA transacción que el delta, así que o entran los
+        // dos o no entra ninguno. Guardar `event.id` y no un booleano permite que una
+        // edición posterior (evento distinto) sí vuelva a agregar.
+        if (ratingSnap.get("aggregatedEventId") === event.id) {
+          logger.info(`onRatingUpdated: evento ${event.id} ya agregado, se ignora`);
+          return;
+        }
         const totalRatings: number = plateDoc.get("totalRatings") ?? 0;
         if (totalRatings === 0) {
           // Initial rating hasn't been folded into plate.averageScore yet
@@ -1432,7 +1453,7 @@ export const onRatingUpdated = onDocumentUpdated(
           // directly from this rating doc once it does. Just refresh the
           // rating's own averageScore for display; recalculating against
           // the plate here would divide by zero.
-          tx.update(event.data!.after.ref, { averageScore: newAvg });
+          tx.update(event.data!.after.ref, { averageScore: newAvg, aggregatedEventId: event.id });
           return;
         }
         const currentAvg: number = plateDoc.get("averageScore") ?? 0;
@@ -1454,7 +1475,7 @@ export const onRatingUpdated = onDocumentUpdated(
           wouldOrderAgainResponses: responses,
           rankingScore: rankingScoreFor(recalculated, totalRatings),
         });
-        tx.update(event.data!.after.ref, { averageScore: newAvg });
+        tx.update(event.data!.after.ref, { averageScore: newAvg, aggregatedEventId: event.id });
       });
     } catch (err) {
       logger.error(`onRatingUpdated error for rating ${event.params.ratingId}:`, err);
