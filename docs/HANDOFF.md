@@ -76,6 +76,43 @@ location, y la pastilla "Comp".
 
 ---
 
+### ✅ LA v26 YA ESTÁ PUBLICADA EN PRODUCCIÓN (2026-11-20)
+
+Google la aprobó y, con **publicación gestionada desactivada**, salió sola el mismo día.
+Aviso de Play: *"Se ha publicado la actualización de la aplicación."*
+
+Producción pasa de la **20 (1.6)** a la **26 (1.9.3)**, y con ella llega por fin el acceso
+por correo que desbloquea a los revisores.
+
+#### ⚠️ PUBLICADA NO ES REPARTIDA — esto es lo que decide el despliegue de `functions`
+
+El aviso de Play dice que está publicada, **no que la tengan los usuarios**. Los clientes
+actualizan a lo largo de días. Y el orden que no se puede saltar sigue intacto:
+
+1. Mirar en **Play Console → Estadísticas → distribución por versión** qué parte del
+   parque está ya en la 26.
+2. **Solo entonces** `firebase deploy --only functions`.
+
+El motivo no ha cambiado: los cambios de servidor que esperan (canales de avisos,
+idempotencia del XP de liga) **no los entienden los clientes anteriores a la v22**, y hasta
+hoy producción entera estaba en la 20. Desplegar con la mayoría todavía en la 20 les
+rompe los avisos.
+
+⚠️ Desplegar también **sigue sin completar la migración FCM**: el cliente ya registra cada
+instalación en `users/{uid}/dispositivos`, pero la función de envío usa un único
+`fcmToken`. Eso es trabajo aparte.
+
+#### Lo que toca vigilar estos días
+
+- **Si vuelve a llegar un aviso de bloqueo al móvil de Sergio**, el revisor usó el botón de
+  Google en vez del camino de correo. Salida de raíz: mover la credencial a una dirección
+  que no sea una cuenta de Google.
+- **Crashlytics**, por si la v26 trae algo que no salió en las pruebas.
+- **La campana**: el arreglo del listener está en el repo pero **NO en la v26** — entra en
+  la v27.
+
+---
+
 ### 🚀 LA v26 ENVIADA A REVISIÓN PARA PRODUCCIÓN (2026-11-20)
 
 **Estado: esperando a Google.** Enviado el 20 nov desde *Resumen de publicación*.
