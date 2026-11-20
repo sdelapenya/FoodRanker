@@ -76,6 +76,60 @@ location, y la pastilla "Comp".
 
 ---
 
+### ✅ `functions` DESPLEGADO — Y LA ESPERA ERA INNECESARIA (2026-11-20)
+
+**Desplegadas las 18 funciones** en `europe-west1`, todas con *Successful update operation*
+y estado ACTIVE. Se acabó el desfase: lo que corría era de octubre.
+
+Confirmación de que subió el código nuevo y no el viejo: **`renamePlate` aparece en
+`functions:list`**, y esa función no existía en el despliegue anterior.
+
+#### ⚠️ LA REGLA DE "ESPERAR AL REPARTO" ESTABA MAL CALIBRADA
+
+Durante días se mantuvo la regla *"no desplegar `functions` hasta que la v22+ esté
+repartida en producción, porque los clientes viejos no entienden los canales de avisos"*.
+Al comprobarla de verdad, resultó **excesiva en dos sentidos**:
+
+**1. El canal inexistente no rompe nada.** Antes de la v22 el manifest **no declaraba**
+canal por defecto y los `foodranker_*` no existían, así que esos clientes **ya funcionaban
+con el canal de reserva que crea solo el SDK de FCM**. Recibir un `channelId` que no
+conocen los deja donde ya estaban.
+
+**2. Ya estaba pasando, y sin consecuencias.** En los logs:
+
+```
+2026-11-16 18:50:48  onnotificationcreated: push enviado: tipo=like canal=foodranker_social
+```
+
+La función **enviaba el canal desde el 16 de noviembre**, con producción entera en la v20 y
+ningún cliente con ese canal creado. Cuatro días de envíos sin un solo error. (El log prueba
+que FCM los aceptó, no que se pintaran en pantalla — pero no hubo ninguna queja.)
+
+#### ⚠️ Y la espera no era gratis
+
+Lo que llevaba sin desplegar incluía **un arreglo de crash pensado precisamente para curar
+a los clientes viejos sin que actualicen** (`9296b93`), con esta nota en el propio código:
+
+> *"Se arregla aquí ADEMÁS de en el cliente a propósito: así deja de pasar en todas las
+> versiones ya instaladas, sin esperar a que nadie actualice."*
+
+Es el crash de tocar un aviso que no es de un plato, visto en Crashlytics el 16 de
+noviembre y **presente desde la 1.2**. Y con él esperaba el arreglo del **XP de liga que se
+pagaba dos veces**, que mientras tanto seguía corrompiendo datos.
+
+**Lección:** una regla de prudencia también hay que verificarla. Esta protegía de un riesgo
+hipotético mientras mantenía vivos dos problemas reales, y bastaban dos comprobaciones
+(el manifest y un log) para verlo. Con un parque de **~12 usuarios**, además, el cálculo
+nunca estuvo cerca.
+
+#### Qué vigilar ahora
+
+- **Crashlytics**: el crash de los avisos debería dejar de aparecer, en todas las versiones.
+- Que los avisos siguen llegando (probar un like o un comentario desde otra cuenta).
+- El **XP de liga**, que ya no debería duplicarse.
+
+---
+
 ### ✅ LA v26 YA ESTÁ PUBLICADA EN PRODUCCIÓN (2026-11-20)
 
 Google la aprobó y, con **publicación gestionada desactivada**, salió sola el mismo día.
