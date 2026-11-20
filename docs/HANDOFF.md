@@ -15,6 +15,44 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🚀 LA v26 ENVIADA A REVISIÓN PARA PRODUCCIÓN (2026-11-20)
+
+**Estado: esperando a Google.** Enviado el 20 nov desde *Resumen de publicación*.
+
+| Qué | Detalle |
+|---|---|
+| Versión | **26 (1.9.3)**, lanzamiento completo al 100 % |
+| Venía de | producción en la **20 (1.6)** — un salto de 6 versiones |
+| Notas | las de **producción**, no las del interno (ver `docs/play-store-listing.md`) |
+| Datos de inicio de sesión | actualizados el mismo día, **una sola entrada**, "Lista para enviar a revisión" |
+| Aviso de hardware | **ignorado a propósito** (ver más abajo), marcando "publicar es más importante" y "ya tengo previsto resolverlo" |
+
+⚠️ **Publicación gestionada desactivada**: cuando Google apruebe, **sale sola al 100 %**. No
+hay un segundo botón.
+
+#### Lo que viene cuando apruebe
+
+1. **Esperar a que esté repartida de verdad en producción** (no basta con que Google
+   apruebe: hay que ver clientes en la 26).
+2. **Entonces** `firebase deploy --only functions`. Los cambios de servidor que esperan
+   (canales de avisos, idempotencia del XP de liga) **no los entienden los clientes
+   anteriores a la v22**, y hasta ahora producción entera estaba en la 20.
+3. Si los revisores entran con la credencial de correo, el problema de las tres cuentas
+   de revisión muertas queda cerrado. Si vuelve a llegar un aviso de bloqueo al móvil de
+   Sergio, es que el revisor usó el botón de Google: la salida de raíz entonces es mover
+   la credencial a una dirección **que no sea una cuenta de Google** (p. ej.
+   `review@foodranker.app`, existiendo solo en Firebase).
+
+#### Dos detalles del envío, por si se repiten
+
+- Los **Datos de inicio de sesión no salen en la lista de "cambios"**, sino abajo, en
+  *Información que has aportado*. No cuentan para el contador de "Enviar N cambios"
+  porque no son contenido publicable, pero **sí se tienen en cuenta en esa revisión**.
+- El botón del diálogo de los datos de inicio de sesión pone **"Añadir"** aunque estés
+  editando la entrada existente. No crea una segunda — comprobado en la lista después.
+
+---
+
 ### 📱 LA v23 PROBADA EN EL MÓVIL REAL — Y UN FALLO QUE OBLIGA A LA v24 (2026-11-19)
 
 **Las dos pruebas críticas de la v23, superadas sobre la build firmada por Play**, en el
