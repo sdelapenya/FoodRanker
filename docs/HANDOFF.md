@@ -127,19 +127,26 @@ data class entero borraría el campo y se quedaría sin poder editar. No pasa: l
 `update(mapOf(...))` con campos concretos (`PlateDetailViewModel:650`), que es también por
 lo que `leagueXpAmount` ya convivía sin problema.
 
-#### ⏳ PENDIENTE: los dos necesitan despliegue
+#### ✅ DESPLEGADOS Y PROBADOS CONTRA PRODUCCIÓN
 
-```
-firebase deploy --only firestore:rules      # el arreglo de las denuncias
-firebase deploy --only functions            # el sello de idempotencia
-```
+Las reglas compilaron y se publicaron; `functions` volvió a desplegarse con el sello.
 
-El código compila (`npm run build` limpio) pero **no está en producción**. El emulador de
-Firestore no sirvió para validar las reglas en local: pide **Java 21+** y aquí no hay.
+**La prueba que importaba no era que el ataque fallara, sino que denunciar siguiera
+funcionando** — si `existsAfter` no se comportara como se espera, el arreglo dejaría a
+todo el mundo sin poder denunciar. Se probó por REST con un `idToken` real de la cuenta de
+revisión, contra un plato de verdad:
 
-⚠️ **Al desplegar las reglas, probar que denunciar sigue funcionando**, no solo que ya no
-se pueda hacer trampa: si `existsAfter` no se comportara como se espera dentro de la
-transacción del SDK cliente, el efecto sería dejar a todo el mundo sin poder denunciar.
+| Caso | Resultado |
+|---|---|
+| Subir `reportCount` **sin** crear denuncia (el ataque) | ✅ `PERMISSION_DENIED` — antes pasaba |
+| Denuncia + incremento en el mismo commit (el flujo real) | ✅ pasa — no se rompió nada |
+
+Después se limpió: el reporte de prueba borrado y el `reportCount` del plato devuelto a 0
+con Admin SDK. `adc_tmp.json` borrado.
+
+⚠️ Un detalle de las reglas de permisos: `Bash(firebase deploy --only functions)` como
+regla **exacta** solo casa con el comando literal. Con `2>&1 | tail -12` detrás no casa y
+decide el clasificador. Para comandos con tubería hace falta la forma de prefijo.
 
 ---
 
