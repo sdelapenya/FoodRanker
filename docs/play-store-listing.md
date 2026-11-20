@@ -150,7 +150,53 @@ está: ahí es donde se duplican.
 
 ---
 
-## v26 (1.9.3) — la hoja de correo se abría a medias
+## v26 (1.9.3) — PRODUCCIÓN: el salto de la 1.6 a la 1.9.3
+
+⚠️ **Estas NO son las notas del canal interno.** Producción estaba en la **20 (1.6)**, así
+que al promocionar la v26 sus usuarios reciben de golpe lo de la v21, la v22 y la v23. Las
+notas del interno ("la hoja de correo se abría a medias") **no valen aquí**: quien viene de
+la 1.6 nunca tuvo esa pantalla y le llega ya arreglada.
+
+**Qué se deja fuera a propósito:**
+
+- Los arreglos de la **v24, v25 y v26**: corrigen versiones que nunca salieron de los
+  canales de prueba.
+- El botón de guardar tras la barra y el aviso en rojo (v22), y el enlace mal formado
+  (v21). Caben por carácter, pero tapan las tres cosas grandes.
+- Los **canales de avisos** (v22), con el criterio de siempre: no reparten hasta que se
+  despliegue `functions`, y eso va **después** de que la v26 esté repartida en producción.
+
+Longitudes: **es-ES 433** y **en 404** caracteres, de 500.
+
+**Bloque entero, para pegar de una vez:**
+
+```
+<es-ES>
+FoodRanker ya sigue el modo oscuro del móvil: antes se quedaba en blanco aunque tuvieras el sistema en oscuro.
+
+Ya puedes entrar con tu correo y una contraseña, sin necesidad de una cuenta de Google. Si entrabas con Google, sigue funcionando igual que siempre.
+
+También puedes elegir el idioma de la app desde tu perfil, en castellano o en inglés (necesita Android 13 o posterior), y corregir el nombre de un plato que añadieras mal.
+</es-ES>
+<en-GB>
+FoodRanker now follows your phone's dark mode: it used to stay white even with your system set to dark.
+
+You can now sign in with your email and a password, with no Google account needed. If you signed in with Google, it still works just the same.
+
+You can also choose the app's language from your profile, Spanish or English (needs Android 13 or later), and correct the name of a dish you added wrongly.
+</en-GB>
+<en-US>
+FoodRanker now follows your phone's dark mode: it used to stay white even with your system set to dark.
+
+You can now sign in with your email and a password, with no Google account needed. If you signed in with Google, it still works just the same.
+
+You can also choose the app's language from your profile, Spanish or English (needs Android 13 or later), and correct the name of a dish you added wrongly.
+</en-US>
+```
+
+---
+
+## v26 (1.9.3) — interno: la hoja de correo se abría a medias
 
 Tres versiones subidas al interno con el mismo fallo sin arreglar (v24 y v25 no lo
 tocaban: ver `docs/HANDOFF.md`). La v26 es la que lo arregla de verdad, **comprobada en el
