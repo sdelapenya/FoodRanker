@@ -36,3 +36,14 @@ tools/legal/out/
 
 # Cache de despliegue de Firebase Hosting (artefacto local, no versionar)
 .firebase/
+
+# Imagenes del material de redes. El texto de cada post SI se versiona (docs/social/*.txt,
+# igual que las notas de la tienda en docs/play-store-listing.md): pesa nada y se lee en un
+# diff. Las imagenes no: git no olvida un binario, cada reintento de la misma foto se queda
+# en el historial para siempre y lo arrastra todo el que clone — y ahora gitea es espejo de
+# github, asi que cada MB se duplica en el servidor. Guardalas fuera del repo.
+docs/social/*.png
+docs/social/*.jpg
+docs/social/*.jpeg
+docs/social/*.webp
+docs/social/*.mp4
