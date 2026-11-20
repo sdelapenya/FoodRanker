@@ -85,6 +85,38 @@ Verificado sobre la **build de release con R8**: enlace en `[175,1312][545,1360]
 barra desde `1544`, y al tocarlo se abre el modo alta. En modo alta con el teclado abierto
 el formulario entero queda visible sin necesidad de desplazar.
 
+#### 📌 PARA LA PRÓXIMA VERSIÓN: dos cosas pequeñas que no bloquean
+
+**1. `android.hardware.wifi` obligatorio.** Al enviar la v26 a producción, Play avisa de que
+*"las declaraciones de funciones de hardware obligatorias están restringiendo la
+disponibilidad"*. No lo declara nadie: es **implícito**.
+
+```
+uses-implied-feature: name='android.hardware.wifi'
+  reason='requested android.permission.ACCESS_WIFI_STATE permission'
+```
+
+Y ese permiso lo mete **`com.google.android.libraries.places:places:4.1.0`** (el selector de
+local), según `manifest-merger-release-report.txt`. **No es nuevo**: el manifest no se tocó
+en la v23–v26 y producción ya está publicada así desde la v20. Se decidió **Continuar de
+todos modos** para no gastar otra ronda de revisión: en teléfonos no excluye a nadie, solo
+a Chromebooks sin wifi y Android XR.
+
+Hay un segundo igual que Play todavía no marca, `android.hardware.location`, implícito por
+los permisos de ubicación. La app funciona sin ubicación (solo se resiente "Cerca de ti"),
+así que también debería ser opcional. Los dos se arreglan en el manifest:
+
+```xml
+<uses-feature android:name="android.hardware.wifi"     android:required="false" />
+<uses-feature android:name="android.hardware.location" android:required="false" />
+```
+
+⚠️ Mismo cuidado que con el `uses-feature` de CAMERA que ya está comentado arriba en el
+manifest: si algún día se quita la librería Places, este `uses-feature` sobra.
+
+**2. La pastilla "Compartir" sale truncada como "Comp"** en la pantalla de login a 720px de
+ancho. En inglés ("Share") cabe; en castellano no. Sin verificar ningún arreglo todavía.
+
 #### Verificado en el Redmi con la v26 ya firmada por Play
 
 | Prueba | Resultado |
