@@ -85,6 +85,26 @@ Verificado sobre la **build de release con R8**: enlace en `[175,1312][545,1360]
 barra desde `1544`, y al tocarlo se abre el modo alta. En modo alta con el teclado abierto
 el formulario entero queda visible sin necesidad de desplazar.
 
+#### Verificado en el Redmi con la v26 ya firmada por Play
+
+| Prueba | Resultado |
+|---|---|
+| «¿Aún no tienes cuenta? Créala» | ✅ `[146,1313][574,1367]`, barra desde 1546 — 179px de margen |
+| Tocarlo | ✅ abre el alta, el foco se queda en la app |
+| Alta con teclado (caso peor) | ✅ botón en 764, enlace en 863 |
+| Botón *Entrar* con el teclado abierto | ✅ visible en 638: ya no hay que cerrar el teclado |
+| Login del revisor por correo | ✅ entra al ranking |
+| **Google Sign-In** | ✅ entra |
+
+Antes del arreglo ese enlace estaba en `[146,1572][574,1626]`, dentro de la barra.
+
+⚠️ **Un hallazgo aparte, que no viene de este cambio:** al entrar aparece **un**
+`PERMISSION_DENIED` en `notifications/{uid}/items`, en el mismo instante del login
+(08:19:34 del 20 nov). Es el listener de avisos suscribiéndose antes de que el token de
+Firestore haya propagado. La app sigue funcionando y solo ocurre una vez, pero conviene
+mirar si la campana se queda sin cargar cuando pasa. **No lo causa la v26** — solo toca
+`EmailAuthSheet.kt`.
+
 #### ⚠️ CÓMO PROBAR ESTO BIEN — dos errores de método que costaron dos versiones
 
 **1. El emulador estaba en navegación por gestos.** Con gestos el inset inferior es mínimo
