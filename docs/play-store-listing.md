@@ -150,6 +150,31 @@ está: ahí es donde se duplican.
 
 ---
 
+## v26 (1.9.3) — la hoja de correo se abría a medias
+
+Tres versiones subidas al interno con el mismo fallo sin arreglar (v24 y v25 no lo
+tocaban: ver `docs/HANDOFF.md`). La v26 es la que lo arregla de verdad, **comprobada en el
+Redmi**, no en el emulador.
+
+El texto no menciona la barra de navegación ni los insets: al usuario le importa que el
+botón de crear cuenta ahora se puede pulsar.
+
+**Bloque entero, para pegar de una vez:**
+
+```
+<es-ES>
+Arreglado: la pantalla para entrar o registrarse con correo se abría a medias y el botón de crear cuenta quedaba fuera de alcance.
+</es-ES>
+<en-GB>
+Fixed: the email sign-in screen opened half-way and the create account button was out of reach.
+</en-GB>
+<en-US>
+Fixed: the email sign-in screen opened half-way and the create account button was out of reach.
+</en-US>
+```
+
+---
+
 ## v23 (1.9) — entrar con correo y contraseña
 
 Lo que el usuario nota de la v23.
