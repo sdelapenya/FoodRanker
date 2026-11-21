@@ -805,7 +805,18 @@ async function approveplate(
       });
       // Igual que en onRatingCreated: la nota del rating se reescribe con la fórmula del
       // servidor para que no discrepe de la que aporta al plato.
-      tx.update(initialRatingRef, { processed: true, averageScore: ratingAvg });
+      // Mismo sello que en onRatingCreated: el plato queda sembrado con esta
+      // valoración, así que se anota qué se incorporó para que las ediciones futuras
+      // reconcilien contra un valor conocido y no contra el `before` del evento.
+      tx.update(initialRatingRef, {
+        processed: true,
+        averageScore: ratingAvg,
+        appliedAvg: ratingAvg,
+        appliedWouldOrderAgain:
+          typeof ratingSnap.get("wouldOrderAgain") === "boolean"
+            ? (ratingSnap.get("wouldOrderAgain") as boolean)
+            : null,
+      });
       return {
         userName: (ratingSnap.get("userName") as string) ?? "Usuario",
         userPhotoUrl: (ratingSnap.get("userPhotoUrl") as string) ?? "",
@@ -1076,7 +1087,16 @@ export const onRatingCreated = onDocumentCreated(
         // Se reescribe también la nota del propio rating: el cliente manda la suya, y un
         // cliente antiguo la calcula con la fórmula vieja. Sin esto, la lista de valoraciones
         // enseñaría un número distinto del que ese voto aporta al plato.
-        tx.update(snap.ref, { processed: true, averageScore: avgScore });
+        // Y se sella lo que el plato acaba de incorporar de esta valoración:
+        // `appliedAvg` es la referencia contra la que onRatingUpdated reconcilia cada
+        // edición posterior. Sin sellar aquí, la primera edición tendría que fiarse del
+        // `before` del evento, que es justo lo que no aguanta un desorden de entrega.
+        tx.update(snap.ref, {
+          processed: true,
+          averageScore: avgScore,
+          appliedAvg: avgScore,
+          appliedWouldOrderAgain: answered ? (rating.wouldOrderAgain as boolean) : null,
+        });
         processed = true;
       });
     } catch (err) {
@@ -1385,8 +1405,12 @@ export const onNotificationCreated = onDocumentCreated(
 
 /**
  * Fires when a rating is updated (edit flow).
- * Recalculates the plate's averageScore by replacing the old rating value
- * with the new one: newAvg = (oldAvg * n - oldRating + newRating) / n.
+ *
+ * Reconcilia los agregados del plato contra el estado VIVO de la valoración, no contra el
+ * delta del evento: al plato se le aplica `avgVivo - appliedAvg`, donde `appliedAvg` es lo
+ * que esta valoración ya tiene incorporado. Es idempotente y no depende del orden de
+ * entrega, que Firestore no garantiza. El porqué, con el caso que tumba la alternativa
+ * obvia, está en el comentario largo de dentro de la transacción.
  */
 export const onRatingUpdated = onDocumentUpdated(
   "ratings/{ratingId}",
@@ -1403,63 +1427,103 @@ export const onRatingUpdated = onDocumentUpdated(
     if (!scoresChanged && !repeatChanged && !priceChanged) return;
 
     const plateId: string = after.plateId;
-    const oldAvg = ratingAverage(before);
-    const newAvg = ratingAverage(after);
-
-    // Delta del contador de "lo volvería a pedir": solo cuenta el paso true↔no-true.
-    let repeatDelta = 0;
-    let responseDelta = 0;
-    if (repeatChanged) {
-      if (after.wouldOrderAgain === true) repeatDelta = 1;
-      else if (before.wouldOrderAgain === true) repeatDelta = -1;
-      // Contestar por primera vez (el caso de quien editó una valoración antigua) suma al
-      // denominador del porcentaje; cambiar de sí a no, no.
-      const answeredBefore = typeof before.wouldOrderAgain === "boolean";
-      const answeredAfter = typeof after.wouldOrderAgain === "boolean";
-      if (!answeredBefore && answeredAfter) responseDelta = 1;
-      else if (answeredBefore && !answeredAfter) responseDelta = -1;
-    }
-
     const plateRef = db.collection("plates").doc(plateId);
+
     try {
       await db.runTransaction(async (tx) => {
         const plateDoc = await tx.get(plateRef);
         // Las dos lecturas van juntas y antes de cualquier escritura: una transacción de
         // Firestore no admite leer después de escribir.
         const ratingSnap = await tx.get(event.data!.after.ref);
-        if (!plateDoc.exists) return;
+        if (!plateDoc.exists || !ratingSnap.exists) return;
 
-        // ⚠️ Sello de idempotencia, mismo patrón que `leagueXpAmount` en addLeagueXP.
+        // ⚠️ POR QUÉ ESTO NO APLICA EL DELTA DEL EVENTO.
         //
-        // Esto aplica un DELTA sobre los agregados del plato (`currentAvg * totalRatings
-        // - oldAvg + newAvg`, y los contadores de "lo volvería a pedir"). Los triggers de
-        // Firestore son **at-least-once**: si el mismo evento se entrega dos veces, el
-        // delta se aplica dos veces y el promedio del plato queda corrupto, sin forma de
-        // notarlo después. `RETRY_POLICY_DO_NOT_RETRY` baja la probabilidad pero no la
-        // quita: Eventarc puede duplicar la entrega igualmente. Es exactamente lo que
-        // pagaba el XP de liga dos veces hasta el 2026-11-18.
+        // Los triggers de Firestore son **at-least-once** y **sin orden garantizado**:
+        // el mismo evento puede llegar dos veces, y dos eventos distintos pueden llegar
+        // del revés. `RETRY_POLICY_DO_NOT_RETRY` baja la probabilidad pero no la quita.
         //
-        // El sello se escribe en la MISMA transacción que el delta, así que o entran los
-        // dos o no entra ninguno. Guardar `event.id` y no un booleano permite que una
-        // edición posterior (evento distinto) sí vuelva a agregar.
+        // La versión anterior sumaba al plato el delta del propio evento
+        // (`after - before`). Eso aguanta el desorden —los deltas conmutan, así que
+        // aplicados todos en cualquier orden la suma sale igual— pero no el duplicado:
+        // una reentrega volvía a sumar lo mismo y el promedio del plato quedaba corrupto
+        // sin forma de notarlo. Es lo que pagaba el XP de liga dos veces hasta el
+        // 2026-11-18.
+        //
+        // Y ojo con el arreglo que PARECE evidente: descartar los eventos más antiguos
+        // que el último agregado. No vale. Una reentrega tardía y una entrega
+        // desordenada dejan el documento en el mismo estado observable —un sello más
+        // nuevo que la marca del evento que llega— y no se distinguen mirando el tiempo,
+        // así que descartarlos arregla el duplicado y rompe el desorden: con 5 → 7 → 8,
+        // si llega antes la segunda edición se suma su +1 sobre la contribución de 5 y
+        // la primera se tira por antigua, dejando 6 en vez de 8 para siempre.
+        //
+        // La salida es no fiarse del evento. El evento solo dice "algo cambió"; el valor
+        // bueno se lee del documento DENTRO de la transacción (`ratingSnap`), y al plato
+        // se le aplica la diferencia contra `appliedAvg`, que es lo que esta valoración
+        // ya tiene incorporado al agregado. Así:
+        //   • duplicado    → lo vivo ya coincide con lo aplicado, la diferencia es 0;
+        //   • desordenado  → cada entrega reconcilia contra el estado real, y la última
+        //                     que corra deja el agregado en su sitio;
+        //   • reentrega de un evento ya superado → igual, converge.
+        // El sello y la escritura del plato van en la MISMA transacción: o entran los dos
+        // o no entra ninguno.
         if (ratingSnap.get("aggregatedEventId") === event.id) {
           logger.info(`onRatingUpdated: evento ${event.id} ya agregado, se ignora`);
           return;
         }
+
+        const vivo = ratingSnap.data()!;
+        const avgVivo = ratingAverage(vivo);
+        const repVivo: boolean | null =
+          typeof vivo.wouldOrderAgain === "boolean" ? vivo.wouldOrderAgain : null;
+
+        // Valoraciones anteriores a este cambio no tienen `appliedAvg`. Para esas, lo que
+        // hay incorporado al plato es el `before` del evento, que es la mejor estimación
+        // disponible; es exactamente el comportamiento de antes. A partir de la primera
+        // edición ya queda sellada y el cálculo pasa a ser exacto.
+        const sellada = typeof ratingSnap.get("appliedAvg") === "number";
+        const avgAplicado: number = sellada
+          ? (ratingSnap.get("appliedAvg") as number)
+          : ratingAverage(before);
+        const aplicadoRaw = ratingSnap.get("appliedWouldOrderAgain");
+        const repAplicado: boolean | null = sellada
+          ? (typeof aplicadoRaw === "boolean" ? aplicadoRaw : null)
+          : (typeof before.wouldOrderAgain === "boolean" ? before.wouldOrderAgain : null);
+
+        const deltaAvg = avgVivo - avgAplicado;
+        // El contador de "lo volvería a pedir" cuenta los sí; el denominador cuenta las
+        // respuestas, contestadas o no. Los dos salen de comparar lo vivo con lo aplicado,
+        // no de mirar el paso before→after del evento.
+        const repeatDelta = (repVivo === true ? 1 : 0) - (repAplicado === true ? 1 : 0);
+        const responseDelta = (repVivo !== null ? 1 : 0) - (repAplicado !== null ? 1 : 0);
+
+        const sello = {
+          averageScore: avgVivo,
+          appliedAvg: avgVivo,
+          appliedWouldOrderAgain: repVivo,
+          aggregatedEventId: event.id,
+        };
+
         const totalRatings: number = plateDoc.get("totalRatings") ?? 0;
         if (totalRatings === 0) {
-          // Initial rating hasn't been folded into plate.averageScore yet
-          // (approveplate hasn't run) — it will read the latest scores
-          // directly from this rating doc once it does. Just refresh the
-          // rating's own averageScore for display; recalculating against
-          // the plate here would divide by zero.
-          tx.update(event.data!.after.ref, { averageScore: newAvg, aggregatedEventId: event.id });
+          // Los agregados del plato aún no están sembrados (approveplate no ha corrido):
+          // los leerá de este documento cuando lo haga, y dividir aquí sería dividir por
+          // cero. Se refresca el averageScore de la propia valoración y se sella.
+          tx.update(event.data!.after.ref, sello);
           return;
         }
+
+        if (deltaAvg === 0 && repeatDelta === 0 && responseDelta === 0) {
+          // Nada que incorporar: o es una reentrega, o la edición no movió la media
+          // (subir sabor y bajar presentación, por ejemplo). Se sella igual para que la
+          // valoración deje de depender del `before` de los eventos.
+          tx.update(event.data!.after.ref, sello);
+          return;
+        }
+
         const currentAvg: number = plateDoc.get("averageScore") ?? 0;
-        const recalculated = scoresChanged
-          ? (currentAvg * totalRatings - oldAvg + newAvg) / totalRatings
-          : currentAvg;
+        const recalculated = currentAvg + deltaAvg / totalRatings;
         const repeats = Math.max(
           0,
           ((plateDoc.get("wouldOrderAgainCount") as number) || 0) + repeatDelta
@@ -1475,7 +1539,7 @@ export const onRatingUpdated = onDocumentUpdated(
           wouldOrderAgainResponses: responses,
           rankingScore: rankingScoreFor(recalculated, totalRatings),
         });
-        tx.update(event.data!.after.ref, { averageScore: newAvg, aggregatedEventId: event.id });
+        tx.update(event.data!.after.ref, sello);
       });
     } catch (err) {
       logger.error(`onRatingUpdated error for rating ${event.params.ratingId}:`, err);

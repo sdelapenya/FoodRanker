@@ -251,7 +251,16 @@ service cloud.firestore {
                     && flagOk(request.resource.data, 'wouldOrderAgain')
                     && flagOk(request.resource.data, 'verifiedAtVenue')
                     && request.resource.data.get('reportCount', 0) == 0
-                    && !('processed' in request.resource.data);
+                    && !('processed' in request.resource.data)
+                    // Y tampoco el sello de onRatingUpdated, que lo escribe solo el
+                    // servidor. El `hasOnly` del update de abajo ya impide tocarlo una
+                    // vez creada, pero el create admite campos extra: sin esto una
+                    // valoración podría nacer declarando que ya está incorporada al
+                    // plato con la nota que le diera la gana, y en la primera edición
+                    // la media del plato se movería en esa diferencia inventada.
+                    && !('appliedAvg' in request.resource.data)
+                    && !('appliedWouldOrderAgain' in request.resource.data)
+                    && !('aggregatedEventId' in request.resource.data);
       // Reportar una valoración: mismo patrón que plates/comments (solo +1, y el id
       // determinista del reporte impide contarlo dos veces). Hacía falta porque la
       // declaración "lo he probado" no se puede comprobar: si alguien miente para hundir o
@@ -340,7 +349,19 @@ service cloud.firestore {
       // listar ni leer reportes de otro usuario.
       allow get: if isSignedIn() && reportId.split('_')[0] == request.auth.uid;
       allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.reportedByUserId == request.auth.uid;
+      // El `create` tiene que comprobar el **id**, no solo el campo. Mirando únicamente
+      // `reportedByUserId` cualquiera podía crear `reports/{uidDeOtro}_{plateId}`
+      // declarándose autor: la transacción de reportPlate/reportComment da por hecho que
+      // "el documento existe" significa "ya lo denuncié yo" (ver PlateDetailViewModel),
+      // así que a la víctima le quedaba ese plato marcado como ya denunciado y no podía
+      // denunciarlo nunca. Y como aquí no hay `update` ni `delete`, el documento plantado
+      // solo se quitaba con el Admin SDK. Se exige el mismo prefijo que el `get` de
+      // arriba, que ya lleva tiempo en producción. `split('_')[0]` es seguro aunque el
+      // plateId lleve guiones bajos (p. ej. "ChIJ17p_qV9HoBIRTRSfEBcZuhk__arroz-illa"):
+      // coge el primer segmento, que es el uid.
+      allow create: if isSignedIn()
+                    && reportId.split('_')[0] == request.auth.uid
+                    && request.resource.data.reportedByUserId == request.auth.uid;
       allow update, delete: if false;
     }
 

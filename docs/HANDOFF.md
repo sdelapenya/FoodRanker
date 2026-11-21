@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-19
+**Actualizado:** 2026-11-22
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -14,6 +14,132 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 🧮 EL XP DE LIGA SE DUPLICABA Y LA MEDIA DE LOS PLATOS SE CORROMPÍA (2026-11-22)
+
+**Desplegado en producción el 22 de noviembre**: `functions` (18/18) y `firestore.rules`.
+Nada de esto toca el cliente, así que entró en producción sin pasar por revisión de Play.
+
+#### El fallo
+
+`onRatingUpdated` aplicaba al plato el **delta del evento** (`after − before`). La entrega
+de eventos de Eventarc es **at-least-once y sin orden garantizado**, así que:
+
+* entregado dos veces, el delta se aplicaba dos veces → la media del plato se iba, y el XP
+  de liga se pagaba otra vez;
+* entregado al revés, se aplicaba el delta de un paso que ya no era el actual.
+
+Medido en el banco con el código que estaba desplegado, una secuencia `A,B,A,B,A` sobre un
+plato que debía quedar en 8.0 lo dejaba en **13.0**. `A,A,A` lo dejaba en 7.0.
+
+`RETRY_POLICY_DO_NOT_RETRY` baja la probabilidad pero no la quita. Y el sello
+`aggregatedEventId` que ya había solo pilla el **mismo** evento repetido seguido, no dos
+eventos distintos intercalados.
+
+#### El arreglo: reconciliar contra el estado vivo, no contra el evento
+
+`onRatingUpdated` ya no mira el `before` del evento. Lee la valoración **dentro de la
+transacción** y le aplica al plato `avgVivo − appliedAvg`, donde `appliedAvg` es lo que el
+plato ya tenía incorporado de esa valoración. Luego resella `appliedAvg = avgVivo`.
+
+Eso lo hace **idempotente y además insensible al orden**: los deltas conmutan. Es la
+diferencia con una guarda por marca de tiempo, que arreglaría la duplicación pero rompería
+el reordenamiento — Codex pilló justo esa regresión en un intento anterior.
+
+Lo mismo para `wouldOrderAgainCount` y `wouldOrderAgainResponses`, comparando lo vivo con
+`appliedWouldOrderAgain` (con `null` explícito para "no contestó", que no suma a ninguno de
+los dos).
+
+#### El sello se escribe en los tres sitios que incorporan una valoración
+
+* `onRatingCreated` → `appliedAvg` + `appliedWouldOrderAgain`
+* `approveplate` → lo mismo, para la valoración inicial del autor
+* `onRatingUpdated` → lo resella en cada reconciliación
+
+⚠️ **`onRatingDeleted` se dejó a propósito sin tocar.** Resta `ratingAverage(rating)` en vez
+del sello, pero solo corre en cascadas de Admin SDK donde el plato ya no existe y sale por
+el `if (!plateDoc.exists) return`. Apuntado por si algún día se unifica, no porque corra prisa.
+
+#### El relleno (hecho una sola vez, NO repetible)
+
+`functions/scripts/backfillAppliedAvg.js` selló las valoraciones que ya estaban en
+producción: **69/69**. Simulación por defecto, `--confirm` para escribir.
+
+**El origen del sello es exacto, no una estimación**: los tres caminos que incorporan una
+valoración al plato reescriben `rating.averageScore` con lo que acaban de aplicar, **en la
+misma transacción** que la escritura del plato. O sea que el valor guardado *es* lo que el
+plato tiene dentro. La simulación lo confirmó: 0 sin procesar, 0 sin `averageScore`, 0 donde
+el guardado discrepara de la fórmula.
+
+⚠️ **El orden importaba: primero el relleno, después desplegar.** Al revés deja una ventana
+en la que el código nuevo ve valoraciones sin sellar y cae a la rama del `before`.
+
+Verificado en producción después del despliegue (script de solo lectura): **0 valoraciones
+con `aggregatedEventId`**, **0 descuadres** entre los agregados de los 59 platos y el
+recálculo desde sus valoraciones, **0 sellos distintos de la nota viva**.
+
+#### Las reglas: el sello tiene que ser inalcanzable desde el cliente
+
+El `create` de `ratings` solo prohibía `processed` y **admitía cualquier otro campo extra**.
+Si el cliente pudiera sembrar `appliedAvg`, una valoración podría nacer declarando "yo ya
+aporté un 10 a este plato" y en la primera edición mover la media del plato en esa
+diferencia inventada. Ahora el `create` prohíbe `appliedAvg`, `appliedWouldOrderAgain` y
+`aggregatedEventId`. El `update` ya estaba cerrado por el `hasOnly`.
+
+Comprobado antes de cerrarlo que el cliente no manda ninguno de los tres.
+
+#### ⚠️ LECCIÓN DE MÉTODO: el banco de pruebas tenía una carrera dentro
+
+Las primeras cifras que dio este trabajo **eran basura**, y no por el código: cada escenario
+empezaba borrando la valoración anterior, y ese `DELETE` disparaba `onRatingDeleted`, que
+restaba del plato recién recreado. Según si el evento de borrado llegaba antes o después, el
+escenario medía bien o medía cualquier cosa.
+
+Y el borrado masivo del emulador **tampoco sirve**: `DELETE /emulator/v1/projects/{p}/
+databases/(default)/documents` también emite eventos de borrado, que llegan tarde y caen
+sobre los platos que la ejecución siguiente recrea con el mismo nombre.
+
+**Regla para el banco: ni un solo `DELETE`, un plato nuevo por escenario, y sufijo único por
+ejecución** (`time.strftime("%H%M%S")`). Se pilló porque un número contradecía la teoría —
+el control daba 7.0 donde solo podía dar 8.0. **Si una cifra del banco no cuadra con lo que
+el código dice que hace, sospecha del banco antes de tocar el código.**
+
+#### Trampas del banco que costaron tiempo
+
+* **`approveplate` es inalcanzable por HTTP**: es interna y la única que la llama es
+  `moderatePlateImage`, que es fail-closed y sin Vision borra el plato en vez de aprobarlo.
+  Se prueba exportándola desde el bundle compilado (`lib/index.js`) como `__approveplate` y
+  llamándola desde Node contra el emulador. Es el código de verdad, no una copia.
+* **`awardXP` hace `if (!snap.exists) return null`**: sin el documento `users/{uid}` el XP no
+  se escribe nunca, mientras el log `XP +45` se imprime igual. El banco necesita el usuario.
+* **`approveplate` devuelve `Promise<void>`**: mirar su retorno para comprobar la concesión
+  no mide nada. Se mira en `users/{uid}.xp` y en el aviso de aprobación.
+* **`refreshPriceAggregate` hace `orderBy("createdAt")`** y Firestore omite los documentos
+  sin ese campo: sin `createdAt` la consulta sale vacía y el agregado se limpiaría.
+* **El emulador de functions recarga `lib/index.js` en caliente** ("Loaded functions
+  definitions from source") pero **no registra endpoints HTTP nuevos** al recargar. Sirve
+  para intercambiar builds (HEAD ↔ nuevo) sin reiniciar.
+* **Firestore devuelve los enteros como `number`**, así que un sello guardado como `9`
+  (`integerValue`) lo reconoce el `typeof === "number"`. Probado, porque si no lo
+  reconociera la valoración pasaría por "sin sellar".
+
+#### ADC para los scripts de Admin SDK
+
+El `adc_tmp.json` necesita el par de cliente de **`firebase-tools`**, no el de
+`gcloud`. Con el de `gcloud` (el `client_secret` que empieza por `GOCSPX-`) sale
+`2 UNKNOWN: Getting metadata from plugin failed with error: invalid_client`, que no dice en
+ningún momento que el problema sea el cliente.
+
+El par de `firebase-tools` es público (cliente OAuth de aplicación instalada) y está en el
+propio paquete — se saca de `functions/node_modules/firebase-tools/lib/api.js`, constantes
+`clientId` / `clientSecret`. **No se copia aquí**: el repo es público y no hace falta que un
+escáner de secretos tenga nada que mirar.
+
+El `refresh_token`, que es lo único que de verdad es secreto, sale de
+`~/.config/configstore/firebase-tools.json`. Escribir el fichero **sin BOM** y **borrarlo en
+el mismo comando** que lo usa.
+
+---
 
 ### 🔔 LA CAMPANA SE QUEDABA CONGELADA PARA SIEMPRE (2026-11-20)
 
