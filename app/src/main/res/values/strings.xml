@@ -68,8 +68,8 @@
     <string name="explore_users">Find foodies</string>
     <string name="loading_plates">Loading dishes from around the world…</string>
     <string name="offline_short">Offline</string>
-    <string name="mission_title">Daily mission: shake up the ranking</string>
-    <string name="mission_progress">%1$d of %2$d votes done · +%3$d XP if you finish today</string>
+    <string name="mission_title">Daily mission</string>
+    <string name="mission_progress">%1$d of %2$d votes · +%3$d XP today</string>
     <string name="mission_cta">Rate %1$d dishes today and climb the league</string>
     <string name="league_ends_in">League ends in</string>
     <string name="league_resets_monday">The weekly league restarts every Monday</string>

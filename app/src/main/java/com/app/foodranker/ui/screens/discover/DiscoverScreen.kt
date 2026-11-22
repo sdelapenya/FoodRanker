@@ -479,7 +479,7 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         shape  = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2419)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -487,11 +487,11 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -523,10 +523,12 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
                     fontSize = 12.sp
                 )
             }
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
+            // El anillo era de 52dp y ponia por si solo el suelo de altura de la
+            // tarjeta: 52 mas el relleno. A 40dp sigue leyendose bien y deja de mandar.
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(40.dp)) {
                 CircularProgressIndicator(
                     progress = { fraction },
-                    modifier  = Modifier.size(52.dp),
+                    modifier  = Modifier.size(40.dp),
                     color     = Color(0xFF4CAF50),
                     trackColor = Color.White.copy(alpha = 0.15f),
                     strokeWidth = 4.dp
@@ -535,7 +537,7 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
                     "$progress/$goal",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 )
             }
         }

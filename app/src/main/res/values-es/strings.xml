@@ -67,8 +67,8 @@
     <string name="explore_users">Descubrir foodies</string>
     <string name="loading_plates">Cargando platos del mundo…</string>
     <string name="offline_short">Sin conexión</string>
-    <string name="mission_title">Misión diaria: mueve el ranking</string>
-    <string name="mission_progress">%1$d de %2$d votos hechos · +%3$d XP si terminas hoy</string>
+    <string name="mission_title">Misión diaria</string>
+    <string name="mission_progress">%1$d de %2$d votos · +%3$d XP hoy</string>
     <string name="mission_cta">Vota %1$d platos hoy y sube en la liga</string>
     <string name="league_ends_in">La liga acaba en</string>
     <string name="league_resets_monday">La liga semanal reinicia cada lunes</string>
