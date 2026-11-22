@@ -72,6 +72,47 @@ solo cuando hace falta.
 ⚠️ **Lección: probar el 130% de tamaño de texto es barato y encuentra cosas.** Las dos
 pantallas se vieron en castellano e inglés, al 100% y al 130%.
 
+#### Revisada en el Redmi con la firma de Play (2026-11-22)
+
+Subida a **prueba interna** e instalada desde Play en el Redmi (`2409BRN2CY`), para que el
+binario lleve la firma de Play y no la de subida. **Promocionar esa misma versión a
+producción**, no volver a subir el AAB: así lo que llega a los usuarios es el binario
+probado.
+
+El Redmi es **720x1640 a densidad 320** — exactamente lo que se configuró en el emulador— y
+está **al 110 % de tamaño de texto**, dato que conviene recordar: la pastilla tenía aún menos
+sitio del que se midió al 100 %.
+
+| Comprobado | Resultado |
+|---|---|
+| "Compartir" entero y botón de Google en una línea, al 110 % | ✅ |
+| **Entrar con Google** (solo verificable con la firma de Play) | ✅ |
+| La campana carga, sin errores del listener en el registro | ✅ |
+| **Renombrar plato**: cambio de mayúscula, mismo slug | ✅ guardado y reflejado |
+| **La guarda del slug**: nombre realmente distinto | ✅ rechazado, con el mensaje bueno |
+| Errores de la app en todo el recorrido | **ninguno** |
+
+El plato de prueba quedó **restaurado exactamente** (`Pizza Barbacoa/4quesos`), descripción
+incluida. `renamePlate` es seguro por construcción: solo el autor, solo plato aprobado,
+**solo si el slug no cambia**, y solo escribe `name`.
+
+⚠️ Trampas de conducir la app por `adb`: `KEYCODE_BACK` **cierra la hoja entera** y descarta
+la edición — para ocultar el teclado hay que pulsar el ✓ del propio teclado. Y
+`input text` no mete acentos ni "ñ", así que para probar hay que elegir un plato sin ellos.
+
+#### Pendientes vistos de paso, NO bloqueantes
+
+* **`E/Finsky: requestIntegrityToken() failed for com.app.foodranker`**, tres veces durante
+  el arranque. Es Play Integrity fallando. Hoy no rompe nada porque **App Check no está en
+  modo obligatorio**, pero hay que resolverlo ANTES de activarlo o dejaría fuera a los
+  usuarios legítimos.
+* **Los títulos de las tarjetas de plato se cortan sin puntos suspensivos** ("Pizza
+  Barbacoa/", "Carpaccio de", "Arroz meloso de"), en la rejilla del perfil. Es la misma
+  familia que la pastilla: `maxLines` sin `overflow`.
+* **La tarjeta de "Misión diaria" ocupa demasiado** en la pantalla de entrada (~140dp) y
+  deja poco sitio para los platos. Lo alto viene del título a dos líneas, los 16dp de
+  relleno interior y el círculo de 52dp.
+
 #### Comprobaciones pasadas
 
 `check_strings` (paridad y marcadores), `check_args`, `check_notif_parity`,
