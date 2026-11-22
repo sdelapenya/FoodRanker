@@ -15,6 +15,70 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔁 DOS HUECOS QUE QUEDABAN EN LOS AGREGADOS (2026-11-22, tarde)
+
+Salieron de una auditoría de Codex. **Las tres eran reales**; se arreglan las dos que
+pueden corromper la media de un plato.
+
+#### 1. El alta y la edición podían cruzarse
+
+`onRatingUpdated` comprobaba `totalRatings === 0` **del plato**, no si **esa valoración** ya
+estaba incorporada. En un plato con votos previos, si la edición llegaba antes que el alta:
+la valoración no tenía `appliedAvg`, se caía a `ratingAverage(before)` y se le aplicaba al
+plato un delta por un voto que todavía no contaba. Después `onRatingCreated` la incorporaba
+bien y el delta inventado se quedaba dentro para siempre.
+
+**Arreglo:** `if (ratingSnap.get("processed") !== true) return;` dentro de la transacción.
+Una valoración sin incorporar no ha aportado nada, así que no hay nada que reconciliar. **No
+se sella**: sellarla dejaría escrito que ya aportó algo.
+
+#### 2. El borrado restaba la nota viva, no el sello
+
+⚠️ **Corrige una afirmación falsa que estaba en este fichero y en el commit `f0e0186`:** que
+`onRatingDeleted` solo corre en cascadas donde el plato ya no existe. **No es cierto.**
+`deleteUserAccount` hace `deleteQueryBatch(ratings where userId == uid)`, y esas valoraciones
+están casi todas en platos **de otros**, que siguen vivos.
+
+Restaba `ratingAverage(rating)` en vez de `appliedAvg`. Con una edición pendiente de agregar,
+la nota viva ya cambió pero el plato tiene dentro la anterior: restar la viva desvía el
+promedio. Igual con `wouldOrderAgain` frente a `appliedWouldOrderAgain`. **Arreglo:** restar
+el sello, con el valor vivo como reserva para las no selladas.
+
+#### 3. Denuncias — anotada, NO arreglada
+
+El `create` de `reports` valida el prefijo del id y `reportedByUserId`, pero no que el
+destino del cuerpo coincida con el del id ni obliga a que el contador suba. El agujero grave
+—plantar denuncias a nombre de otro— **está cerrado**; lo que queda es que alguien se
+autobloquee una denuncia o que el cuerpo discrepe del id. No corrompe datos ajenos.
+
+#### Probado en el banco: 4/4
+
+`scratchpad/prueba_hallazgos.py`. Tres intentos fallidos antes de un verde que valiera:
+
+⚠️ **1. El emulador cargó CERO funciones y la prueba dio verde.** `Cannot determine backend
+specification. Timeout after 10000` → hace falta `FUNCTIONS_DISCOVERY_TIMEOUT=180`. El 404
+del disparo (`valid functions are:` vacío) es la señal; sin mirarlo, los tres "OK" parecían
+buenos. **Y `firebase-tools` ya no acepta Java 17: hay que poner el JBR 21 de Android Studio
+primero en el `PATH`**, no basta con `JAVA_HOME`.
+
+⚠️ **2. `moderatePlateImage` borra todo plato creado en el banco** (`has no imageUrl,
+rejecting` → `Cascade delete complete`), así que los platos de prueba desaparecían solos.
+`--only functions:X` NO sirve: es un filtro de despliegue, el emulador los carga todos. Se
+neutraliza parcheando el bundle compilado con una salida temprana condicionada a
+`BANCO_SIN_MODERACION=1`, y **se restaura con `npm run build`** (comprobado: 0 parches).
+
+⚠️ **3. Una aserción floja dio un falso verde.** Mirar solo la media al borrar pasa también
+cuando no corre nada, porque la media no cambia; hay que exigir que **`totalRatings` baje**.
+Y dormir un número fijo de segundos hizo fallar la prueba con el arreglo ya correcto: hay
+que **sondear**.
+
+⚠️ **Para probar la guarda del alta hace falta un caso determinista**: con una valoración
+normal, `onRatingCreated` corre antes de que dé tiempo a entregar la edición y la guarda ni
+se toca. Se usa **la valoración del propio autor**, que `onRatingCreated` salta a propósito y
+por tanto se queda sin `processed` de forma estable.
+
+---
+
 ### 🚫 V28 (1.11) — FUERA LA PUBLICIDAD Y FUERA PREMIUM (2026-11-22)
 
 **El porqué no es técnico, es económico.** AdMob ingresa **0,11 € al mes** (dato real de la

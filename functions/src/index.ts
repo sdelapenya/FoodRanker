@@ -1437,6 +1437,30 @@ export const onRatingUpdated = onDocumentUpdated(
         const ratingSnap = await tx.get(event.data!.after.ref);
         if (!plateDoc.exists || !ratingSnap.exists) return;
 
+        // ⚠️ ESTA VALORACIÓN AÚN NO CUENTA EN EL PLATO.
+        //
+        // `onRatingCreated` es quien la incorpora, y marca `processed` en la misma
+        // transacción que la escritura del plato. Si todavía no está marcada, su
+        // contribución no está dentro del agregado.
+        //
+        // Pasa de verdad: alta y edición seguidas generan dos eventos, y la entrega no
+        // respeta el orden. Si la edición llega primero sobre un plato que YA tiene otros
+        // votos, el `totalRatings === 0` de más abajo no la frena —el plato sí tiene
+        // votos, solo que no el suyo—, la valoración no tiene `appliedAvg`, se cae a
+        // `ratingAverage(before)` y se le aplica al plato un delta por un voto que no
+        // cuenta. Después `onRatingCreated` la incorpora bien, y ese delta inventado se
+        // queda dentro para siempre.
+        //
+        // No hay nada que reconciliar contra cero: se sale sin tocar el plato y sin
+        // sellar. Sellar aquí sería peor, porque dejaría escrito que esta valoración ya
+        // aportó algo. `onRatingCreated` sellará con lo que de verdad aplique.
+        if (ratingSnap.get("processed") !== true) {
+          logger.info(
+            `onRatingUpdated: ${event.params.ratingId} aún sin incorporar, se deja a onRatingCreated`
+          );
+          return;
+        }
+
         // ⚠️ POR QUÉ ESTO NO APLICA EL DELTA DEL EVENTO.
         //
         // Los triggers de Firestore son **at-least-once** y **sin orden garantizado**:
@@ -1558,6 +1582,11 @@ export const onRatingUpdated = onDocumentUpdated(
  * `allow delete: if false`), so this only runs for Admin SDK cascades — borrar un plato,
  * borrar una cuenta o `manageUser.js wipe-content`.
  *
+ * ⚠️ Cascada NO significa "el plato ya no existe". Al borrar una cuenta,
+ * `deleteUserAccount` elimina todas las valoraciones de esa persona, y están casi todas
+ * en platos de OTROS, que siguen vivos y hay que recalcular bien. Solo en el borrado de
+ * un plato propio se sale por el `!plateDoc.exists`.
+ *
  * Sin esto, cada borrado dejaba `averageScore`/`totalRatings` inflados para siempre: el
  * hueco que ya estaba documentado como limitación conocida de `wipe-content`. Con más
  * agregados que mantener (ranking, repeticiones, precio) tocaba cerrarlo.
@@ -1574,7 +1603,33 @@ export const onRatingDeleted = onDocumentDeleted(
     const plateId: string = rating.plateId;
     if (!plateId) return;
 
-    const deletedAvg = ratingAverage(rating);
+    // Se resta EL SELLO, no la nota viva.
+    //
+    // ⚠️ Corrige una afirmación que estaba escrita aquí y en el handoff: que esta función
+    // solo corre en cascadas donde el plato ya no existe. Es falso. `deleteUserAccount`
+    // hace `deleteQueryBatch(ratings where userId == uid)`, y esas valoraciones están casi
+    // todas en platos DE OTROS, que siguen vivos.
+    //
+    // Si hay una edición pendiente de agregar, la nota viva ya cambió pero el plato aún
+    // tiene dentro la anterior. Restar la viva dejaría el promedio desviado en esa
+    // diferencia. `appliedAvg` es justo lo que el plato incorporó, así que es lo que hay
+    // que quitarle. Lo mismo para los contadores con `appliedWouldOrderAgain`.
+    //
+    // La reserva es para valoraciones anteriores al sello; tras el relleno del 22 de
+    // noviembre no queda ninguna, pero una creada y borrada antes de que corriera
+    // `onRatingCreated` tampoco llega hasta aquí (la frena el `processed !== true`).
+    const sellada = typeof rating.appliedAvg === "number";
+    const deletedAvg: number = sellada
+      ? (rating.appliedAvg as number)
+      : ratingAverage(rating);
+    const repAplicado: boolean | null = sellada
+      ? (typeof rating.appliedWouldOrderAgain === "boolean"
+        ? (rating.appliedWouldOrderAgain as boolean)
+        : null)
+      : (typeof rating.wouldOrderAgain === "boolean"
+        ? (rating.wouldOrderAgain as boolean)
+        : null);
+
     const plateRef = db.collection("plates").doc(plateId);
 
     try {
@@ -1592,12 +1647,12 @@ export const onRatingDeleted = onDocumentDeleted(
         const repeats = Math.max(
           0,
           ((plateDoc.get("wouldOrderAgainCount") as number) || 0) -
-            (rating.wouldOrderAgain === true ? 1 : 0)
+            (repAplicado === true ? 1 : 0)
         );
         const responses = Math.max(
           0,
           ((plateDoc.get("wouldOrderAgainResponses") as number) || 0) -
-            (typeof rating.wouldOrderAgain === "boolean" ? 1 : 0)
+            (repAplicado !== null ? 1 : 0)
         );
 
         tx.update(plateRef, {
