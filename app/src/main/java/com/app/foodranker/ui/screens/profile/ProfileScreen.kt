@@ -68,8 +68,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.LocalActivity
-import com.app.foodranker.utils.BillingManager
-import com.app.foodranker.utils.ConsentManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -86,7 +84,6 @@ import com.app.foodranker.utils.RewardManager
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.viewmodel.AuthViewModel
-import com.app.foodranker.viewmodel.BillingViewModel
 import com.app.foodranker.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,11 +97,9 @@ fun ProfileScreen(
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToTerms: () -> Unit = {},
     onNavigateToReferral: () -> Unit = {},
-    onNavigateToPremium: () -> Unit = {},
     onAccountDeleted: () -> Unit = onSignOut,
     viewModel: ProfileViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel(),
-    billingViewModel: BillingViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     // La cabecera del perfil es un degradado oscuro y ocupa la zona de la barra de
     // estado: sin esto los iconos del sistema salen oscuros sobre oscuro.
@@ -115,12 +110,6 @@ fun ProfileScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val currentUser = authViewModel.currentUser
-    // El badge del perfil propio usa el estado combinado en vivo (compra real + temporal +
-    // regalado) de BillingManager; el de otros perfiles solo puede reflejar lo que haya en
-    // Firestore (hoy, solo el premium regalado a mano — una compra real o el temporal por
-    // anuncio de OTRO usuario nunca salen de su dispositivo, no hay verificación server-side
-    // de compras). Limitación conocida, no algo que se vaya a resolver aquí.
-    val ownIsPremium by billingViewModel.isPremium.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditSheet by remember { mutableStateOf(false) }
     var showEditPlateId by remember { mutableStateOf<String?>(null) }
@@ -128,7 +117,6 @@ fun ProfileScreen(
     // Id de texto del error al corregir el nombre de un plato, o null. Vive aqui y no
     // en la hoja porque quien conoce el veredicto es el ViewModel, no la hoja.
     var renameError by remember { mutableStateOf<Int?>(null) }
-    var adPrivacyError by remember { mutableStateOf(false) }
 
     // ON_RESUME carga el perfil tanto en la primera apertura como al volver.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -144,13 +132,6 @@ fun ProfileScreen(
         val msg = uiState.error ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(msg)
         viewModel.clearError()
-    }
-
-    val adPrivacyErrorMsg = stringResource(R.string.prof_ad_privacy_error)
-    LaunchedEffect(adPrivacyError) {
-        if (!adPrivacyError) return@LaunchedEffect
-        snackbarHostState.showSnackbar(adPrivacyErrorMsg)
-        adPrivacyError = false
     }
 
     Scaffold(
@@ -224,7 +205,6 @@ fun ProfileScreen(
                     ProfileHero(
                         name = uiState.user?.name ?: currentUser?.displayName ?: stringResource(R.string.det_user_fallback),
                         photoUrl = uiState.user?.photoUrl ?: currentUser?.photoUrl?.toString() ?: "",
-                        isPremium = if (uiState.isOwnProfile) ownIsPremium else (uiState.user?.isPremium ?: false),
                         paddingTop = paddingValues.calculateTopPadding(),
                         bio = uiState.user?.bio ?: "",
                         city = uiState.user?.city ?: ""
@@ -480,9 +460,6 @@ fun ProfileScreen(
                             onPrivacy = onNavigateToPrivacy,
                             onTerms = onNavigateToTerms,
                             onReferral = onNavigateToReferral,
-                            onPremium = onNavigateToPremium,
-                            onAdPrivacyError = { adPrivacyError = true },
-                            isPremium = ownIsPremium,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
@@ -710,9 +687,6 @@ private fun ProfileAccountDangerZone(
     onPrivacy: () -> Unit,
     onTerms: () -> Unit,
     onReferral: () -> Unit = {},
-    onPremium: () -> Unit = {},
-    onAdPrivacyError: () -> Unit = {},
-    isPremium: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -733,28 +707,6 @@ private fun ProfileAccountDangerZone(
             )
 
             HorizontalDivider(color = FoodTheme.colors.divider.copy(alpha = 0.85f))
-
-            if (!isPremium) {
-                // Mientras la suscripcion no este a la venta, la fila no puede decir "Hazte
-                // Premium ... y funciones exclusivas": lo unico que hay detras es el anuncio
-                // recompensado, que quita los anuncios 24 horas y nada mas.
-                ProfileMenuRow(
-                    icon = Icons.Default.Star,
-                    title = stringResource(
-                        if (BillingManager.SUSCRIPCION_A_LA_VENTA) R.string.prof_premium
-                        else R.string.prof_adfree
-                    ),
-                    subtitle = stringResource(
-                        if (BillingManager.SUSCRIPCION_A_LA_VENTA) R.string.prof_premium_sub
-                        else R.string.prof_adfree_sub
-                    ),
-                    iconTint = StarYellow,
-                    arrowTint = StarYellow,
-                    backgroundColor = Color(0xFFFFF8E1),
-                    onClick = onPremium
-                )
-                Spacer(Modifier.height(6.dp))
-            }
 
             ProfileMenuRow(
                 icon = Icons.Default.CardGiftcard,
@@ -898,29 +850,6 @@ private fun ProfileAccountDangerZone(
 
             Spacer(Modifier.height(6.dp))
 
-            // El RGPD exige poder cambiar de opinión sobre los anuncios, así que la entrada
-            // tiene que ser permanente, no solo el diálogo del primer arranque. Solo sale
-            // donde el SDK dice que hace falta (EEE y Reino Unido): en el resto del mundo
-            // no abriría nada y sería una opción muerta.
-            val actividad = LocalActivity.current
-            var privacidadAnuncios by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                privacidadAnuncios = ConsentManager.isPrivacyOptionsRequired(ctxAjustes)
-            }
-            if (privacidadAnuncios) {
-                ProfileMenuRow(
-                    icon = Icons.Outlined.PrivacyTip,
-                    title = stringResource(R.string.prof_ad_privacy),
-                    iconTint = OrangePrimary.copy(alpha = 0.85f),
-                    onClick = {
-                        val act = actividad
-                        if (act != null) ConsentManager.showPrivacyOptionsForm(act, onAdPrivacyError)
-                        else onAdPrivacyError()
-                    }
-                )
-                Spacer(Modifier.height(6.dp))
-            }
-
             ProfileMenuRow(
                 icon = Icons.AutoMirrored.Outlined.Article,
                 title = stringResource(R.string.prof_terms),
@@ -1005,7 +934,7 @@ private fun ProfileAccountDangerZone(
 
 @Composable
 private fun ProfileHero(
-    name: String, photoUrl: String, isPremium: Boolean,
+    name: String, photoUrl: String,
     paddingTop: androidx.compose.ui.unit.Dp,
     bio: String = "", city: String = ""
 ) {
@@ -1070,15 +999,6 @@ private fun ProfileHero(
                         )
                     } else {
                         Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(52.dp), tint = FoodTheme.colors.textSecondary)
-                    }
-                }
-                if (isPremium) {
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomEnd).size(28.dp),
-                        shape = CircleShape,
-                        color = StarYellow
-                    ) {
-                        Box(contentAlignment = Alignment.Center) { Text("⭐", fontSize = 14.sp) }
                     }
                 }
             }

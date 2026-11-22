@@ -5,7 +5,6 @@ sealed class Screen(val route: String) {
     object Splash    : Screen("splash")
     object Auth      : Screen("auth")
     object Discover : Screen("discover")
-    object Premium : Screen("premium")
     object Explore : Screen("explore")
     object ExploreUsers : Screen("explore_users")
     // placeId opcional: al llegar desde "Qué pido aquí" el local ya viene elegido,

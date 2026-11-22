@@ -11,7 +11,7 @@ object ErrorMapper {
      *
      * Se guarda aquí en vez de pasarlo en cada llamada porque a `toUserMessage` la llaman 21
      * sitios desde nueve ViewModels, que no pueden leer recursos. Es el mismo patrón que ya
-     * usan AdManager, CloudinaryManager y compañía: se inicializa en FoodRankerApp.
+     * usan CloudinaryManager y compañía: se inicializa en FoodRankerApp.
      */
     private var appContext: Context? = null
 

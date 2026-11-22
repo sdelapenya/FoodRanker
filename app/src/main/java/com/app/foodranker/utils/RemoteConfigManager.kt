@@ -6,7 +6,7 @@ import com.google.firebase.remoteconfig.remoteConfigSettings
 
 /**
  * Valores configurables remotamente desde Firebase Console sin publicar una nueva versión.
- * Uso: RemoteConfigManager.premiumPrice, RemoteConfigManager.maxDailyPlates, etc.
+ * Uso: RemoteConfigManager.maxDailyPlates, RemoteConfigManager.feedPageSize, etc.
  */
 object RemoteConfigManager {
 
@@ -18,10 +18,12 @@ object RemoteConfigManager {
         })
         // Valores por defecto (se usan si no hay conexión o no se ha hecho fetch)
         config.setDefaultsAsync(mapOf(
-            "premium_price_monthly"  to "2,99 €/mes",
-            "premium_price_yearly"   to "19,99 €/año",
-            "max_daily_plates"       to 10L,
-            "max_daily_plates_premium" to 20L,
+            // Era 10 para todos y 20 para Premium. Al retirar Premium (2026-11-22)
+            // se queda el valor alto, que es el que ya tenían ocho usuarios.
+            // ⚠️ La plantilla de Remote Config del servidor está VACÍA (comprobado
+            // con `remoteconfig:get`), así que manda este valor por defecto. Si algún
+            // día se publica una plantilla, el valor de allí gana al de aquí.
+            "max_daily_plates"       to 20L,
             "feed_page_size"         to 20L,
             "show_thefork_button"    to true,
             "enable_following_feed"  to true,
@@ -39,10 +41,7 @@ object RemoteConfigManager {
             }
     }
 
-    val premiumPriceMonthly: String get() = config.getString("premium_price_monthly")
-    val premiumPriceYearly: String  get() = config.getString("premium_price_yearly")
     val maxDailyPlates: Int         get() = config.getLong("max_daily_plates").toInt()
-    val maxDailyPlatesPremium: Int  get() = config.getLong("max_daily_plates_premium").toInt()
     val feedPageSize: Int           get() = config.getLong("feed_page_size").toInt()
     val showTheForkButton: Boolean  get() = config.getBoolean("show_thefork_button")
     val enableFollowingFeed: Boolean get() = config.getBoolean("enable_following_feed")

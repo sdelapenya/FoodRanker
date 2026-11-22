@@ -307,7 +307,9 @@ service cloud.firestore {
     // ── SAVES ──────────────────────────────────────────────────
     match /saves/{saveId} {
       // El propio usuario ve sus guardados; el autor del plato puede ver quién lo ha
-      // guardado (función Premium "quién ha interactuado" — ver PlateDetailViewModel).
+      // guardado ("quién ha interactuado" — ver PlateDetailViewModel). Esto fue una
+      // función de Premium hasta el 2026-11-22; ahora la tiene cualquier autor, y la
+      // regla no cambia porque nunca miró el premium, solo la autoría del plato.
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
         get(/databases/$(database)/documents/plates/$(resource.data.plateId)).data.addedByUserId == request.auth.uid

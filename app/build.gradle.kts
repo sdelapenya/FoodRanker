@@ -82,8 +82,8 @@ android {
         applicationId = "com.app.foodranker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "1.10"
+        versionCode = 28
+        versionName = "1.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProp("CLOUDINARY_CLOUD_NAME")}\"")
@@ -192,10 +192,8 @@ dependencies {
     implementation("com.google.firebase:firebase-installations")
 
     // AdMob
-    implementation("com.google.android.gms:play-services-ads:23.0.0")
     // CMP certificada de Google para el consentimiento del EEE y Reino Unido. Sin ella
     // AdMob limita los anuncios en Europa, que es donde está casi todo el público.
-    implementation("com.google.android.ump:user-messaging-platform:3.0.0")
 
     // Cloudinary. Se excluye Fresco: entra por cloudinary-android-download, que la app
     // no usa (solo MediaManager para subir; las imágenes se muestran con Coil), y sus

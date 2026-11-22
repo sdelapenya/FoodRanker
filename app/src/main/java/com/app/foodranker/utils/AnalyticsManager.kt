@@ -72,13 +72,6 @@ object AnalyticsManager {
         putString("badge_id", badgeId)
     }
 
-    // ── Monetización ──────────────────────────────────────────────────────
-    fun logPremiumAttempt(source: String) = log("premium_attempt") {
-        putString("source", source) // "screen", "feature_gate"
-    }
-    fun logPremiumPurchased() = log("premium_purchased")
-    fun logRewardedAdWatched() = log("rewarded_ad_watched")
-
     // ── Onboarding ────────────────────────────────────────────────────────
     fun logOnboardingCompleted() = log("onboarding_completed")
     fun logOnboardingSkipped(atPage: Int) = log("onboarding_skipped") {

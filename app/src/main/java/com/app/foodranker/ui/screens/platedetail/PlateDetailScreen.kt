@@ -64,8 +64,6 @@ import com.app.foodranker.ui.theme.categoryGradient
 import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.utils.votesLabel
-import com.app.foodranker.utils.AdManager
-import com.app.foodranker.viewmodel.BillingViewModel
 import com.app.foodranker.viewmodel.PlateDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,11 +71,9 @@ import com.app.foodranker.viewmodel.PlateDetailViewModel
 fun PlateDetailScreen(
     plateId: String,
     onNavigateBack: () -> Unit,
-    viewModel: PlateDetailViewModel = hiltViewModel(),
-    billingViewModel: BillingViewModel = hiltViewModel()
+    viewModel: PlateDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isPremium by billingViewModel.isPremium.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -96,22 +92,6 @@ fun PlateDetailScreen(
 
     LaunchedEffect(Unit) { viewModel.loadUserCollections() }
 
-    // El interstitial se muestra al SALIR de la pantalla para no interrumpir
-    // al usuario antes de que haya visto el contenido.
-    var shouldShowAdOnExit by remember { mutableStateOf(false) }
-    LaunchedEffect(plateId) {
-        // isPremium se comprueba también al salir (no solo aquí): quitar el anuncio
-        // en el momento en que se compra/regala Premium, sin esperar a la próxima entrada.
-        shouldShowAdOnExit = !isPremium && AdManager.recordPlateDetailView()
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            if (shouldShowAdOnExit && !isPremium) {
-                val activity = (context as? android.app.Activity)
-                if (activity != null) AdManager.showInterstitial(activity) {}
-            }
-        }
-    }
     LaunchedEffect(uiState.plate) { if (uiState.plate != null) contentVisible = true }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -229,7 +209,11 @@ fun PlateDetailScreen(
                                     showReportPlateDialog = true
                                 }
                             )
-                            if (isPremium && uiState.plate?.addedByUserId == viewModel.currentUserId) {
+                            // Antes esto pedía Premium. Al retirarlo (2026-11-22) lo ve
+                            // cualquier autor sobre su propio plato. La regla de `saves`
+                            // ya lo limitaba igual del lado del servidor: solo el autor
+                            // del plato puede leer quién lo guardó.
+                            if (uiState.plate?.addedByUserId == viewModel.currentUserId) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.det_who_interacted)) },
                                     onClick = {
@@ -656,43 +640,13 @@ fun PlateDetailScreen(
                                 }
                             }
                         }
-
-                        // Rewarded ad: ganar XP extra
-                        item {
-                            OutlinedButton(
-                                onClick = {
-                                    val activity = context as? android.app.Activity
-                                    if (activity != null) {
-                                        AdManager.showRewarded(
-                                            activity,
-                                            onRewarded = { viewModel.awardXpFromAd() },
-                                            onDismiss = {}
-                                        )
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, OrangePrimary),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = OrangePrimary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.det_watch_ad), color = OrangePrimary, fontWeight = FontWeight.Medium)
-                            }
-                        }
                     }
                 }
             }
         }
     }
 
-    // Sheet Premium: quién ha dado like o guardado el plato
+    // Hoja de interacciones: quién ha dado like o guardado el plato
     if (showEngagementSheet) {
         @OptIn(ExperimentalMaterial3Api::class)
         ModalBottomSheet(onDismissRequest = { showEngagementSheet = false }) {

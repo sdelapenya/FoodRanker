@@ -41,6 +41,17 @@
     <uses-permission
         android:name="android.permission.READ_MEDIA_IMAGES"
         tools:node="remove" />
+    <!-- El identificador de publicidad, fuera. No lo pedimos nosotros: lo inyecta
+         Firebase Analytics, que arrastra `play-services-ads-identifier` y con él
+         `AdvertisingIdClient`. Al retirar AdMob (2026-11-22) el SDK de anuncios
+         desapareció, pero esto no: sin este `tools:node="remove"` la app seguiría
+         recogiendo el AD_ID y habría que seguir declarándolo en el formulario de
+         seguridad de los datos de Play, lo que contradice el "no hay publicidad".
+         Lo que se pierde es la atribución de instalaciones en Analytics, que sin
+         campañas de pago no mide nada. -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Localización: para ofrecer los locales cercanos al publicar un plato (quien
@@ -96,16 +107,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FoodRanker"
         tools:targetApi="31">
-
-        <!-- ✅ AdMob App ID — directamente en application, NO dentro de provider -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-6291919286572988~5455770258"/>
-
-        <property
-            android:name="android.adservices.AD_SERVICES_CONFIG"
-            android:resource="@xml/gma_ad_services_config"
-            tools:replace="android:resource" />
 
         <!-- FileProvider para compartir imágenes -->
         <provider

@@ -19,7 +19,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import com.app.foodranker.ui.screens.profile.ProfileScreen
 import com.app.foodranker.ui.screens.explore.ExploreScreen
 import com.app.foodranker.ui.screens.platedetail.PlateDetailScreen
-import com.app.foodranker.ui.screens.premium.PremiumScreen
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.app.foodranker.ui.screens.discover.DiscoverScreen
 import com.app.foodranker.ui.screens.notifications.NotificationsScreen
@@ -57,7 +56,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.app.foodranker.utils.FoodRankerMessagingService
-import com.app.foodranker.utils.ConsentManager
 
 
 @AndroidEntryPoint
@@ -66,9 +64,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Antes de que el SDK de anuncios pida nada: el formulario es un diálogo y
-        // necesita Activity. De aquí sale el arranque de AdManager.
-        ConsentManager.gather(this)
         setContent {
             FoodRankerTheme {
                 FoodRankerNavigation()
@@ -286,8 +281,7 @@ fun FoodRankerNavigation() {
                 },
                 onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
                 onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
-                onNavigateToReferral = { navController.navigate(Screen.Referral.route) },
-                onNavigateToPremium = { navController.navigate(Screen.Premium.route) }
+                onNavigateToReferral = { navController.navigate(Screen.Referral.route) }
             )
         }
 
@@ -341,12 +335,6 @@ fun FoodRankerNavigation() {
             val plateId = backStackEntry.arguments?.getString("plateId") ?: ""
             PlateDetailScreen(
                 plateId = plateId,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(Screen.Premium.route) {
-            PremiumScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

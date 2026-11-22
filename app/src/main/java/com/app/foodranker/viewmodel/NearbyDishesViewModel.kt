@@ -8,7 +8,6 @@ import com.app.foodranker.data.model.Rating
 import com.app.foodranker.data.model.Venue
 import com.app.foodranker.data.repository.VenueRepository
 import com.app.foodranker.data.repository.VenueSuggestion
-import com.app.foodranker.utils.BillingManager
 import com.app.foodranker.utils.Fallos
 import com.app.foodranker.utils.GeoUtils
 import com.google.firebase.firestore.FirebaseFirestore
@@ -51,13 +50,11 @@ data class NearbyDishesUiState(
 class NearbyDishesViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val venueRepository: VenueRepository,
-    private val billingManager: BillingManager,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     companion object {
-        private const val FREE_RADIUS_METERS = 550.0
-        private const val PREMIUM_RADIUS_METERS = 1_600.0
+        private const val RADIUS_METERS = 1_600.0
         private const val PLACES_FALLBACK_RADIUS_METERS = 1_000.0
     }
 
@@ -74,7 +71,10 @@ class NearbyDishesViewModel @Inject constructor(
             }
 
             try {
-                val radiusMeters = if (billingManager.isPremium.value) PREMIUM_RADIUS_METERS else FREE_RADIUS_METERS
+                // Radio único desde que se retiró Premium (2026-11-22). Ampliarlo para
+                // todos no cuesta nada: la consulta va contra `venues` en Firestore con
+                // `limit(50)`, así que el número de lecturas no depende del radio.
+                val radiusMeters = RADIUS_METERS
                 val deltaLat = GeoUtils.metersToLatDegrees(radiusMeters)
 
                 val venueSnap = firestore.collection("venues")

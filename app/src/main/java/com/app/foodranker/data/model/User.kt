@@ -7,7 +7,6 @@ data class User(
     val bio: String = "",
     val city: String = "",
     val website: String = "",
-    val isPremium: Boolean = false,
     val xp: Int = 0,
     val level: Int = 1,
     val badges: List<String> = emptyList(),

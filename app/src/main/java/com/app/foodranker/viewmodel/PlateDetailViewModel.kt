@@ -50,7 +50,7 @@ data class PlateDetailUiState(
     val userRating: Rating? get() = ratings.find { it.userId == currentUserId }
 }
 
-/** Quién ha dado like o guardado el plato — visible solo para el autor, y solo Premium. */
+/** Quién ha dado like o guardado el plato — visible solo para el autor. */
 data class PlateEngagement(
     val isLoading: Boolean = false,
     val likedByUsers: List<User> = emptyList(),
@@ -518,8 +518,8 @@ class PlateDetailViewModel @Inject constructor(
 
     /**
      * Quién ha dado like o guardado el plato. La llama la UI solo cuando el que mira es el
-     * autor y es Premium (la regla de `saves` ya lo exige del lado del servidor: solo el
-     * autor del plato puede leer los guardados de otra persona).
+     * autor; la regla de `saves` lo exige igual del lado del servidor. Pidió Premium hasta
+     * el 2026-11-22.
      */
     fun loadEngagement(plateId: String) {
         val plate = _uiState.value.plate ?: return
@@ -689,27 +689,5 @@ class PlateDetailViewModel @Inject constructor(
 
     fun clearSuccessMessage() {
         _uiState.value = _uiState.value.copy(successMessage = null)
-    }
-
-    fun awardXpFromAd() {
-        if (auth.currentUser == null) return
-        viewModelScope.launch {
-            try {
-                val result = functions.getHttpsCallable("awardAdXp").call().await()
-                @Suppress("UNCHECKED_CAST")
-                val data = result.data as? Map<String, Any>
-                val granted = data?.get("granted") as? Boolean ?: false
-                _uiState.value = _uiState.value.copy(
-                    successMessage = if (granted) {
-                        appContext.getString(R.string.vm_ad_xp_ok)
-                    } else {
-                        appContext.getString(R.string.vm_ad_xp_done)
-                    }
-                )
-            } catch (e: Exception) {
-                Fallos.reportar(e, "plato: XP por anuncio")
-                _uiState.value = _uiState.value.copy(error = com.app.foodranker.utils.ErrorMapper.toUserMessage(e))
-            }
-        }
     }
 }

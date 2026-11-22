@@ -209,7 +209,6 @@
     <string name="det_share_text">📤 Share as text</string>
     <string name="det_share_image">🖼️ Share as image</string>
     <string name="det_search_thefork">🍴 Search on TheFork</string>
-    <string name="det_watch_ad">Watch an ad and earn +50 XP</string>
     <string name="det_rate_title">⭐ Rate: %1$s</string>
     <string name="det_edit_title">✏️ Edit rating</string>
     <string name="det_rate_generic">⭐ Rate this dish</string>
@@ -261,12 +260,8 @@
     <string name="prof_likes_received">Likes\nreceived</string>
     <string name="prof_ratings_given">Ratings\ngiven</string>
     <string name="prof_account">Your account</string>
-    <string name="prof_premium">Go Premium</string>
-    <string name="prof_premium_sub">No ads and exclusive features</string>
     <!-- Used while BillingManager.SUSCRIPCION_A_LA_VENTA is false: with no merchant account
          the subscription does not exist and the rewarded ad is the only real option. -->
-    <string name="prof_adfree">Remove the ads</string>
-    <string name="prof_adfree_sub">Watch an ad and get 24 hours without them</string>
     <string name="prof_invite">Invite friends</string>
     <string name="prof_invite_sub">Share your code and earn XP</string>
     <string name="prof_language">Language</string>
@@ -281,8 +276,6 @@
     <string name="prof_notifications_sub">Choose which alerts you get</string>
     <string name="prof_privacy">Privacy policy</string>
     <string name="prof_terms">Terms of use</string>
-    <string name="prof_ad_privacy">Ad privacy options</string>
-    <string name="prof_ad_privacy_error">Could not open the privacy options. Try again in a moment.</string>
     <string name="prof_delete_account">Delete account</string>
     <string name="prof_delete_account_cta">Permanently delete my account</string>
     <string name="prof_delete_q">Delete account?</string>
@@ -396,18 +389,6 @@
     <string name="lg_vote_hint">Rate dishes to earn XP and climb the league.</string>
     <string name="lg_vote_now">Rate now ⚡</string>
     <string name="lg_top3">Keep it up, you are in the Top 3! 🏅</string>
-    <string name="prm_title">FoodRanker Premium</string>
-    <string name="prm_sub">Support the app and remove the ads</string>
-    <string name="prm_title_adfree">24 hours ad-free</string>
-    <string name="prm_sub_adfree">Watch a short ad and they are gone</string>
-    <string name="prm_badge">Premium badge</string>
-    <string name="prm_stand_out">Stand out in the community</string>
-    <string name="prm_no_interrupt">Enjoy it without interruptions</string>
-    <string name="prm_more_plates">More dishes per day</string>
-    <string name="prm_cancel_any">Cancel any time</string>
-    <string name="prm_unavailable">Purchases are not available right now.</string>
-    <string name="prm_error">Could not start the purchase. Try again.</string>
-    <string name="prm_name">Premium</string>
     <string name="ref_share_code">Share your code</string>
     <string name="ref_both_xp">You both earn XP</string>
     <string name="ref_friends">Friends invited</string>
@@ -583,8 +564,6 @@
     <string name="vm_plate_invalid">Invalid dish</string>
     <string name="vm_already_rated">You already rated this dish</string>
     <string name="vm_rating_updated">Rating updated!</string>
-    <string name="vm_ad_xp_ok">+50 XP for watching the ad! ⭐</string>
-    <string name="vm_ad_xp_done">You already earned ad XP today. Come back later.</string>
     <string name="vm_user_invalid">Invalid user</string>
     <string name="vm_no_permission_delete">You do not have permission to delete this dish</string>
     <string name="vm_delete_account_fail">Could not delete the account</string>
@@ -613,11 +592,6 @@
     <string name="fl_view_profile">View profile</string>
 
     <!-- Seguidores, Premium y liga -->
-    <string name="prm_no_ads">No ads</string>
-    <string name="prm_double_plates">Post up to twice as many dishes</string>
-    <string name="prm_thanks">🎉 You are Premium! Thanks for supporting FoodRanker</string>
-    <string name="prm_watch_ad">📺 Watch an ad — 24h ad-free</string>
-    <string name="prm_subscribe">⭐ Subscribe — %1$s</string>
     <string name="lg_week_n">Week %1$s</string>
     <string name="lg_title_global">⚔️ Weekly league  ·  %1$s</string>
     <string name="lg_title_city">⚔️ %1$s league  ·  %2$s</string>
@@ -698,8 +672,6 @@
     </plurals>
 
     <!-- Precio de Premium -->
-    <string name="prm_per_month">%1$s/month</string>
-    <string name="prm_subscribe_plain">⭐ Subscribe</string>
 
     <!-- Palabras sueltas de la UI -->
     <string name="ex_title">Explore</string>

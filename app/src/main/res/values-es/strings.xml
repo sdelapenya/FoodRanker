@@ -210,7 +210,6 @@
     <string name="det_share_text">📤 Compartir texto</string>
     <string name="det_share_image">🖼️ Compartir como imagen</string>
     <string name="det_search_thefork">🍴 Buscar en TheFork</string>
-    <string name="det_watch_ad">Ver anuncio y ganar +50 XP</string>
     <string name="det_rate_title">⭐ Valorar: %1$s</string>
     <string name="det_edit_title">✏️ Editar valoración</string>
     <string name="det_rate_generic">⭐ Valorar este plato</string>
@@ -263,12 +262,8 @@
     <string name="prof_likes_received">Likes\nrecibidos</string>
     <string name="prof_ratings_given">Valoraciones\ndadas</string>
     <string name="prof_account">Tu cuenta</string>
-    <string name="prof_premium">Hazte Premium</string>
-    <string name="prof_premium_sub">Sin anuncios y funciones exclusivas</string>
     <!-- Se usan mientras BillingManager.SUSCRIPCION_A_LA_VENTA este en false: sin cuenta de
          comercio la suscripcion no existe y lo unico real es el anuncio recompensado. -->
-    <string name="prof_adfree">Quitate los anuncios</string>
-    <string name="prof_adfree_sub">Ve un anuncio y pasa 24 horas sin ellos</string>
     <string name="prof_invite">Invita amigos</string>
     <string name="prof_invite_sub">Comparte tu código y gana XP</string>
     <string name="prof_language">Idioma</string>
@@ -283,8 +278,6 @@
     <string name="prof_notifications_sub">Elige qué avisos quieres recibir</string>
     <string name="prof_privacy">Política de privacidad</string>
     <string name="prof_terms">Términos de uso</string>
-    <string name="prof_ad_privacy">Opciones de privacidad de anuncios</string>
-    <string name="prof_ad_privacy_error">No se han podido abrir las opciones de privacidad. Inténtalo dentro de un momento.</string>
     <string name="prof_delete_account">Eliminación de cuenta</string>
     <string name="prof_delete_account_cta">Eliminar mi cuenta permanentemente</string>
     <string name="prof_delete_q">¿Eliminar cuenta?</string>
@@ -398,18 +391,6 @@
     <string name="lg_vote_hint">Vota platos para acumular XP y subir en la liga.</string>
     <string name="lg_vote_now">Votar ahora ⚡</string>
     <string name="lg_top3">¡Sigue así, estás en el Top 3! 🏅</string>
-    <string name="prm_title">FoodRanker Premium</string>
-    <string name="prm_sub">Apoya la app y quítate los anuncios</string>
-    <string name="prm_title_adfree">24 horas sin anuncios</string>
-    <string name="prm_sub_adfree">Ve un anuncio corto y desaparecen</string>
-    <string name="prm_badge">Badge Premium</string>
-    <string name="prm_stand_out">Destaca en la comunidad</string>
-    <string name="prm_no_interrupt">Disfruta sin interrupciones</string>
-    <string name="prm_more_plates">Más platos al día</string>
-    <string name="prm_cancel_any">Cancela cuando quieras</string>
-    <string name="prm_unavailable">Las compras no están disponibles en este momento.</string>
-    <string name="prm_error">No se pudo iniciar la compra. Inténtalo de nuevo.</string>
-    <string name="prm_name">Premium</string>
     <string name="ref_share_code">Comparte tu código</string>
     <string name="ref_both_xp">Ambos ganáis XP</string>
     <string name="ref_friends">Amigos invitados</string>
@@ -586,8 +567,6 @@
     <string name="vm_plate_invalid">Plato no válido</string>
     <string name="vm_already_rated">Ya valoraste este plato</string>
     <string name="vm_rating_updated">¡Valoración actualizada!</string>
-    <string name="vm_ad_xp_ok">¡+50 XP ganados por ver el anuncio! ⭐</string>
-    <string name="vm_ad_xp_done">Ya has ganado XP por un anuncio hoy. Vuelve a intentarlo más tarde.</string>
     <string name="vm_user_invalid">Usuario no válido</string>
     <string name="vm_no_permission_delete">No tienes permiso para eliminar este plato</string>
     <string name="vm_delete_account_fail">Error al eliminar la cuenta</string>
@@ -616,11 +595,6 @@
     <string name="fl_view_profile">Ver perfil</string>
 
     <!-- Seguidores, Premium y liga -->
-    <string name="prm_no_ads">Sin anuncios</string>
-    <string name="prm_double_plates">Publica hasta el doble de platos</string>
-    <string name="prm_thanks">🎉 ¡Eres Premium! Gracias por apoyar FoodRanker</string>
-    <string name="prm_watch_ad">📺 Ver anuncio — 24h sin anuncios</string>
-    <string name="prm_subscribe">⭐ Suscribirse — %1$s</string>
     <string name="lg_week_n">Semana %1$s</string>
     <string name="lg_title_global">⚔️ Liga semanal  ·  %1$s</string>
     <string name="lg_title_city">⚔️ Liga %1$s  ·  %2$s</string>
@@ -703,8 +677,6 @@
     </plurals>
 
     <!-- Precio de Premium -->
-    <string name="prm_per_month">%1$s/mes</string>
-    <string name="prm_subscribe_plain">⭐ Suscribirse</string>
 
     <!-- Palabras sueltas de la UI -->
     <string name="ex_title">Explorar</string>

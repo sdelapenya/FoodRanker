@@ -2015,40 +2015,6 @@ export const onChallengeUpdated = onDocumentUpdated(
   }
 );
 
-// ── awardAdXp ─────────────────────────────────────────────────────────────
-
-const XP_AD_REWARD = 50;
-const AD_REWARD_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 1 día entre recompensas
-
-/**
- * Callable function invocada cuando el usuario completa un anuncio recompensado.
- * Otorga 50 XP con un cooldown de 24h para evitar abuso.
- */
-export const awardAdXp = onCall(
-  { region: "europe-west1" },
-  async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "Must be authenticated");
-
-    const userRef = db.collection("users").doc(uid);
-    try {
-      const granted = await db.runTransaction(async (tx) => {
-        const snap = await tx.get(userRef);
-        if (!snap.exists) return false;
-        const lastAdReward = (snap.get("lastAdRewardAt") as number) ?? 0;
-        if (Date.now() - lastAdReward < AD_REWARD_COOLDOWN_MS) return false;
-        const xp = ((snap.get("xp") as number) ?? 0) + XP_AD_REWARD;
-        tx.update(userRef, { xp, level: getLevel(xp), lastAdRewardAt: Date.now() });
-        return true;
-      });
-      return { granted, xp: XP_AD_REWARD };
-    } catch (err) {
-      logger.error(`awardAdXp error for ${uid}:`, err);
-      throw new HttpsError("internal", "Failed to award XP");
-    }
-  }
-);
-
 // ── getLeagueId ──────────────────────────────────────────────────────────
 
 /**

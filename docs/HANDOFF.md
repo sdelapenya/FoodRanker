@@ -15,6 +15,97 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🚫 V28 (1.11) — FUERA LA PUBLICIDAD Y FUERA PREMIUM (2026-11-22)
+
+**El porqué no es técnico, es económico.** AdMob ingresa **0,11 € al mes** (dato real de la
+consola, no estimación). El umbral de pago en euros son **70 €**: a ese ritmo se tardaría
+**53 años en cobrar por primera vez**. Y la suscripción lleva fuera de venta desde el
+2026-11-02 por no haber cuenta de comercio, así que las compras integradas ingresan **cero
+por diseño**.
+
+Mientras tanto, mantener esa publicidad obligaba a declararse **operador** en Play, y eso
+publica **teléfono y dirección** desde el 1 de marzo de 2027. Se estaba pagando un precio
+real por un ingreso que no existe.
+
+#### Comprobado en la consola de Play antes de decidir
+
+Hoy el perfil público de la cuenta son **dos líneas: el país y el correo de desarrollador**.
+La dirección NO se publica. La propia consola lo dice: *«Si decides obtener ingresos en
+Google Play, tu dirección legal completa se mostrará públicamente»* — y "obtener ingresos en
+Google Play" es su sistema de facturación, no AdMob. Los datos de contacto (teléfono
+incluido) están en el bloque que Google marca como *«no se mostrará públicamente»*.
+
+⚠️ **Conclusión que conviene no perder: los anuncios nunca publicaron nada. Toda la
+exposición vendría de UN SOLO ACTO, declararse operador.** Quitar la publicidad no es una
+medida de privacidad: es lo que hace que declararse **no operador** sea cierto.
+
+#### Lo que se ha retirado
+
+Banner, intersticial y vídeo recompensado · `AdManager`, `BannerAd`, `ConsentManager` ·
+el muro de consentimiento RGPD del arranque · la fila "opciones de privacidad de anuncios"
+del perfil · `PremiumScreen`, `BillingManager`, `BillingViewModel` · la tarjeta "hazte
+Premium" y el badge de la estrella · la función `awardAdXp` · las dependencias
+`play-services-ads` y `user-messaging-platform` · el id de AdMob y la propiedad
+`AD_SERVICES_CONFIG` del manifest · 28 cadenas de texto en los dos idiomas.
+
+#### ⚠️ Premium abría TRES cosas, no solo el badge
+
+No se vio hasta mapear el código, y cambia qué significa "retirarlo":
+
+| | Antes gratis | Antes Premium | Ahora, para todos |
+|---|---|---|---|
+| Platos al día | 10 | 20 | **20** |
+| Radio de "cerca de ti" | 550 m | 1.600 m | **1.600 m** |
+| "Quién ha interactuado" | no | sí | **sí** (cualquier autor) |
+
+Se eligió el valor alto en los tres: bajar a todos habría sido quitar algo que ocho usuarios
+ya tenían. Ampliar el radio no cuesta nada porque la consulta va contra `venues` con
+`limit(50)`. Y la regla de `saves` **nunca miró el premium**, solo la autoría del plato, así
+que abrir "quién ha interactuado" no necesitó tocar `firestore.rules`.
+
+⚠️ **Error que estuvo a punto de colarse:** al unificar el límite diario quedó usando
+`maxDailyPlates`, cuyo valor por defecto es **10**, justo lo contrario de lo acordado. Se
+pilló al leer los defaults para borrarlos. Se comprobó además que la plantilla de Remote
+Config del servidor está **vacía** (`remoteconfig:get`), así que manda el valor del código.
+
+#### ⚠️ QUITAR ADMOB NO QUITA EL IDENTIFICADOR DE PUBLICIDAD
+
+Hallazgo que no estaba previsto. Tras sacar el SDK, el APK seguía con **5 clases de
+`AdvertisingIdClient`** y el permiso `com.google.android.gms.permission.AD_ID`: lo arrastra
+**Firebase Analytics** vía `play-services-ads-identifier`. Sin tocarlo, habría que seguir
+declarando la recogida del AD_ID en el formulario de seguridad de los datos, lo que
+contradice decir que no hay publicidad.
+
+Se corta con `tools:node="remove"` sobre ese permiso, que es **el interruptor documentado
+por Google**. Quedan `ACCESS_ADSERVICES_AD_ID` y `ACCESS_ADSERVICES_ATTRIBUTION`, que declara
+la librería de medición para las APIs del Privacy Sandbox: **no se tocan**, porque quitarlas
+no está documentado como forma de desactivar nada y podría romper Analytics en silencio.
+
+#### Verificado en el emulador (720x1640, 320 dpi, 3 botones, texto al 110 %)
+
+| | |
+|---|---|
+| Primer arranque **sin muro de consentimiento** | ✅ de 3 pantallas de trámite a 2 |
+| Sin banner en el feed | ✅ |
+| Perfil sin tarjeta de Premium, sin badge, sin privacidad de anuncios | ✅ |
+| Cinco entradas y salidas de plato sin intersticial | ✅ 0 coincidencias en logcat |
+| Sin botón "ver anuncio" al final de las valoraciones | ✅ |
+| "Quién ha interactuado" en plato propio | ❌ **sin probar** (ver abajo) |
+
+⚠️ **Para entrar en el emulador: las cuentas personales NO tienen contraseña.**
+`sergiodelapenya1991@` y `sdelapenya1991@` solo tienen proveedor `google.com`, así que
+"entrar con correo" no funcionará nunca con ellas por mucho que se teclee bien. La única con
+proveedor `password` es **`foodrankerreview2@`**. Y esa cuenta no ha publicado ningún plato,
+por eso la comprobación de "quién ha interactuado" quedó sin hacer: el cambio es quitar
+`isPremium &&` de una condición cuyo servidor ya limitaba por autoría.
+
+⚠️ Trampas del emulador con teclado español: **no recibe `AltGr+2`**, así que la arroba no se
+puede teclear — hay que meterla con `adb shell input text`. Y el portapapeles está
+sincronizado con Windows: al pegar, Android enseña la sugerencia **con la contraseña en
+claro**, que acaba en cualquier captura que se tome en ese momento.
+
+---
+
 ### 📱 V27 (1.10) — EL FILTRADO DE DISPOSITIVOS Y DOS RECORTES DE TEXTO (2026-11-22)
 
 AAB construido y verificado sobre el binario: `versionCode=27`, `versionName=1.10`.

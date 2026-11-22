@@ -46,7 +46,6 @@ import com.app.foodranker.R
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.data.model.PlateCategory
-import com.app.foodranker.ui.components.BannerAdView
 import com.app.foodranker.ui.theme.*
 import com.app.foodranker.ui.theme.categoryGradient
 import com.app.foodranker.utils.votesLabel
@@ -177,14 +176,14 @@ fun DiscoverScreen(
             )
         },
         bottomBar = {
-            Column {
-                BannerAdView()
-                RankingNavBar(
-                    onAddPlate = onNavigateToAddPlate,
-                    onLeague   = onNavigateToLeague,
-                    onProfile  = { onNavigateToProfile(currentUser?.uid ?: "") }
-                )
-            }
+            // Aquí había un `Column` que apilaba el banner de AdMob sobre la barra. Al
+            // retirar la publicidad (2026-11-22) el Column se queda sin función: envolver
+            // un único hijo añade un nodo de composición y nada más.
+            RankingNavBar(
+                onAddPlate = onNavigateToAddPlate,
+                onLeague   = onNavigateToLeague,
+                onProfile  = { onNavigateToProfile(currentUser?.uid ?: "") }
+            )
         }
     ) { padding ->
 
