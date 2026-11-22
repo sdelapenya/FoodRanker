@@ -123,6 +123,64 @@ el código dice que hace, sospecha del banco antes de tocar el código.**
   (`integerValue`) lo reconoce el `typeof === "number"`. Probado, porque si no lo
   reconociera la valoración pasaría por "sin sellar".
 
+#### Verificado de extremo a extremo CONTRA PRODUCCION (y como repetirlo sin molestar)
+
+Que el bundle desplegado sea byte a byte el probado no prueba que el trigger corra bien en
+la infraestructura de produccion. Se comprobo asi, **14/14**, sin que ningun usuario se
+entere y sin dejar rastro:
+
+* Se elige una valoracion **propia** sobre un plato donde es la **unica** valoracion (hay
+  siete asi): ningun dato de otro usuario entra en juego.
+* `onRatingUpdated` solo escribe agregados del plato y el sello — **ni avisos ni XP**, se
+  comprobo leyendo la funcion. Nadie recibe nada.
+* Las escrituras van en **parejas que se anulan**: cada prueba edita y restaura, y el
+  `finally` restaura siempre, tambien si algo revienta por el medio. **Nunca se borra nada.**
+
+⚠️ **La escritura identica NO sirve**: la guarda de arriba
+(`if (!scoresChanged && !repeatChanged && !priceChanged) return`) sale antes de la
+transaccion. Para entrar hay que cambiar de verdad un campo de nota.
+
+Las dos ramas que se midieron:
+
+* **delta 0 por compensacion** — presentacion −1.5 y satisfaccion +1.0 cumplen
+  `0.2·Δp + 0.3·Δs = 0`: pasa la guarda, entra en la transaccion, lee el sello y sale por
+  "nada que incorporar" **sin tocar el plato**.
+* **delta no nulo** — sabor +0.5 da exactamente +0.25 de media. El plato subio de 8.85 a
+  9.1 y al restaurar volvio a **8.85 exacto**.
+
+⚠️ Los numeros no son cualesquiera: `deltaAvg === 0` es una comparacion **exacta**, y la
+ida y vuelta tiene que cerrar sin residuo. Se comprobo en Node **antes** de escribir que la
+compensada da `0` y no `1e-16`, y que `8.85 + 0.25 − 0.25 === 8.85`. Con otros valores la
+prueba mediria la coma flotante en vez del codigo.
+
+#### ⚠️ CADA EDICION DE VALORACION CUESTA DOS INVOCACIONES (no es un fallo nuevo)
+
+La prueba hizo 4 escrituras y el registro mostro **8 ejecuciones** de `onRatingUpdated`. No
+es entrega duplicada de Eventarc: no aparece ni un "ya agregado, se ignora" en el log. Son
+4 reales + 4 que **la funcion se dispara a si misma** al escribir el sello en el documento
+de la valoracion. Esas 4 mueren en la guarda de arriba sin escribir nada, porque el sello no
+toca ningun campo de nota.
+
+**Ya pasaba antes de este cambio**: la version anterior tambien hacia
+`tx.update(event.data!.after.ref, ...)`. No hay bucle y no corrompe nada; solo dobla el
+numero de invocaciones de ese trigger. Con ~12 usuarios da igual, pero conviene saberlo
+antes de mirar una factura o un grafico de invocaciones y pensar que hay algo raro.
+
+#### ⚠️ Los registros de Cloud Logging van en UTC
+
+Costo un intento: el despliegue salio a las `23:32Z` del 21, que son las **00:32 del 22** en
+hora peninsular. Un filtro `timestamp>="2026-11-22T00:00:00Z"` se deja fuera el despliegue
+entero y parece que no hay registros. Y `firebase functions:log` devolvio entradas que se
+paraban dias antes; para esto es mas fiable la REST API de `logging` con un filtro propio.
+
+#### Las reglas publicadas se pueden probar sin tocar datos
+
+`POST https://firebaserules.googleapis.com/v1/{rulesetName}:test` ejecuta el **motor real**
+sobre el ruleset que esta **publicado**, sin escribir ningun documento. Es la forma de
+comprobar las reglas en produccion sin inventarse datos de prueba: se saca el `rulesetName`
+de `/projects/{p}/releases/cloud.firestore`. Salio **6/6**, incluido el `ALLOW` del `create`
+normal, que es el que importa de verdad — si eso fallara, nadie podria valorar.
+
 #### ADC para los scripts de Admin SDK
 
 El `adc_tmp.json` necesita el par de cliente de **`firebase-tools`**, no el de
