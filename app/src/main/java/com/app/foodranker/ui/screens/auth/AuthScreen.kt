@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -181,7 +182,14 @@ fun AuthScreen(
                     onClick = { launchGoogleSignIn() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
+                        // Altura MÍNIMA, no fija. Con `.height(56.dp)` el botón no podía
+                        // crecer: con el texto del sistema al 130% "Continuar con Google"
+                        // pasa a dos líneas y la segunda quedaba cortada por fuera del
+                        // botón — el botón principal del login, ilegible. Visto en el
+                        // emulador a 720x1640 con `font_scale 1.3` (2026-11-22). Con
+                        // `heightIn` el aspecto al 100% es idéntico y crece solo cuando
+                        // hace falta.
+                        .heightIn(min = 56.dp)
                         .scale(btnScale),
                     shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
@@ -298,12 +306,22 @@ private fun FeaturePill(
         shape = RoundedCornerShape(20.dp),
         color = Color.White.copy(alpha = 0.12f)
     ) {
-        Row(
+        // ⚠️ EL ICONO VA ENCIMA DEL TEXTO, NO AL LADO. No es una preferencia estética:
+        // con los tres en fila y `weight(1f)`, cada pastilla mide un tercio del ancho
+        // (91,5dp a 360dp de pantalla) y el icono, el separador y el relleno se comen
+        // 44dp. Al texto le quedaban 47,5dp y "Compartir" pide unos 57, así que salía
+        // recortado como "Compa". En inglés ("Share") no se notaba.
+        //
+        // Apretar los márgenes daba justo los 12dp que faltaban, y por eso se descartó:
+        // volvería a romperse con el texto del sistema en grande, o en cuanto se añada
+        // un idioma con una palabra más larga. Apilando, el texto dispone de los 79dp
+        // completos de la pastilla y aguanta las dos cosas.
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+                .padding(horizontal = 6.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = icon,
@@ -311,13 +329,18 @@ private fun FeaturePill(
                 tint = Color.White.copy(alpha = 0.92f),
                 modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = label,
                 color = Color.White.copy(alpha = 0.90f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1
+                maxLines = 1,
+                // Red de seguridad: si algún idioma futuro no cupiera ni así, que corte
+                // con puntos suspensivos y no a mitad de palabra. El defecto de Compose
+                // es `Clip`, que es justo lo que producía "Compa".
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
             )
         }
     }

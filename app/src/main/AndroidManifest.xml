@@ -49,6 +49,41 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- ── HARDWARE OPCIONAL ──────────────────────────────────────────────────
+         Play DEDUCE hardware obligatorio a partir de los permisos y esconde la app a
+         los dispositivos que no lo tengan, en silencio y sin avisar en la consola. La
+         tabla 2 de developer.android.com/guide/topics/manifest/uses-feature-element es
+         la que manda. Nada de esto es obligatorio para FoodRanker, así que todo va con
+         `required="false"`.
+
+         Una declaración explícita TIENE PRECEDENCIA sobre lo implícito ("<uses-feature>
+         declarations, including any declared android:required attribute, always take
+         precedence over features implied by the permissions in table 2"), que es justo
+         por lo que esto funciona.
+
+         WIFI — lo implica `ACCESS_WIFI_STATE`, que NO es nuestro: lo inyecta
+         `com.google.android.libraries.places:places`. Sin esta línea, Play escondería la
+         app a cualquier dispositivo sin wifi. Como el permiso viene de una dependencia,
+         desaparecería de golpe si algún día se quita Places — y volvería si se añade
+         otra librería que lo declare, sin que nadie lo note. Dejarlo puesto no cuesta
+         nada y cubre los dos casos.
+
+         LOCALIZACIÓN — con `targetSdk 36`, `ACCESS_COARSE/FINE_LOCATION` ya NO implican
+         `.network` ni `.gps`: esa parte de la tabla dice "Only when target API level is
+         20 or lower". Pero la propia página pide declararlos igualmente cuando se usan
+         para recibir ubicación, y aquí se usan: al publicar un plato se ofrecen los
+         locales cercanos. Se declaran los tres, opcionales, porque la localización es
+         prescindible — sin permiso el local se busca por texto.
+
+         ⚠️ NO hace falta nada para la huella: `USE_FINGERPRINT` lo inyecta
+         `androidx.biometric`, pero NO aparece en la tabla 2 (sus categorías son
+         Bluetooth, Camera, Location, Microphone, Telephony y Wi-Fi), así que no implica
+         ningún `uses-feature` y no filtra dispositivos. Comprobado, no supuesto. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
+
     <application
         android:name=".FoodRankerApp"
         android:allowBackup="false"

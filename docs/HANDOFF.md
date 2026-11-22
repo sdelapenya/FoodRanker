@@ -15,6 +15,84 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 📱 V27 (1.10) — EL FILTRADO DE DISPOSITIVOS Y DOS RECORTES DE TEXTO (2026-11-22)
+
+AAB construido y verificado sobre el binario: `versionCode=27`, `versionName=1.10`.
+**Aún no subido a Play** y **aún sin revisar en el Redmi**.
+
+Lo que lleva, además de lo que ya estaba en el repo sin publicar (el arreglo del listener de
+avisos y **la edición de nombre de plato**, que estaba terminada y nadie podía usar):
+
+#### `uses-feature`: Play escondía la app y nadie se enteraba
+
+Play **deduce hardware obligatorio a partir de los permisos** y filtra dispositivos en
+silencio. La referencia es la tabla 2 de
+`developer.android.com/guide/topics/manifest/uses-feature-element`. No había **ningún**
+`uses-feature` en el manifest fusionado. Lo que había que cubrir:
+
+* **`android.hardware.wifi`** — lo implica `ACCESS_WIFI_STATE`, que NO es nuestro: lo
+  inyecta `com.google.android.libraries.places`. Este era el filtrado real.
+* **`android.hardware.location`** (+ `.gps` y `.network`) — con `targetSdk 36` las de
+  localización ya NO implican `.gps` ni `.network` (eso era "only when target API level is
+  20 or lower"), pero la propia página pide declararlos cuando se usan, y aquí se usan.
+
+Los cuatro van con `required="false"`. Una declaración explícita **tiene precedencia sobre
+lo implícito**, así que esto cierra el asunto sea cual sea la lectura de la tabla.
+
+⚠️ **`USE_FINGERPRINT` NO necesita nada.** Lo inyecta `androidx.biometric` y parece que
+debería, pero **no aparece en la tabla 2** (sus categorías son Bluetooth, Camera, Location,
+Microphone, Telephony y Wi-Fi). Comprobado contra la documentación, no supuesto.
+
+#### La pastilla "Compartir", por fin vista fallar
+
+Reproducida en el emulador a `wm size 720x1640`, `wm density 320`, overlay
+`navbar.threebutton` **y en castellano** — en inglés ("Share") no se nota, que es parte de
+por qué se escapó dos veces. No ponía "Comp": ponía **"Compa"**, y cortaba a mitad de
+palabra porque había `maxLines = 1` **sin** `overflow`, y el defecto de Compose es `Clip`.
+
+La cuenta: a 360dp de ancho cada pastilla mide 91,5dp y el relleno, el icono y el separador
+se comen 44dp. Al texto le quedaban 47,5dp y "Compartir" pide unos 57.
+
+**El arreglo es apilar el icono sobre el texto**, no apretar márgenes. Apretar daba justo
+los 12dp que faltaban y se descartó por eso: volvería a romperse con el texto del sistema
+en grande o con un idioma de palabra más larga. Apilando, el texto dispone de los 79dp
+completos. Se añadió además `overflow = TextOverflow.Ellipsis` como red de seguridad.
+
+⚠️ Compose BOM es `2024.09.00` (Compose 1.7), así que **no hay `autoSize`** — llegó en 1.8.
+Si algún día se sube el BOM, esto se puede simplificar.
+
+#### Y de paso, el botón principal del login se cortaba
+
+Al probar el arreglo con `settings put system font_scale 1.3` apareció otro fallo, **no
+relacionado con el cambio**: `Button(... .height(56.dp))` es altura FIJA, así que
+"Continuar con Google" pasaba a dos líneas y la segunda quedaba fuera del botón. El botón
+principal del login, ilegible. Cambiado a `heightIn(min = 56.dp)`: idéntico al 100% y crece
+solo cuando hace falta.
+
+⚠️ **Lección: probar el 130% de tamaño de texto es barato y encuentra cosas.** Las dos
+pantallas se vieron en castellano e inglés, al 100% y al 130%.
+
+#### Comprobaciones pasadas
+
+`check_strings` (paridad y marcadores), `check_args`, `check_notif_parity`,
+`check_slug_parity` y `check_theme_colors`: todas OK.
+
+#### Trampas del banco de pruebas con `adb` en Git Bash
+
+* **Git Bash convierte `/sdcard/...` en una ruta de Windows** y `screencap` responde con su
+  texto de uso, que parece un error de argumentos y no lo es. Se arregla con
+  `export MSYS_NO_PATHCONV=1`.
+* **El idioma hay que forzarlo por app**: `adb shell cmd locale set-app-locales
+  com.app.foodranker --locales es-ES`. El emulador viene en `en-US` y en inglés el fallo no
+  se reproduce.
+* **La instalación falla con `INSTALL_FAILED_UPDATE_INCOMPATIBLE`** si queda una copia
+  firmada con otra clave: hay que desinstalar primero.
+* Al arrancar salen **dos diálogos encadenados** (permiso de notificaciones y
+  consentimiento de anuncios) y el onboarding. Conviene capturar entre pulsación y
+  pulsación en vez de encadenar toques a ciegas: la maqueta se mueve al cerrar el primero.
+
+---
+
 ### 🧮 EL XP DE LIGA SE DUPLICABA Y LA MEDIA DE LOS PLATOS SE CORROMPÍA (2026-11-22)
 
 **Desplegado en producción el 22 de noviembre**: `functions` (18/18) y `firestore.rules`.
