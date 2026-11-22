@@ -42,6 +42,84 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔎 LAS 3 RECOMENDACIONES DE PLAY SOBRE LA V27: INVESTIGADAS, NO SE TOCA NADA (2026-11-22)
+
+Play muestra tres "acciones recomendadas" sobre la v27. **Ninguna es un bloqueo** y, tras
+investigarlas, **dos no se pueden arreglar** y la tercera tiene trampa conocida.
+
+#### 1 y 2. Las de "vista de extremo a extremo": NO se pueden quitar
+
+Play dice que la app usa `Window.setStatusBarColor`, `Window.setNavigationBarColor` y
+`LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`, y señala
+`com.google.android.libraries.places.widget.internal.ui.AutocompleteImplFragment`.
+
+**El código propio está limpio**: `enableEdgeToEdge()` se llama en `MainActivity`, no hay
+`statusBarColor`/`navigationBarColor` en ningún sitio, y los temas no llevan
+`windowOptOutEdgeToEdgeEnforcement` ni `fitsSystemWindows`.
+
+⚠️ **Quien llama a esas APIs es AndroidX.** Escaneando los 257 artefactos de la caché de
+Gradle:
+
+```
+setStatusBarColor:     activity-1.12.1, core-1.17.0, core-splashscreen-1.0.1,
+                       material-1.12.0, material-1.4.0, places-4.1.0
+setNavigationBarColor: activity-1.12.1, core-1.17.0, core-splashscreen-1.0.1,
+                       material-1.12.0, browser-1.4.0
+```
+
+**`androidx.activity` es donde vive `enableEdgeToEdge()`**, la función que la propia
+recomendación te dice que uses: la llama por dentro para compatibilidad con Android
+anterior al 15. **No hay nada que hacer desde aquí.** No perder más tiempo con esto.
+
+#### El intento de subir Places, y por qué se abandonó
+
+Se probó, y la cadena es esta:
+
+**Places 6.1.0 → Hilt que entienda Kotlin metadata 2.4 → Hilt ≥ 2.59 → AGP 9.0.**
+
+Con Hilt 2.58 (la actual) y Places 6.1.0, el release falla con *"Provided Metadata instance
+has version 2.4.0, while maximum supported version is 2.3.0"*. Con Hilt 2.59 o 2.60.1 falla
+antes: *"only compatible with AGP version 9.0.0 or higher"*. **No existe una Hilt que
+soporte metadata 2.4 sobre AGP 8.**
+
+Y aunque se hiciera, **no serviría**: lo de arriba. Comparando los artefactos:
+
+| | 4.1.0 (actual) | 5.3.0 | 6.1.0 |
+|---|---|---|---|
+| `setStatusBarColor` | sí | sí | no |
+| `setNavigationBarColor` | sí | no | no |
+| cutout `SHORT_EDGES` | sí | no | no |
+
+Pero `activity-1.12.1` sigue llamando a las dos primeras pase lo que pase.
+
+⚠️ **La migración de API, si algún día se hace, son tres renombres y nada más** (probado,
+compila con 5.3.0): `Place.Field.NAME` → `DISPLAY_NAME`, `Place.Field.ADDRESS` →
+`FORMATTED_ADDRESS`, `Places.initialize()` → `initializeWithNewPlacesApiEnabled()`, y en el
+`Place`: `name` → `displayName`, `address` → `formattedAddress`. `Place.Field.ID` no cambia.
+
+⚠️ `ACCESS_WIFI_STATE` **sigue** con Places 5.3.0: tampoco se va actualizando.
+
+⚠️ Al experimentar, un `sed` con el patrón `version "..." apply false` pisó también el
+plugin `com.google.gms.google-services` y lo dejó apuntando a una versión inexistente. Si
+aparece *"Plugin [id: 'com.google.gms.google-services', version: '2.58.1'] was not found"*,
+es eso: `git checkout -- build.gradle.kts`.
+
+#### 3. La de R8: dos partes, una aprovechable
+
+Play pide dos cosas: *"La reducción de recursos no está habilitada"* y *"Actualiza AGP a la
+9.0 o posterior"*.
+
+La primera es la que ya está documentada más abajo: `isShrinkResources = false` está
+apagado **a propósito** porque borraba cinco cadenas y provocaba un
+`Resources.NotFoundException` en release. **Nunca se probó la solución estándar**: un
+`res/raw/keep.xml` que las fije por nombre. Las cinco se usan con referencias normales a
+`R` (`R.string.cd_like` y compañía), no con `getIdentifier()`, así que `keep.xml` debería
+bastar. Son 370 KB. Hacerlo en su propio commit y verificar con `tools/i18n/check_apk.py`.
+
+La segunda, AGP 9, es el proyecto grande — y es el que desbloquearía también Hilt y Places.
+
+---
+
 ### 🔁 DOS HUECOS QUE QUEDABAN EN LOS AGREGADOS (2026-11-22, tarde)
 
 Salieron de una auditoría de Codex. **Las tres eran reales**; se arreglan las dos que
