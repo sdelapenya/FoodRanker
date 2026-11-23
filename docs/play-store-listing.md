@@ -631,6 +631,17 @@ Comment notifications are fixed too: they showed in the bell but never notified 
 v17 y con datos reales. En Play Console se suben con el selector de idioma en `es-ES` y en
 `en-GB`; si solo se suben las de un idioma, Play reutiliza esas para los dos.
 
+### Si algún día se rehacen, estas tres cosas (leer ANTES de disparar)
+
+1. **Bajar un poco menos en el perfil.** La de ahora corta a media etiqueta — se lee
+   "Platos publicados" partido y "Likes / dados" medio tapado por la barra de navegación.
+   Dejar que el bloque de estadísticas entre entero o cortar por un hueco, no por un texto.
+2. **Esperar a que cargue la ficha de plato**: ~14 s. La primera tanda cogió el esqueleto
+   de carga, y se nota en el peso (85 KB contra 1,2 MB).
+3. **Ya no hace falta el truco de Premium.** Se daba para que no saliera el banner de
+   AdMob; desde la v28 no hay anuncios ni Premium, así que vale cualquier cuenta. Pero hace
+   falta una **con datos**: la de revisión tiene 0 platos y 0 XP.
+
 Las anteriores estaban **obsoletas**, no solo en castellano: enseñaban "Top semana" y
 "Reset semanal del ranking", dos textos que se corrigieron por no ser verdad, y platos de
 prueba que ya no existen (`Bar Casa Benito`, Toledo). Se han sustituido.
