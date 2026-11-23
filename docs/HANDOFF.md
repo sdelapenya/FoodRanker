@@ -42,6 +42,48 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🎨 TEXTO ILEGIBLE EN MODO OSCURO: UN SOLO PATRON, TRES SITIOS (2026-11-23)
+
+Revisando los contrastes aparecio el mismo fallo repetido: **una tarjeta con el fondo
+escrito a mano y el texto tomado del tema**. El fondo no cambia con el modo y el texto si,
+asi que en oscuro queda casi blanco sobre un crema o un blanco fijos.
+
+| Donde | Que pasaba | Contraste |
+|---|---|---|
+| Perfil, fila "Invita amigos" | crema `0xFFFFF3E0` + `textPrimary` | **1,01** |
+| Liga, cada fila de la tabla | `Color.White` + `textPrimary` | **1,07** |
+| Pantalla "Invita amigos" | `Scaffold` clavado en `0xFFF8F8F8` | fondo blanco en oscuro |
+
+⚠️ **Ninguno lo introdujo la v28.** La fila de invitar ya llevaba su crema fijo (`git log -L`
+lo situa antes de `8837989`); lo que hizo la v28 fue quitarle de encima la tarjeta de
+Premium, que tenia el mismo defecto, y dejarla a la vista. El de la liga es el peor: deja la
+clasificacion entera ilegible.
+
+**Lo que NO estaba mal, y por eso no se toco**: los fondos *oscuros* fijos (la tarjeta de
+mision diaria `0xFF1A2419`, el snackbar `0xFF2A2A2A`, la nota final del plato `0xFF1A1F19`)
+llevan el texto en `Color.White` tambien fijo. Se leen en los dos modos: son "siempre
+oscuros" por diseno, igual que la cabecera del perfil. Y en Notificaciones los pasteles son
+solo el circulo del emoji, no el fondo del texto.
+
+**El arreglo**: nueve tokens nuevos en `FoodRankerColorTokens`, en **pares cerrados**
+fondo/texto con un valor por modo (`accentSoft`/`onAccentSoft`/`onAccentSoftMuted`,
+`successSoft`/`onSuccessSoft`/`onSuccessSoftMuted`, los dos bordes y `successStrong`).
+De paso el verde de acento pasa de `0xFF168963` a `0xFF117A56`: el anterior se quedaba en
+**4,38** sobre blanco, por debajo del 4,5 de AA.
+
+**Herramienta nueva: `tools/ui/check_contrast.py`.** Calcula el contraste WCAG de cada par
+en los dos temas. La que ya habia, `check_theme_colors.py`, solo comprueba que nadie clave
+los colores *del tema*; por eso esto llevaba meses sin verse. Hay que pasarla al tocar
+colores, igual que las de `tools/i18n/`.
+
+⚠️ **La tabla de la liga no se ha podido ver con datos**: la cuenta de revision no tiene
+ciudad ni XP, asi que esa pantalla nunca llega a pintar filas. El cambio es
+`Color.White` → `FoodTheme.colors.surface`, el mismo token que usan todas las demas
+tarjetas (verificadas en pantalla), y en oscuro da 15,25 de contraste. Queda **verificado
+por calculo, no en pantalla** — mirarlo en el Redmi, que si tiene ciudad y liga.
+
+Verificado en el emulador, release y en los dos temas: perfil e "Invita amigos".
+
 ### 📄 LA V28 NO SOLO ERA CÓDIGO: TRES TEXTOS SEGUÍAN VENDIENDO ANUNCIOS Y PREMIUM (2026-11-23)
 
 Quitar AdMob y Premium del binario dejó la app diciendo una cosa y contando otra en **tres

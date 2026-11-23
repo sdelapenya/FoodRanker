@@ -295,8 +295,8 @@ fun LeagueScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 6.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
-                        border = BorderStroke(1.dp, Color(0xFFFFCC80))
+                        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.accentSoft),
+                        border = BorderStroke(1.dp, FoodTheme.colors.accentSoftBorder)
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
@@ -309,12 +309,12 @@ fun LeagueScreen(
                                     stringResource(R.string.league_out_of_top),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = Color(0xFF5D3A00)
+                                    color = FoodTheme.colors.onAccentSoft
                                 )
                                 Text(
                                     stringResource(R.string.league_out_hint),
                                     fontSize = 11.sp,
-                                    color = Color(0xFF7A5020)
+                                    color = FoodTheme.colors.onAccentSoftMuted
                                 )
                             }
                         }
@@ -336,21 +336,21 @@ fun LeagueScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF7EE)),
-                        border = BorderStroke(1.dp, Color(0xFFCFE8D7))
+                        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.successSoft),
+                        border = BorderStroke(1.dp, FoodTheme.colors.successSoftBorder)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 stringResource(R.string.lg_gap_top3, gap),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
-                                color = Color(0xFF153B2A)
+                                color = FoodTheme.colors.onSuccessSoft
                             )
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 stringResource(R.string.lg_vote_hint),
                                 fontSize = 11.sp,
-                                color = Color(0xFF516D5E),
+                                color = FoodTheme.colors.onSuccessSoftMuted,
                                 fontWeight = FontWeight.Medium
                             )
                             Spacer(Modifier.height(8.dp))
@@ -360,8 +360,8 @@ fun LeagueScreen(
                                     .fillMaxWidth()
                                     .height(7.dp)
                                     .clip(RoundedCornerShape(999.dp)),
-                                color = Color(0xFF168963),
-                                trackColor = Color(0xFF168963).copy(alpha = 0.18f)
+                                color = FoodTheme.colors.successStrong,
+                                trackColor = FoodTheme.colors.successStrong.copy(alpha = 0.18f)
                             )
                         }
                     }
@@ -402,7 +402,7 @@ fun LeagueScreen(
                     else -> stringResource(R.string.lg_vote_keep)
                 }
                 val ctaColor = if (votedToday && uiState.currentUserRank <= 3)
-                    Color(0xFF168963) else OrangePrimary
+                    FoodTheme.colors.successStrong else OrangePrimary
 
                 Button(
                     onClick = onNavigateToDiscover,
@@ -526,8 +526,8 @@ private fun LeagueRow(
     entry: LeagueEntry,
     isCurrentUser: Boolean
 ) {
-    val bgColor = if (isCurrentUser) Color(0xFFEAF7EE) else Color.White
-    val borderColor = if (isCurrentUser) Color(0xFFB9DEC6) else FoodTheme.colors.divider
+    val bgColor = if (isCurrentUser) FoodTheme.colors.successSoft else FoodTheme.colors.surface
+    val borderColor = if (isCurrentUser) FoodTheme.colors.successSoftBorder else FoodTheme.colors.divider
 
     Card(
         modifier = Modifier
@@ -596,7 +596,7 @@ private fun LeagueRow(
                 Text(
                     subtitle,
                     fontSize = 11.sp,
-                    color = if (isCurrentUser) Color(0xFF168963) else FoodTheme.colors.textSecondary,
+                    color = if (isCurrentUser) FoodTheme.colors.successStrong else FoodTheme.colors.textSecondary,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -606,7 +606,7 @@ private fun LeagueRow(
                 "${entry.xp} XP",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                color = if (isCurrentUser) Color(0xFF168963) else OrangePrimary
+                color = if (isCurrentUser) FoodTheme.colors.successStrong else OrangePrimary
             )
         }
     }

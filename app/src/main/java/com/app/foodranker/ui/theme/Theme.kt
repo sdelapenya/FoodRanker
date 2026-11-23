@@ -16,6 +16,16 @@ data class FoodRankerColorTokens(
     val textPrimary: Color,
     val textSecondary: Color,
     val divider:    Color,
+    // Pares (fondo, texto) de las tarjetas destacadas. Ver Color.kt.
+    val accentSoft:         Color,
+    val accentSoftBorder:   Color,
+    val onAccentSoft:       Color,
+    val onAccentSoftMuted:  Color,
+    val successSoft:        Color,
+    val successSoftBorder:  Color,
+    val onSuccessSoft:      Color,
+    val onSuccessSoftMuted: Color,
+    val successStrong:      Color,
     val isDark:     Boolean
 )
 
@@ -27,6 +37,15 @@ val LocalFoodColors = staticCompositionLocalOf {
         textPrimary  = TextPrimary,
         textSecondary = TextSecondary,
         divider      = DividerColor,
+        accentSoft         = AccentSoftLight,
+        accentSoftBorder   = AccentSoftBorderLight,
+        onAccentSoft       = OnAccentSoftLight,
+        onAccentSoftMuted  = OnAccentSoftMutedLight,
+        successSoft        = SuccessSoftLight,
+        successSoftBorder  = SuccessSoftBorderLight,
+        onSuccessSoft      = OnSuccessSoftLight,
+        onSuccessSoftMuted = OnSuccessSoftMutedLight,
+        successStrong      = SuccessStrongLight,
         isDark       = false
     )
 }
@@ -79,6 +98,15 @@ fun FoodRankerTheme(
         textPrimary   = TextPrimaryDark,
         textSecondary = TextSecondaryDark,
         divider       = DividerDark,
+        accentSoft         = AccentSoftDark,
+        accentSoftBorder   = AccentSoftBorderDark,
+        onAccentSoft       = OnAccentSoftDark,
+        onAccentSoftMuted  = OnAccentSoftMutedDark,
+        successSoft        = SuccessSoftDark,
+        successSoftBorder  = SuccessSoftBorderDark,
+        onSuccessSoft      = OnSuccessSoftDark,
+        onSuccessSoftMuted = OnSuccessSoftMutedDark,
+        successStrong      = SuccessStrongDark,
         isDark        = true
     ) else FoodRankerColorTokens(
         background    = BackgroundLight,
@@ -87,6 +115,15 @@ fun FoodRankerTheme(
         textPrimary   = TextPrimary,
         textSecondary = TextSecondary,
         divider       = DividerColor,
+        accentSoft         = AccentSoftLight,
+        accentSoftBorder   = AccentSoftBorderLight,
+        onAccentSoft       = OnAccentSoftLight,
+        onAccentSoftMuted  = OnAccentSoftMutedLight,
+        successSoft        = SuccessSoftLight,
+        successSoftBorder  = SuccessSoftBorderLight,
+        onSuccessSoft      = OnSuccessSoftLight,
+        onSuccessSoftMuted = OnSuccessSoftMutedLight,
+        successStrong      = SuccessStrongLight,
         isDark        = false
     )
 

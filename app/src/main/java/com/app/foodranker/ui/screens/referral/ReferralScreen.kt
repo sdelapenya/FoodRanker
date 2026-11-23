@@ -64,7 +64,7 @@ fun ReferralScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FoodTheme.colors.surface)
             )
         },
-        containerColor = Color(0xFFF8F8F8)
+        containerColor = FoodTheme.colors.background
     ) { padding ->
         Column(
             modifier = Modifier

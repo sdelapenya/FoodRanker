@@ -714,7 +714,7 @@ private fun ProfileAccountDangerZone(
                 subtitle = stringResource(R.string.prof_invite_sub),
                 iconTint = OrangePrimary,
                 arrowTint = OrangePrimary,
-                backgroundColor = Color(0xFFFFF3E0),
+                backgroundColor = FoodTheme.colors.accentSoft,
                 onClick = onReferral
             )
 
@@ -1751,7 +1751,7 @@ private fun RivalCard(rivalName: String, rivalXp: Int, gap: Int) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+        colors = CardDefaults.cardColors(containerColor = FoodTheme.colors.accentSoft),
         border = BorderStroke(1.dp, Color(0xFFFFCC80)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -1767,27 +1767,27 @@ private fun RivalCard(rivalName: String, rivalXp: Int, gap: Int) {
                 Text(
                     stringResource(R.string.prof_rival),
                     fontSize = 11.sp,
-                    color = Color(0xFFA0522D),
+                    color = FoodTheme.colors.onAccentSoftMuted,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     rivalName,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = Color(0xFF5D2E00)
+                    color = FoodTheme.colors.onAccentSoft
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     stringResource(R.string.prof_xp_to_go, gap),
                     fontSize = 12.sp,
-                    color = Color(0xFFA0522D),
+                    color = FoodTheme.colors.onAccentSoftMuted,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     stringResource(R.string.prof_xp, rivalXp),
                     fontSize = 11.sp,
-                    color = Color(0xFFA0522D)
+                    color = FoodTheme.colors.onAccentSoftMuted
                 )
             }
         }
