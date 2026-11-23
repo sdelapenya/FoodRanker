@@ -400,7 +400,18 @@ service cloud.firestore {
 
     // ── REFERRALS ──────────────────────────────────────────────
     match /referrals/{referralId} {
-      allow read: if false;
+      // El referido puede leer SU propio referral, y solo ese. Hace falta porque
+      // applyReferralCode hace tx.get sobre este documento dentro de la transaccion para
+      // no contar dos veces la misma invitacion; con `read: if false` esa lectura fallaba
+      // siempre y el alta por invitacion no funcionaba para nadie.
+      //
+      // Se filtra por el ID, no por resource.data, a proposito: en el momento del tx.get
+      // el documento normalmente NO existe todavia, y entonces `resource` es null y
+      // cualquier condicion sobre su contenido falla. El ID es determinista
+      // (referrerId_referredId) y los uid de Firebase no llevan "_", asi que split da
+      // exactamente dos partes.
+      allow get: if isSignedIn() && referralId.split('_')[1] == request.auth.uid;
+      allow list: if false;
       // ID determinista referrerId_referredId: evita que un usuario cree múltiples
       // referrals para el mismo referidor y acumule XP varias veces.
       allow create: if isSignedIn()

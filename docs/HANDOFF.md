@@ -72,7 +72,40 @@ de la línea que toca el token, y dejar en `provideFirestore` solo el `getInstan
 `try/catch` de red de seguridad. Hay que comprobarlo con el logcat: tras el arreglo, esa
 línea de `W/FirebaseModule` **no debe aparecer** al arrancar con sesión.
 
-#### El segundo, `io.grpc.Status.asException`: sin ubicar
+#### ✅ El segundo, `io.grpc.Status.asException`: ERA LAS INVITACIONES, Y YA ESTÁ ARREGLADO
+
+`PERMISSION_DENIED: Missing or insufficient permissions`. No era red ni App Check (los tres
+servicios están **UNENFORCED**, consultado por API). Era una regla contra el propio código:
+
+`ReferralManager.applyReferralCode` hace, dentro de la transacción,
+`tx.get(referralRef)` sobre `/referrals/{referrerId}_{miUid}` para no contar dos veces la
+misma invitación — y la regla de esa colección era `allow read: if false`. **Esa lectura no
+podía funcionar nunca: abrir un enlace de invitación fallaba siempre, para todo el mundo.**
+
+Se llega por `MainActivity` → `applyInviteCode` cuando alguien abre un enlace de invitación
+estando con sesión. Comprobado contra el motor real de reglas (`firebaserules:test`) que con
+las reglas viejas esa lectura se denegaba.
+
+**Arreglado el 2026-11-23 solo con reglas, sin versión nueva de la app**, así que vale para
+todos los instalados al instante:
+
+```
+allow get: if isSignedIn() && referralId.split('_')[1] == request.auth.uid;
+allow list: if false;
+```
+
+⚠️ **Filtra por el ID, no por `resource.data`, y eso es lo importante:** en el momento del
+`tx.get` el documento normalmente **no existe**, y entonces `resource` es `null` y cualquier
+condición sobre su contenido falla igual que antes. El ID es determinista y los uid de
+Firebase no llevan `_`, así que `split` da exactamente dos partes.
+
+Probado 5/5 **contra el ruleset ya publicado** (no contra el fichero local): el referido lee
+el suyo; un tercero no; el referidor tampoco (mínimo privilegio); sin sesión no; y la
+colección no se puede listar.
+
+⚠️ Queda una cosa por mirar cuando se vea otro `PERMISSION_DENIED`: la etiqueta del
+`Fallos.reportar` vive en la pestaña **Registros** del evento de Crashlytics, no en la
+traza. Sin ella hay más de veinte candidatos.
 
 Es la excepción que lanza Firestore cuando una operación falla, y la reportan más de veinte
 sitios distintos con `Fallos.reportar`, así que sin la traza de Crashlytics no se puede
