@@ -262,8 +262,6 @@
     <string name="prof_likes_received">Likes\nrecibidos</string>
     <string name="prof_ratings_given">Valoraciones\ndadas</string>
     <string name="prof_account">Tu cuenta</string>
-    <!-- Se usan mientras BillingManager.SUSCRIPCION_A_LA_VENTA este en false: sin cuenta de
-         comercio la suscripcion no existe y lo unico real es el anuncio recompensado. -->
     <string name="prof_invite">Invita amigos</string>
     <string name="prof_invite_sub">Comparte tu código y gana XP</string>
     <string name="prof_language">Idioma</string>
@@ -438,17 +436,17 @@
     <string name="pp_2_t">2. Ubicación</string>
     <string name="pp_2_b">FoodRanker pide permiso de ubicación con un único fin: encontrar los locales que tienes cerca cuando publicas un plato, para que no tengas que escribir la dirección a mano.\n\n• El permiso es opcional. Si lo rechazas, puedes seguir usando la app y buscar el local escribiendo su nombre.\n• La ubicación se usa en el momento de la búsqueda y se envía a Google Places para obtener la lista de locales cercanos.\n• No guardamos tu ubicación ni construimos un historial de dónde has estado.\n• Lo que sí queda guardado es el local que tú eliges y la ciudad de ese local, porque son parte del plato que publicas y se muestran públicamente.</string>
     <string name="pp_3_t">3. Cómo usamos tu información y con qué base legal</string>
-    <string name="pp_3_b">Usamos tus datos para:\n\n• Mostrar tu perfil y tus platos publicados en la app.\n• Permitir que otros usuarios vean tus valoraciones y fotos.\n• Calcular el ranking de platos de tu ciudad y la liga semanal.\n• Enviarte notificaciones sobre likes y valoraciones en tus platos.\n• Detectar fallos y entender qué partes de la app se usan, para mejorarla.\n\nSi resides en el Espacio Económico Europeo o en el Reino Unido, el RGPD nos obliga a decirte en qué nos basamos legalmente para cada uno de esos usos:\n\n• Ejecución del contrato (art. 6.1.b): tu cuenta, tu perfil y la publicación de platos, valoraciones y comentarios. Sin tratar esos datos no podemos prestarte el servicio que nos pides.\n• Tu consentimiento (art. 6.1.a): la ubicación, las notificaciones, el acceso a la cámara y a tus fotos, y la publicidad personalizada. Los das tú y puedes retirarlos cuando quieras, desde los ajustes de Android o desde “Opciones de privacidad de anuncios” en tu perfil.\n• Interés legítimo (art. 6.1.f): detectar fallos, prevenir abusos y entender de forma agregada cómo se usa la app para mejorarla. Puedes oponerte escribiendo a foodranker.app@gmail.com.\n\nRetirar un consentimiento no afecta a lo que hicimos legalmente antes de que lo retiraras.</string>
+    <string name="pp_3_b">Usamos tus datos para:\n\n• Mostrar tu perfil y tus platos publicados en la app.\n• Permitir que otros usuarios vean tus valoraciones y fotos.\n• Calcular el ranking de platos de tu ciudad y la liga semanal.\n• Enviarte notificaciones sobre likes y valoraciones en tus platos.\n• Detectar fallos y entender qué partes de la app se usan, para mejorarla.\n\nSi resides en el Espacio Económico Europeo o en el Reino Unido, el RGPD nos obliga a decirte en qué nos basamos legalmente para cada uno de esos usos:\n\n• Ejecución del contrato (art. 6.1.b): tu cuenta, tu perfil y la publicación de platos, valoraciones y comentarios. Sin tratar esos datos no podemos prestarte el servicio que nos pides.\n• Tu consentimiento (art. 6.1.a): la ubicación, las notificaciones, el acceso a la cámara y a tus fotos. Los das tú y puedes retirarlos cuando quieras, desde los ajustes de Android.\n• Interés legítimo (art. 6.1.f): detectar fallos, prevenir abusos y entender de forma agregada cómo se usa la app para mejorarla. Puedes oponerte escribiendo a foodranker.app@gmail.com.\n\nRetirar un consentimiento no afecta a lo que hicimos legalmente antes de que lo retiraras.</string>
     <string name="pp_4_t">4. Qué NO hacemos</string>
     <string name="pp_4_b">• No vendemos tus datos personales ni los cedemos a terceros con fines comerciales.\n• No publicamos tu dirección de correo. El correo se queda en el sistema de autenticación de Google y no se guarda en la base de datos que consultan otros usuarios, así que nadie puede verlo desde la app.\n• No guardamos tu ubicación ni te seguimos en segundo plano.</string>
     <string name="pp_5_t">5. Fotos que subes y revisión automática</string>
     <string name="pp_5_b">Al subir una foto confirmas que:\n\n• Eres el propietario de la imagen o tienes permiso para publicarla.\n• Autorizas a FoodRanker a mostrarla dentro de la app.\n\nAntes de publicarse, cada foto se analiza automáticamente con Google Cloud Vision para comprobar que es comida y que no tiene contenido inapropiado. Si no lo es, se rechaza y no se publica. Este análisis es automático y ninguna persona revisa la imagen en ese paso.\n\nLas fotos publicadas se almacenan en Cloudinary y son visibles públicamente dentro de la app.</string>
     <string name="pp_6_t">6. Servicios de terceros</string>
-    <string name="pp_6_b">FoodRanker utiliza los siguientes servicios, cada uno con su propia política de privacidad:\n\n• Firebase (Google) — inicio de sesión, base de datos, funciones de servidor, notificaciones push, estadísticas de uso (Analytics), informes de fallos (Crashlytics) y configuración remota.\n• Google Places y servicios de ubicación (Google) — búsqueda de locales cercanos y ficha del local.\n• Google Cloud Vision (Google) — revisión automática de las fotos.\n• Cloudinary — almacenamiento de las imágenes publicadas.\n• Google AdMob (Google) — publicidad. Puede recopilar identificadores del dispositivo para mostrar anuncios, según su propia política.\n• Google Play Facturación (Google) — gestión de la suscripción Premium. El pago lo procesa Google Play; FoodRanker no recibe ni almacena datos de tu tarjeta.\n\nTe recomendamos revisar las políticas de privacidad de cada servicio.</string>
-    <string name="pp_7_t">7. Publicidad</string>
-    <string name="pp_7_b">La app muestra anuncios a través de Google AdMob. Si te suscribes a Premium, los anuncios dejan de mostrarse. AdMob puede usar identificadores de tu dispositivo para personalizar los anuncios; puedes limitarlo desde los ajustes de privacidad de Android de tu teléfono.</string>
+    <string name="pp_6_b">FoodRanker utiliza los siguientes servicios, cada uno con su propia política de privacidad:\n\n• Firebase (Google) — inicio de sesión, base de datos, funciones de servidor, notificaciones push, estadísticas de uso (Analytics), informes de fallos (Crashlytics) y configuración remota.\n• Google Places y servicios de ubicación (Google) — búsqueda de locales cercanos y ficha del local.\n• Google Cloud Vision (Google) — revisión automática de las fotos.\n• Cloudinary — almacenamiento de las imágenes publicadas.\n\nTe recomendamos revisar las políticas de privacidad de cada servicio.</string>
+    <string name="pp_7_t">7. Publicidad: no hay</string>
+    <string name="pp_7_b">FoodRanker no muestra publicidad de ningún tipo.\n\nHasta la versión 1.10 enseñaba anuncios de Google AdMob. Desde la 1.11 están retirados, y con ellos el identificador de publicidad del dispositivo: la app ya no lo pide ni lo recibe.\n\nTampoco hay nada que comprar dentro: ni suscripción, ni funciones de pago.</string>
     <string name="pp_8_t">8. Seguridad</string>
-    <string name="pp_8_b">Tomamos medidas razonables para proteger tu información. El acceso a tu cuenta está protegido por Google Sign-In, y los datos que solo debe escribir el servidor (puntuaciones, XP, estado Premium) no se pueden modificar desde la app. Aun así, ningún sistema es infalible.</string>
+    <string name="pp_8_b">Tomamos medidas razonables para proteger tu información. El acceso a tu cuenta está protegido por Google Sign-In, y los datos que solo debe escribir el servidor (puntuaciones, XP, nivel y distintivos) no se pueden modificar desde la app. Aun así, ningún sistema es infalible.</string>
     <string name="pp_9_t">9. Conservación y eliminación de datos</string>
     <string name="pp_9_b">Conservamos tus datos mientras tengas la cuenta activa.\n\n• Puedes borrar cualquier plato o valoración que hayas publicado en cualquier momento.\n• Puedes eliminar tu cuenta desde tu perfil. Al hacerlo se borran tu perfil, tus platos, tus valoraciones, tus comentarios y tus guardados.\n• Los informes de fallos y las estadísticas de uso son anónimos o agregados y pueden conservarse según los plazos de Firebase.</string>
     <string name="pp_10_t">10. Tus derechos</string>
@@ -477,16 +475,16 @@
     <string name="tos_6_b">Antes de publicarse, cada foto se revisa automáticamente para comprobar que es comida y que no contiene material inapropiado. Si no lo es, se rechaza y el plato no se publica.\n\nAdemás, los usuarios pueden reportar contenido inapropiado. Los platos con 3 o más reportes se ocultan automáticamente mientras se revisan. El abuso del sistema de reportes puede resultar en la suspensión de la cuenta.</string>
     <string name="tos_7_t">7. Sistema de recompensas</string>
     <string name="tos_7_b">El sistema de XP, niveles, badges, ligas y retos es de carácter informativo y no tiene valor monetario ni puede canjearse por dinero o premios. Nos reservamos el derecho de modificar o eliminar el sistema de recompensas en cualquier momento.</string>
-    <string name="tos_8_t">8. Publicidad</string>
-    <string name="tos_8_b">La versión gratuita de FoodRanker muestra anuncios servidos por Google AdMob. Los anuncios son de terceros: no controlamos su contenido ni respaldamos los productos que aparecen en ellos.</string>
-    <string name="tos_9_t">9. Suscripción Premium</string>
-    <string name="tos_9_b">FoodRanker ofrece una suscripción opcional que elimina los anuncios y añade un distintivo en tu perfil.\n\n• El precio y la periodicidad se muestran en la app antes de confirmar la compra, y los cobra Google Play en la moneda de tu país.\n• La suscripción se renueva automáticamente hasta que la canceles.\n• Puedes cancelarla en cualquier momento desde Google Play (Suscripciones). La cancelación evita el siguiente cobro; el periodo ya pagado se mantiene hasta su fin.\n• Las devoluciones se rigen por la política de Google Play. FoodRanker no procesa pagos ni tiene acceso a tus datos bancarios.\n• Si la suscripción caduca, tu cuenta y tu contenido siguen intactos: solo vuelven los anuncios.</string>
+    <string name="tos_8_t">8. Publicidad: no hay</string>
+    <string name="tos_8_b">FoodRanker no muestra publicidad. Hasta la versión 1.10 enseñaba anuncios servidos por Google AdMob; desde la 1.11 están retirados y la app no pide el identificador de publicidad de tu dispositivo.</string>
+    <string name="tos_9_t">9. Pagos dentro de la app</string>
+    <string name="tos_9_b">No hay ninguno. FoodRanker no tiene suscripción ni compras dentro de la app, y todo lo que hace está disponible para cualquier cuenta sin pagar nada.\n\nLa suscripción Premium existió hasta la versión 1.10 y está retirada: ya no se puede contratar. Lo que abría (más platos al día, un radio mayor en los platos cercanos y ver quién ha interactuado con los tuyos) lo tiene ahora todo el mundo.\n\nSi llegaste a tener una suscripción activa, puedes cancelarla desde Google Play (Suscripciones).</string>
     <string name="tos_10_t">10. Limitación de responsabilidad</string>
     <string name="tos_10_b">FoodRanker no verifica la exactitud de la información publicada por los usuarios. La información sobre restaurantes y platos es responsabilidad de quien la publica. No somos responsables de experiencias negativas basadas en el contenido de la app.</string>
     <string name="tos_11_t">11. Propiedad intelectual</string>
     <string name="tos_11_b">FoodRanker y su logo son propiedad de sus creadores. El contenido publicado por usuarios (fotos, textos) sigue siendo propiedad del usuario, quien concede a FoodRanker una licencia no exclusiva para almacenarlo y mostrarlo dentro de la app. Esa licencia termina cuando borras el contenido o tu cuenta.</string>
     <string name="tos_12_t">12. Eliminación de cuenta</string>
-    <string name="tos_12_b">Puedes eliminar tu cuenta desde tu perfil en cualquier momento. Al hacerlo se borran permanentemente tu perfil, tus platos, tus valoraciones, tus comentarios y tus guardados. Eliminar la cuenta no cancela por sí solo una suscripción activa: hazlo desde Google Play.</string>
+    <string name="tos_12_b">Puedes eliminar tu cuenta desde tu perfil en cualquier momento. Al hacerlo se borran permanentemente tu perfil, tus platos, tus valoraciones, tus comentarios y tus guardados.</string>
     <string name="tos_13_t">13. Ley aplicable</string>
     <string name="tos_13_b">Estos términos se rigen por la legislación española. Si alguna cláusula resultara inválida, el resto seguirá siendo aplicable. Si eres consumidor, esto no afecta a los derechos que te reconozca la legislación de tu país de residencia.</string>
     <string name="tos_14_t">14. Contacto</string>
@@ -594,7 +592,7 @@
     <string name="fl_will_appear">Cuando cambie la actividad, verás aquí la lista.</string>
     <string name="fl_view_profile">Ver perfil</string>
 
-    <!-- Seguidores, Premium y liga -->
+    <!-- Seguidores y liga -->
     <string name="lg_week_n">Semana %1$s</string>
     <string name="lg_title_global">⚔️ Liga semanal  ·  %1$s</string>
     <string name="lg_title_city">⚔️ Liga %1$s  ·  %2$s</string>
@@ -675,8 +673,6 @@
         <item quantity="other">%1$d valoraciones</item>
         <item quantity="many">%1$d valoraciones</item>
     </plurals>
-
-    <!-- Precio de Premium -->
 
     <!-- Palabras sueltas de la UI -->
     <string name="ex_title">Explorar</string>

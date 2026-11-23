@@ -59,11 +59,11 @@ Ganas XP por publicar, puntuar y comentar, y subes por seis niveles, de Novato F
 Leyenda Foodie. Hay seis logros que desbloquear, un reto cada semana y una liga semanal:
 global y de tu ciudad. El podio se lleva XP y quien gana se lleva el distintivo.
 
-GRATIS, CON ANUNCIOS
+GRATIS Y SIN ANUNCIOS
 
-FoodRanker es gratis. La suscripción Premium es opcional: quita los anuncios, añade un
-distintivo a tu perfil y te deja publicar el doble de platos al día. Nada de lo que hace
-la app se queda detrás de la suscripción.
+FoodRanker es gratis, no enseña anuncios y no hay nada que comprar dentro: ni suscripción,
+ni funciones de pago, ni límites que se quiten pagando. Todo lo que hace la app lo hace
+igual para todo el mundo.
 
 Disponible en castellano e inglés.
 
@@ -118,11 +118,11 @@ to Foodie Legend. There are six achievements to unlock, a new challenge every we
 weekly league — both global and for your own city. The podium takes XP, and the winner
 takes the badge.
 
-FREE, WITH ADS
+FREE, AND NO ADS
 
-FoodRanker is free. The Premium subscription is optional: it removes the ads, adds a badge
-to your profile and lets you post twice as many dishes a day. Nothing the app does is
-locked behind it.
+FoodRanker is free, it shows no ads and there is nothing to buy inside it: no subscription,
+no paid features, no limits you can pay to lift. Everything the app does, it does the same
+for everybody.
 
 Available in English and Spanish.
 
@@ -147,6 +147,93 @@ etiquetas duplicadas:
 
 Lo que **no** se puede hacer es pegar un bloque con etiquetas dentro de una etiqueta que ya
 está: ahí es donde se duplican.
+
+---
+
+## v28 (1.11) — fuera los anuncios y fuera Premium
+
+Lo que el usuario nota de la v28. El motivo de verdad (0,11 €/mes de AdMob, el umbral de
+pago en 70 €, y que mantener la publicidad obligaba a declararse operador en Play) está en
+`docs/HANDOFF.md`; en las notas no pinta nada.
+
+⚠️ **Se dice qué pasa con lo que abría Premium**, y no solo que desaparece. Premium abría
+tres cosas: 20 platos al día en vez de 10, un radio de 1.600 m en vez de 550 para los
+platos cercanos, y "quién ha interactuado". Las tres se quedan en el valor alto para todo
+el mundo. Anunciar la retirada sin esto sonaría a recorte, y es lo contrario.
+
+⚠️ **No se menciona el identificador de publicidad** (el permiso `AD_ID` cortado con
+`tools:node="remove"`), ni los dos huecos de los agregados de valoraciones: lo primero no
+se ve, y lo segundo es de servidor y ya lo tiene todo el mundo sin actualizar.
+
+**Bloque entero, para pegar de una vez:**
+
+```
+<es-ES>
+Fuera los anuncios: FoodRanker ya no enseña ninguno.
+
+Y fuera la suscripción Premium, pero sin perder nada por el camino: lo que abría pasa a estar para todo el mundo. 20 platos al día, los platos cercanos en un radio más amplio, y ver quién ha interactuado con los tuyos.
+
+La tarjeta de la misión diaria ocupa menos, así que en la pantalla de inicio caben más platos.
+</es-ES>
+<en-GB>
+The ads are gone: FoodRanker no longer shows any.
+
+And so is the Premium subscription, with nothing lost along the way: what it unlocked is now there for everyone. 20 dishes a day, nearby dishes over a wider radius, and seeing who has interacted with yours.
+
+The daily mission card takes up less room, so more dishes fit on the home screen.
+</en-GB>
+<en-US>
+The ads are gone: FoodRanker no longer shows any.
+
+And so is the Premium subscription, with nothing lost along the way: what it unlocked is now there for everyone. 20 dishes a day, nearby dishes over a wider radius, and seeing who has interacted with yours.
+
+The daily mission card takes up less room, so more dishes fit on the home screen.
+</en-US>
+```
+
+---
+
+## v27 (1.10) — PUBLICADA: renombrar platos, la campana y los textos cortados
+
+Lo que se pegó al promocionar la v27 a producción el 2026-11-22. Queda aquí por tenerlo
+todo en el mismo sitio.
+
+⚠️ **La primera línea no es de la v27.** Renombrar un plato estaba hecho desde antes pero
+sin publicar, así que para producción es nuevo y es lo único de la lista que el usuario
+puede *usar*; lo demás son arreglos. Por eso va suelto arriba y el resto en viñetas.
+
+⚠️ **"disponible en dispositivos donde antes no aparecía"** es el `uses-feature`: Play
+deducía hardware obligatorio de los permisos y escondía la app. Quien lea eso no tiene por
+qué saber qué es un `uses-feature`, pero sí le dice por qué un amigo suyo no la encontraba.
+
+**Bloque entero, para pegar de una vez:**
+
+```
+<es-ES>
+Ya puedes cambiar el nombre de un plato que hayas publicado, desde tu perfil.
+
+Además:
+• La campana de avisos ya no se queda en blanco si falla la conexión al entrar.
+• Arreglados textos que se cortaban en pantallas estrechas y con la letra del sistema en grande.
+• La app vuelve a estar disponible en dispositivos donde antes no aparecía.
+</es-ES>
+<en-GB>
+You can now rename a dish you've posted, from your profile.
+
+Also:
+• The notifications bell no longer stays blank if the connection fails when you sign in.
+• Fixed text being cut off on narrow screens and at large system font sizes.
+• The app is now available on devices where it didn't show up before.
+</en-GB>
+<en-US>
+You can now rename a dish you've posted, from your profile.
+
+Also:
+• The notifications bell no longer stays blank if the connection fails when you sign in.
+• Fixed text being cut off on narrow screens and at large system font sizes.
+• The app is now available on devices where it didn't show up before.
+</en-US>
+```
 
 ---
 
@@ -548,10 +635,25 @@ Las anteriores estaban **obsoletas**, no solo en castellano: enseñaban "Top sem
 "Reset semanal del ranking", dos textos que se corrigieron por no ser verdad, y platos de
 prueba que ya no existen (`Bar Casa Benito`, Toledo). Se han sustituido.
 
-⚠️ **Sin anuncios.** La versión gratuita enseña un banner de AdMob, y en una captura de
-tienda sale la marca de un tercero. Para evitarlo se da Premium a la cuenta con
-`node scripts/manageUser.js grant-premium <uid>`, se hacen las capturas y se quita con
-`revoke-premium`.
+### ⚠️ Las tres de perfil hay que REHACERLAS para la v28
+
+Las capturas se hicieron dándole Premium a la cuenta
+(`node scripts/manageUser.js grant-premium <uid>`) para que no saliera el banner de AdMob,
+y quitándolo después. El efecto secundario es que **`03-profile.png`, en los dos idiomas,
+enseña la estrella dorada de Premium sobre la foto de perfil** — un distintivo que desde la
+v28 no existe. Una captura de tienda que promete algo que la app ya no tiene es
+exactamente lo que se está arreglando con esta versión.
+
+Rehacer esa captura con una cuenta normal, que desde la v28 **ya no hace falta el truco**:
+sin anuncios y sin Premium, cualquier cuenta sirve. Y al rehacerla, bajar un poco menos: la
+de ahora corta a media etiqueta ("Platos publicados" / "Likes dados") contra la barra de
+navegación.
+
+Las de ranking y ficha de plato **no llevan la estrella** — esa solo la pinta la cabecera
+del perfil, y ninguna de las dos enseña un avatar (comprobadas las de `es/`). Pueden
+quedarse. La de ranking sí lleva la tarjeta de misión diaria **en su tamaño viejo y con el
+texto viejo** ("Misión diaria: mueve el ranking · 0 de 3 votos hechos"); no es falso, pero
+si se va a rehacer la de perfil, rehacer las tres de una pasada sale casi gratis.
 
 ⚠️ **Esperar a que cargue.** La primera tanda cogió el esqueleto de carga de la ficha de
 plato (se nota en el peso: 85 KB contra 1,2 MB). Para esa pantalla hacen falta ~14 s.

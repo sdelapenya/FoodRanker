@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-22
+**Actualizado:** 2026-11-23
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -41,6 +41,69 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### 📄 LA V28 NO SOLO ERA CÓDIGO: TRES TEXTOS SEGUÍAN VENDIENDO ANUNCIOS Y PREMIUM (2026-11-23)
+
+Quitar AdMob y Premium del binario dejó la app diciendo una cosa y contando otra en **tres
+sitios distintos**, los tres con la misma frase: *"la versión gratuita muestra anuncios"* y
+*"la suscripción Premium elimina los anuncios"*.
+
+1. **La ficha de Play** (`docs/play-store-listing.md`): la descripción completa, en los dos
+   idiomas, tenía un apartado entero titulado "GRATIS, CON ANUNCIOS".
+2. **La política de privacidad y las condiciones DENTRO del APK**
+   (`res/values*/strings.xml`): AdMob y Google Play Facturación listados como terceros que
+   reciben datos, una sección 7 de privacidad describiendo los anuncios personalizados, la
+   base legal del RGPD citando *"la publicidad personalizada"* con un enlace a "Opciones de
+   privacidad de anuncios" —pantalla que se borró con `ConsentManager`—, y dos secciones de
+   las condiciones (8 y 9) dedicadas a la publicidad y a la suscripción.
+3. **Las páginas públicas de gh-pages** (`privacy.html`, `terms.html` y sus `-en`), que son
+   **las URL que Play tiene declaradas**. Se regeneran con
+   `python -I tools/legal/build_pages.py <destino>`, que las saca de `strings.xml`: una vez
+   arreglada la app, es un comando.
+
+⚠️ **Esto no podía esperar a "después de la v28".** Play compara la política declarada con
+lo que hace la app, y el siguiente paso del plan es justamente declarar *Contiene anuncios:
+No* y quitar el identificador de publicidad del formulario de Datos de seguridad. Subir la
+v28 con una política que dice que hay anuncios y declarar en la consola que no los hay es
+una contradicción puesta por escrito en los dos documentos que el revisor abre.
+
+**Qué se decidió en la redacción, y por qué:**
+
+- **Las secciones no se borran, se reescriben en negativo**: "7. Publicidad: no hay",
+  "8. Publicidad: no hay", "9. Pagos dentro de la app". Borrarlas obligaba a renumerar seis
+  secciones en dos idiomas y en cuatro HTML, y además un apartado que dice *"no hay
+  publicidad y la app ya no pide el identificador de publicidad"* vale más que su ausencia:
+  es lo que el usuario va a buscar y lo que el revisor quiere leer.
+- **Se nombra la versión**: "hasta la 1.10 enseñaba anuncios de AdMob, desde la 1.11 no".
+  Quien actualice desde producción venía de una app con anuncios; decir solo "no hay
+  anuncios" parecería que nunca los hubo.
+- **La suscripción retirada se trata con cuidado**: *"ya no se puede contratar"* y *"si
+  llegaste a tener una activa, puedes cancelarla desde Google Play"*. No se dice que no se
+  renueve, porque una suscripción activa **sí** se renovaría: estaba fuera de venta desde el
+  2 de noviembre, que no es lo mismo que cancelada.
+- **`pp_8_b` decía que el servidor protege "el estado Premium"**: ahora dice "nivel y
+  distintivos", que es lo que de verdad protege.
+
+**Y una captura de la ficha miente igual** (`docs/play-store-screenshots/*/03-profile.png`,
+en los dos idiomas): enseña la **estrella dorada de Premium** sobre la foto de perfil. Sale
+de que las capturas se hicieron dándole Premium a la cuenta para que no apareciese el banner
+de AdMob. Hay que rehacer esa captura; el detalle está en `docs/play-store-listing.md`, al
+final.
+
+**Lo que NO se tocó, a propósito:**
+
+- `hosting/public/app-ads.txt` sigue declarando al editor de AdMob. No es falso ni molesta a
+  nadie —solo sirve para que las redes publicitarias pujen, y ya no hay inventario—, pero
+  quitarlo es un `firebase deploy` del hosting, una acción hacia fuera que va cuando se
+  toque la consola, no ahora.
+- `pp_1_b` sigue describiendo el alta como si solo existiera la cuenta de Google ("tus datos
+  de la cuenta de Google al iniciar sesión"). Desde la v23 también se entra con correo y
+  contraseña. **Es una inexactitud anterior y ajena a esto**, así que no se ha metido en
+  este cambio; está pendiente de decidir.
+
+**Comprobado:** `tools/i18n/check_strings.py` (paridad de claves y marcadores),
+`check_args.py`, `tools/i18n/check_listing.py` (todo cabe; la v28 son 368 y 340 caracteres
+de los 500) y el diff de las cuatro páginas generadas.
 
 ### 🔎 LAS 3 RECOMENDACIONES DE PLAY SOBRE LA V27: INVESTIGADAS, NO SE TOCA NADA (2026-11-22)
 
