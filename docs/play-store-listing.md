@@ -635,25 +635,44 @@ Las anteriores estaban **obsoletas**, no solo en castellano: enseñaban "Top sem
 "Reset semanal del ranking", dos textos que se corrigieron por no ser verdad, y platos de
 prueba que ya no existen (`Bar Casa Benito`, Toledo). Se han sustituido.
 
-### ⚠️ Las tres de perfil hay que REHACERLAS para la v28
+### La estrella de Premium: quitada de `03-profile.png` (2026-11-23)
 
 Las capturas se hicieron dándole Premium a la cuenta
-(`node scripts/manageUser.js grant-premium <uid>`) para que no saliera el banner de AdMob,
-y quitándolo después. El efecto secundario es que **`03-profile.png`, en los dos idiomas,
-enseña la estrella dorada de Premium sobre la foto de perfil** — un distintivo que desde la
-v28 no existe. Una captura de tienda que promete algo que la app ya no tiene es
-exactamente lo que se está arreglando con esta versión.
+(`node scripts/manageUser.js grant-premium <uid>`) para que no saliera el banner de AdMob.
+El efecto secundario fue que **`03-profile.png`, en los dos idiomas, enseñaba la estrella
+dorada de Premium** sobre la foto de perfil: un distintivo que desde la v28 no existe.
 
-Rehacer esa captura con una cuenta normal, que desde la v28 **ya no hace falta el truco**:
-sin anuncios y sin Premium, cualquier cuenta sirve. Y al rehacerla, bajar un poco menos: la
-de ahora corta a media etiqueta ("Platos publicados" / "Likes dados") contra la barra de
-navegación.
+**Se quitó de la imagen en vez de rehacer la captura**, porque el resto de esa pantalla no
+ha cambiado en la v28 (la fila de Premium estaba más abajo, fuera del encuadre) y rehacerla
+exigía el Redmi con la cuenta real: la de revisión tiene 0 platos y 0 XP y habría salido un
+perfil vacío. La edición hace que la captura sea **más** fiel a la app, no menos.
 
-Las de ranking y ficha de plato **no llevan la estrella** — esa solo la pinta la cabecera
-del perfil, y ninguna de las dos enseña un avatar (comprobadas las de `es/`). Pueden
-quedarse. La de ranking sí lleva la tarjeta de misión diaria **en su tamaño viejo y con el
-texto viejo** ("Misión diaria: mueve el ranking · 0 de 3 votos hechos"); no es falso, pero
-si se va a rehacer la de perfil, rehacer las tres de una pasada sale casi gratis.
+**Cómo se hizo, por si hay que repetirlo.** El avatar está centrado en la imagen (centro
+x=540 de 1080), así que la zona simétrica del badge tiene el mismo anillo y el mismo fondo.
+Comprobado antes de tocar nada: los píxeles del fondo a un lado y a otro **coinciden
+exactamente**. Entonces:
+
+- **fondo naranja** (fuera del aro): espejo horizontal, que es reconstrucción exacta;
+- **aro exterior** (radio 149-166 desde el centro del avatar): el espejo NO vale, porque el
+  aro tiene un degradado circular y traía el tono del lado contrario — dejaba un escalón de
+  `(255,134,90)` a `(255,233,189)`. Se reconstruye **interpolando en ángulo** entre los dos
+  extremos sanos del arco;
+- **anillo blanco** (142-149): es blanco puro, no hizo falta nada.
+
+⚠️ **Dos trampas que costaron una pasada en falso:** el detector de "píxeles dorados" se
+tragó el antialias del texto *Sergio De La Peña* de debajo y dio un badge del doble de
+tamaño (radio 73 en vez de 38), así que el primer intento se comió medio nombre y lo dejó
+escrito del revés. El badge real es centro (661, 594) radio 38, y el texto empieza en
+y=677. Hay que **medir el badge excluyendo lo casi blanco** y poner un tope por abajo.
+
+Las de ranking y ficha de plato no llevan la estrella: esa solo la pinta la cabecera del
+perfil, y ninguna de las dos enseña un avatar. Pueden quedarse. La de ranking sí lleva la
+tarjeta de misión diaria **en su tamaño viejo y con el texto viejo** ("Misión diaria: mueve
+el ranking · 0 de 3 votos hechos"); no es falso, pero envejece.
+
+⚠️ Detalle menor que sigue ahí: `03-profile.png` corta a media etiqueta ("Platos
+publicados" / "Likes dados") contra la barra de navegación. No se arregla editando; si
+algún día se rehacen las tres, bajar un poco menos.
 
 ⚠️ **Esperar a que cargue.** La primera tanda cogió el esqueleto de carga de la ficha de
 plato (se nota en el peso: 85 KB contra 1,2 MB). Para esa pantalla hacen falta ~14 s.

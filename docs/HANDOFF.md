@@ -149,11 +149,13 @@ una contradicción puesta por escrito en los dos documentos que el revisor abre.
 - **`pp_8_b` decía que el servidor protege "el estado Premium"**: ahora dice "nivel y
   distintivos", que es lo que de verdad protege.
 
-**Y una captura de la ficha miente igual** (`docs/play-store-screenshots/*/03-profile.png`,
-en los dos idiomas): enseña la **estrella dorada de Premium** sobre la foto de perfil. Sale
-de que las capturas se hicieron dándole Premium a la cuenta para que no apareciese el banner
-de AdMob. Hay que rehacer esa captura; el detalle está en `docs/play-store-listing.md`, al
-final.
+**Y una captura de la ficha mentía igual** (`docs/play-store-screenshots/*/03-profile.png`,
+en los dos idiomas): enseñaba la **estrella dorada de Premium** sobre la foto de perfil,
+porque las capturas se hicieron dándole Premium a la cuenta para que no apareciese el banner
+de AdMob. **Resuelto el 2026-11-23 quitando el badge de la imagen**, no rehaciendo la
+captura: el resto de esa pantalla no cambió en la v28 y la cuenta de revisión no tiene datos
+que fotografiar. El cómo, y las dos trampas que costaron una pasada en falso, están en
+`docs/play-store-listing.md`.
 
 **Lo que NO se tocó, a propósito:**
 
