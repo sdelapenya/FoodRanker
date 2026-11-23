@@ -58,12 +58,24 @@ android {
             isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
 
-            // Los simbolos nativos que Play pide en cada version. La app no tiene codigo
-            // nativo propio, pero si .so de sus dependencias (Firebase, AdMob, soloader),
-            // y sin esto los fallos de esas librerias llegan a Crashlytics y a Play como
-            // direcciones de memoria en vez de nombres de funcion y numeros de linea.
-            // FULL no engorda lo que se instala: Play guarda los simbolos aparte y no los
-            // reparte a los moviles, solo crece el AAB que se sube.
+            // ⚠️ Esta linea HOY NO HACE NADA, y el aviso de Play sobre los simbolos de
+            // depuracion que sale en cada version NO se puede quitar. Comprobado en el AAB
+            // de la v28: 8 ficheros .so y cero entradas en
+            // BUNDLE-METADATA/com.android.tools.build.nativesymbols/.
+            //
+            // El motivo: `debugSymbolLevel` solo simboliza el codigo nativo que compila
+            // ESTE proyecto con externalNativeBuild (CMake/ndk-build), y no hay ninguno.
+            // Los .so que viajan en el bundle son de dependencias —hoy, libandroidx.
+            // graphics.path.so y libdatastore_shared_counter.so, los dos de AndroidX—, y
+            // llegan de Maven ya sin simbolos. AGP no puede inventarselos.
+            //
+            // (El comentario anterior decia que sin esto los fallos llegan como direcciones
+            // de memoria, dando a entender que CON esto llegan simbolizados. No es cierto:
+            // llegan igual. Tambien nombraba Firebase, AdMob y soloader, que no son los que
+            // aportan los .so.)
+            //
+            // Se deja puesta porque no estorba, no engorda lo que se instala y el dia que
+            // entre codigo nativo propio hara falta. No perder tiempo con el aviso.
             ndk {
                 debugSymbolLevel = "FULL"
             }
