@@ -42,6 +42,57 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ V28 VERIFICADA EN EL REDMI, Y LO QUE QUEDA DEL NARANJA (2026-11-23)
+
+Instalada **desde la prueba interna**, con la firma de Play, sobre la v27 que tenia el
+movil. Modo oscuro del sistema. Todo correcto:
+
+| | |
+|---|---|
+| Sesion mantenida al actualizar | ✅ |
+| Feed sin banner, mision diaria pequena | ✅ |
+| Perfil: "Invita amigos" legible, sin estrella, sin fila Premium | ✅ |
+| Detalle de plato: sin intersticial, "quien ha interactuado" visible sin pagar | ✅ |
+| Botones naranjas con letra oscura | ✅ |
+| Errores de FoodRanker en el log | ninguno |
+| Rastro de AdMob / Billing / UMP | ninguno |
+
+⚠️ Las 7 coincidencias de "anuncios" que salieron en el primer `grep` del log eran
+**falsas**: la palabra `ump` dentro de `dumpsys` y `DUMP_CACHED_LOG`. Filtrar por proceso
+antes de alarmarse.
+
+#### Lo que NO se ha podido verificar, y por que
+
+- **La tabla de la liga.** Hoy es lunes y la liga reinicia los lunes, asi que nadie tiene
+  XP esta semana: la pantalla dice "Nadie ha votado aun" y no llega a pintar filas. No hay
+  pestana global; es una sola vista. Para verla habria que votar un plato desde la cuenta
+  real, que altera la nota de un plato de produccion — **no se hizo a proposito**. El
+  cambio es `Color.White` → `FoodTheme.colors.surface`, el mismo par que la tarjeta "Nivel
+  y XP" del perfil, que si se ha visto legible. Queda **verificado por equivalencia**, no
+  en pantalla. Mirarlo cualquier dia que no sea lunes.
+- **El login con Google**: exigiria cerrar la sesion del movil personal.
+- **Los limites de 20 platos/dia y 1.600 m**: exigirian publicar platos reales.
+
+#### 🟡 PENDIENTE PARA LA V29 — el naranja, solo a medias
+
+El cambio de `onPrimary` arreglo **los botones**, pero en la app hay mas elementos con
+fondo naranja y texto blanco que no son botones y siguen en 2,84:
+
+- la pastilla de nota del detalle de plato (`★ 9,9 · 1 voto`) y la del feed (`★ 10,0`);
+- los chips de filtro seleccionados (`ExploreScreen`, `AddPlateScreen`);
+- el chip de categoria sobre la foto (`Pizza`), el banner de reto, el logo `F` de la
+  cabecera y el `+` de la barra inferior.
+
+**Se dejan a proposito, no por olvido.** Tres razones: no son una regresion —llevan asi
+desde siempre—, la v28 ya estaba subida cuando se vio, y **no todos deben cambiar**: WCAG
+exime los logotipos, y los iconos piden 3,0 y no 4,5. Lo que de verdad incumple es el
+**texto** de las pastillas y los chips.
+
+⚠️ Esto deja una incoherencia visible: en el detalle de plato conviven un boton con letra
+oscura y una pastilla con letra blanca, los dos naranjas. Es el precio de haber arreglado
+solo la mitad. **Decidir en la v29**: pasar a oscuro el texto de pastillas y chips (y dejar
+en blanco el logo y los iconos), o volver atras. Va junto a `keep.xml`.
+
 ### 🎨 TEXTO ILEGIBLE EN MODO OSCURO: UN SOLO PATRON, TRES SITIOS (2026-11-23)
 
 Revisando los contrastes aparecio el mismo fallo repetido: **una tarjeta con el fondo
