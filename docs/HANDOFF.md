@@ -42,6 +42,38 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 📋 LO QUE ENTRA EN LA V29 (lista cerrada, leer al abrirla)
+
+Tres cosas, por orden de lo que cuesta decidirlas. **Cada una en su commit**, no mezcladas.
+
+**1. El naranja, la mitad que falta.** `onPrimary` arregló los botones; siguen en 2,84 la
+pastilla de nota del detalle y del feed (`★ 9,9`, `★ 10,0`), los chips de filtro de
+`ExploreScreen` y `AddPlateScreen`, el chip de categoría sobre la foto, el banner de reto,
+el logo `F` de la cabecera y el `+` de la barra inferior.
+
+Hay que **decidir, no aplicar a ciegas**: WCAG exime los logotipos y pide 3,0 —no 4,5— a
+los iconos. Lo que de verdad incumple es el **texto**: pastillas y chips. La propuesta es
+pasar esos a `FoodTheme.colors.onOrange` y dejar en blanco el logo y los iconos. Mientras
+no se haga, queda la incoherencia de la v28: en el detalle de plato conviven un botón con
+letra oscura y una pastilla con letra blanca, los dos naranjas.
+
+Al terminar: `python -I tools/ui/check_contrast.py` y mirarlo en el móvil en los dos temas.
+
+**2. `res/raw/keep.xml` y volver a encender `isShrinkResources`.** Son 370 KB. Está
+apagado porque borraba cinco cadenas (`cd_like`, `cd_unlike`, `vm_saved`, `vm_unsaved`,
+`vm_save_fail`) y provocaba un `Resources.NotFoundException` **solo en release**. Las cinco
+se usan con referencias normales a `R`, así que fijarlas por nombre debería bastar. El
+detalle está más abajo, en la sección de las recomendaciones de Play. Verificar con
+`tools/i18n/check_apk.py`.
+
+**3. La tabla de la liga, pendiente de ver con datos.** El arreglo de contraste
+(`Color.White` → `surface`) no se pudo comprobar en pantalla porque la liga reinicia los
+lunes y se verificó un lunes. **Cualquier día que no sea lunes**, abrir la liga en el móvil
+en modo oscuro y confirmar que las filas se leen.
+
+También sigue abierto, sin fecha: los títulos de tarjeta de plato que truncan sin elipsis,
+Play Integrity antes de activar App Check, y AGP 9 (que desbloquearía Hilt y Places).
+
 ### ✅ V28 VERIFICADA EN EL REDMI, Y LO QUE QUEDA DEL NARANJA (2026-11-23)
 
 Instalada **desde la prueba interna**, con la firma de Play, sobre la v27 que tenia el
