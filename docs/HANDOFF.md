@@ -125,14 +125,20 @@ el **modelo del dispositivo**.
 
 Tres cosas, por orden de lo que cuesta decidirlas. **Cada una en su commit**, no mezcladas.
 
-**0. BLOQUEAR USUARIOS — va primero: tapa un incumplimiento ya declarado.**
+**0. BLOQUEAR ENTRE USUARIOS — mejora pendiente, NO un incumplimiento declarado.**
 
-El 2026-11-23, al rehacer el cuestionario de clasificación, se respondió **No** a *"¿La
-aplicación incluye la capacidad de bloquear usuarios o contenido generado por usuarios?"*.
-Es la verdad —comprobado en el modelo `User`, en las reglas, en las 17 funciones y en el
-cliente: no existe ni una cadena de texto— pero la **política de contenido generado por
-usuarios de Play pide tres cosas: denunciar, moderar y bloquear**, y solo hay las dos
-primeras. Queda por escrito ante Google que falta la tercera.
+⚠️ **Corrección del 2026-11-23, el mismo día.** Primero se escribió aquí que el cuestionario
+de clasificación dejaba por escrito un incumplimiento. **Era un error**: se mezcló el
+cuestionario IARC con la política de contenido generado por usuarios de Play, que son cosas
+distintas. La pregunta del cuestionario dice *"capacidad de bloquear usuarios **o**
+contenido generado por usuarios"*, y con ese "o" la app **sí** cumple: `moderatePlateImage`
+rechaza las fotos inapropiadas antes de publicarlas y el umbral de 3 denuncias oculta el
+contenido solo. La respuesta correcta ahí es **Sí**, y así se respondió.
+
+Lo que sigue faltando, y es otra cosa, es que **un usuario pueda bloquear a otro por su
+cuenta**: eso lo pide la política de UGC de Play, y hoy no existe —comprobado en el modelo
+`User`, en las reglas, en las 17 funciones y en el cliente, donde no hay ni una cadena de
+texto—. Es una mejora real, no una casilla que hayamos declarado en contra.
 
 ⚠️ **No confundirlo con lo que ya hay**, que son otras dos cosas:
 - *Denunciar*: a las 3 denuncias el contenido se oculta **para todos** (`UMBRAL_DENUNCIAS`,
@@ -156,9 +162,8 @@ tenerlo**, porque promete una protección que no da. Alcance mínimo:
    seguidores, liga y notificaciones. Olvidar una sola pantalla es el fallo clásico y es
    justo donde reaparece quien creías bloqueado. Es la parte que cuesta no olvidar.
 
-**Y al terminar, volver al cuestionario de clasificación** (Contenido de la aplicación →
-Clasificaciones del contenido → *Iniciar nuevo cuestionario*) y cambiar esa única respuesta
-a **Sí**. Rehacerlo es gratis y se puede repetir.
+**No hace falta volver al cuestionario al terminarlo**: esa respuesta ya es **Sí** por la
+moderación de contenido, y seguirá siéndolo.
 
 **1. El naranja, la mitad que falta.** `onPrimary` arregló los botones; siguen en 2,84 la
 pastilla de nota del detalle y del feed (`★ 9,9`, `★ 10,0`), los chips de filtro de
