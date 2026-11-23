@@ -42,6 +42,52 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔴 NADIE TIENE CACHÉ OFFLINE DE FIRESTORE, Y NO ES UNA CARRERA (2026-11-23)
+
+Crashlytics avisó de dos no críticos nuevos en la 1.11. El primero,
+`com.app.foodranker.di.FirebaseModule`, es el `Fallos.reportar` del `catch` de
+`provideFirestore`. **Reproducido en el Redmi**, en el primer arranque y a la primera:
+
+```
+W/FirebaseModule: Firestore settings skipped — already initialized (persistent cache inactive)
+```
+
+⚠️ **El comentario del código dice que es una carrera que "no falla siempre". Es falso, y
+conviene corregirlo:** en `FoodRankerApp.onCreate()`, dentro de
+`if (FirebaseAuth.getInstance().currentUser != null)`, se llama a
+`FoodRankerMessagingService.saveCurrentToken()`, que accede a Firestore por `getInstance()`.
+Eso **arranca Firestore** antes de que Hilt construya el singleton, así que cuando
+`provideFirestore` intenta aplicar `firestoreSettings` ya es tarde y salta
+`IllegalStateException`. No depende de ningún temporizador: **le pasa a todo el que tenga
+sesión iniciada, que son todos**. Resultado: la app funciona **sin caché persistente de
+Firestore**, es decir, sin offline, para el cien por cien de los usuarios.
+
+No lo introdujo la v28. Que Crashlytics lo marque como "nuevo error" solo significa que es
+la primera vez que se ve **en la 1.11**; el no crítico estaba desde que se puso el
+`Fallos.reportar`, y por eso se puso: para saber a cuánta gente le ocurría. La respuesta es
+"a todos".
+
+**El arreglo** es mover la configuración de Firestore al principio de `onCreate()`, antes
+de la línea que toca el token, y dejar en `provideFirestore` solo el `getInstance()` con su
+`try/catch` de red de seguridad. Hay que comprobarlo con el logcat: tras el arreglo, esa
+línea de `W/FirebaseModule` **no debe aparecer** al arrancar con sesión.
+
+#### El segundo, `io.grpc.Status.asException`: sin ubicar
+
+Es la excepción que lanza Firestore cuando una operación falla, y la reportan más de veinte
+sitios distintos con `Fallos.reportar`, así que sin la traza de Crashlytics no se puede
+saber cuál. Descartado que sea App Check: consultado por API, los tres servicios
+(`firestore`, `identitytoolkit`, `places`) están en **UNENFORCED**.
+
+⚠️ **Hipótesis por confirmar, no dato:** sin caché persistente, cualquier lectura que pille
+un hueco de red falla con `UNAVAILABLE` en vez de servirse de disco. Es decir, el primer
+fallo podría estar **causando** el segundo. Al arreglar la caché, mirar si este desaparece
+antes de buscarle una causa propia.
+
+Para ubicarlo hace falta abrir el error en Crashlytics y leer dos cosas: la **clave del
+log** (la cadena que se pasa a `Fallos.reportar`, del estilo "descubrir: cargar platos") y
+el **modelo del dispositivo**.
+
 ### 📋 LO QUE ENTRA EN LA V29 (lista cerrada, leer al abrirla)
 
 Tres cosas, por orden de lo que cuesta decidirlas. **Cada una en su commit**, no mezcladas.
@@ -58,6 +104,11 @@ no se haga, queda la incoherencia de la v28: en el detalle de plato conviven un 
 letra oscura y una pastilla con letra blanca, los dos naranjas.
 
 Al terminar: `python -I tools/ui/check_contrast.py` y mirarlo en el móvil en los dos temas.
+
+**1-bis. La caché de Firestore, que hoy no tiene nadie.** Ver la sección de arriba: un
+`getInstance()` en `onCreate` arranca Firestore antes de que Hilt aplique los ajustes, y la
+app se queda sin offline para todos. Es el arreglo de más impacto de los tres y el más
+pequeño.
 
 **2. `res/raw/keep.xml` y volver a encender `isShrinkResources`.** Son 370 KB. Está
 apagado porque borraba cinco cadenas (`cd_like`, `cd_unlike`, `vm_saved`, `vm_unsaved`,
