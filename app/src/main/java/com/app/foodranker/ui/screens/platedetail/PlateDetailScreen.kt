@@ -238,7 +238,7 @@ fun PlateDetailScreen(
                 FloatingActionButton(
                     onClick = { showRatingSheet = true },
                     containerColor = OrangePrimary,
-                    contentColor = Color.White,
+                    contentColor = FoodTheme.colors.onOrange,
                     elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
                     modifier = Modifier.size(56.dp)
                 ) {
@@ -1276,7 +1276,7 @@ fun RatingBottomSheet(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
                 ) {
-                    Text(stringResource(R.string.det_tasted_yes), fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.det_tasted_yes), fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange)
                 }
                 TextButton(
                     onClick = onDismiss,
@@ -1397,7 +1397,7 @@ fun RatingBottomSheet(
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = FoodTheme.colors.onOrange)
                 } else {
                     Text(
                         if (isEditMode) stringResource(R.string.det_update_rating) else stringResource(R.string.det_publish_rating),

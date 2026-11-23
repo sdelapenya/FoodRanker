@@ -361,7 +361,7 @@ private fun RankingTopBar(
                             modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp),
                             containerColor = OrangePrimary
                         ) {
-                            Text(unreadCount.coerceAtMost(99).toString(), fontSize = 9.sp, color = Color.White)
+                            Text(unreadCount.coerceAtMost(99).toString(), fontSize = 9.sp, color = FoodTheme.colors.onOrange)
                         }
                     }
                 }

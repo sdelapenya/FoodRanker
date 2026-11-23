@@ -224,7 +224,7 @@ fun LeagueScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text(stringResource(R.string.lg_retry), fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(stringResource(R.string.lg_retry), fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange)
                         }
                     }
                 }
@@ -252,7 +252,7 @@ fun LeagueScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text(stringResource(R.string.lg_go_profile), fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(stringResource(R.string.lg_go_profile), fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange)
                         }
                     }
                 }

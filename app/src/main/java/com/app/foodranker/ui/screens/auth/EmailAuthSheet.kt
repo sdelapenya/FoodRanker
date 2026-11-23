@@ -191,7 +191,7 @@ fun EmailAuthSheet(
                     shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = OrangePrimary,
-                        contentColor = androidx.compose.ui.graphics.Color.White
+                        contentColor = FoodTheme.colors.onOrange
                     )
                 ) {
                     if (cargando) {

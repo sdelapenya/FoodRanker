@@ -84,6 +84,29 @@ por calculo, no en pantalla** — mirarlo en el Redmi, que si tiene ciudad y lig
 
 Verificado en el emulador, release y en los dos temas: perfil e "Invita amigos".
 
+#### Y uno de fondo: el naranja de marca con texto blanco no llega a AA
+
+`#FF6B35` con blanco encima da **2,84**. El minimo es 4,5 para texto normal y 3,0 para
+texto grande: no llega a ninguno. Afecta a todos los botones primarios.
+
+⚠️ **El tema ya lo habia decidido y los botones se lo saltaban.** `DarkColorScheme` tenia
+`onPrimary = Color.Black` y `LightColorScheme` tenia blanco, asi que el mismo boton salia
+con letra oscura en oscuro y blanca en claro. No era un diseno deliberado: el esquema claro
+eligio mal. Se iguala al oscuro, y **el naranja no se toca** -- sigue igual en iconos,
+acentos, cabeceras y logo. Contraste 7,41.
+
+Se descarto oscurecer el boton a `#C2410C` (4,88): pasa el liston, pero mete un segundo
+naranja en la app y apaga el boton. No compensa cuando la otra salida conserva el color y
+da mejor contraste.
+
+Ademas de `onPrimary`, habia **12 sitios escribiendo `Color.White` a mano** dentro de un
+boton naranja, saltandose el token. Ahora usan `FoodTheme.colors.onOrange`. Entre ellos el
+FAB de valorar, el boton "Entrar" de la hoja de correo y el contador de avisos no leidos
+(9sp blanco sobre naranja, lo peor parado de la app).
+
+**Lo que sigue en blanco a proposito**: el texto sobre las *cabeceras* naranjas (perfil,
+login) y sobre las fotos. Ahi es texto grande sobre degradado y funciona.
+
 ### 📄 LA V28 NO SOLO ERA CÓDIGO: TRES TEXTOS SEGUÍAN VENDIENDO ANUNCIOS Y PREMIUM (2026-11-23)
 
 Quitar AdMob y Premium del binario dejó la app diciendo una cosa y contando otra en **tres

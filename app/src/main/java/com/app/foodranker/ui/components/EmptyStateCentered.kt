@@ -77,7 +77,7 @@ fun EmptyStateCentered(
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary),
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text(actionLabel, color = Color.White)
+                Text(actionLabel, color = FoodTheme.colors.onOrange)
             }
         }
     }

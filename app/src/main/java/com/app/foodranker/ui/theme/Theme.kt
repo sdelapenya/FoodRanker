@@ -26,6 +26,8 @@ data class FoodRankerColorTokens(
     val onSuccessSoft:      Color,
     val onSuccessSoftMuted: Color,
     val successStrong:      Color,
+    // Texto e iconos SOBRE el naranja de marca. Negro, no blanco: blanco da 2,84.
+    val onOrange:           Color,
     val isDark:     Boolean
 )
 
@@ -46,6 +48,7 @@ val LocalFoodColors = staticCompositionLocalOf {
         onSuccessSoft      = OnSuccessSoftLight,
         onSuccessSoftMuted = OnSuccessSoftMutedLight,
         successStrong      = SuccessStrongLight,
+        onOrange           = Color.Black,
         isDark       = false
     )
 }
@@ -59,7 +62,11 @@ object FoodTheme {
 // ── Esquemas Material3 ────────────────────────────────────────────────────
 private val LightColorScheme = lightColorScheme(
     primary          = OrangePrimary,
-    onPrimary        = SurfaceWhite,
+    // Blanco sobre el naranja de marca da 2,84 de contraste: no llega ni al 3,0 que se
+    // exige al texto grande. El esquema OSCURO ya usaba negro aqui, asi que los botones
+    // primarios salian con letra oscura en oscuro y blanca en claro -- y la mala era la
+    // clara. Se iguala. El naranja no se toca: es la marca. Contraste 7,41.
+    onPrimary        = Color.Black,
     primaryContainer = OrangeLight,
     secondary        = OrangeDark,
     background       = BackgroundLight,
@@ -107,6 +114,7 @@ fun FoodRankerTheme(
         onSuccessSoft      = OnSuccessSoftDark,
         onSuccessSoftMuted = OnSuccessSoftMutedDark,
         successStrong      = SuccessStrongDark,
+        onOrange           = Color.Black,
         isDark        = true
     ) else FoodRankerColorTokens(
         background    = BackgroundLight,
@@ -124,6 +132,7 @@ fun FoodRankerTheme(
         onSuccessSoft      = OnSuccessSoftLight,
         onSuccessSoftMuted = OnSuccessSoftMutedLight,
         successStrong      = SuccessStrongLight,
+        onOrange           = Color.Black,
         isDark        = false
     )
 

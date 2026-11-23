@@ -1185,7 +1185,7 @@ private fun EditProfileSheet(
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
             ) {
                 if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White)
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = FoodTheme.colors.onOrange)
                 } else {
                     Text(stringResource(R.string.prof_save_changes), fontWeight = FontWeight.Bold, color = Color.White)
                 }
@@ -1515,7 +1515,7 @@ private fun CollectionsSection(
                     enabled = newName.isNotBlank(), modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = MaterialTheme.shapes.small,
                     colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)) {
-                    Text(stringResource(R.string.prof_create_list), fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.prof_create_list), fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange)
                 }
             }
         }
@@ -1645,7 +1645,7 @@ private fun EditPlateSheet(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-            ) { Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold, color = Color.White) }
+            ) { Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange) }
 
             OutlinedButton(
                 onClick = { confirmDelete = true },

@@ -274,7 +274,7 @@ fun AddPlateScreen(
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
                     ) {
-                        Text(stringResource(R.string.add_next), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(stringResource(R.string.add_next), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange)
                     }
                     if (!step1Valid && imageUri == null && imageValidationError == null) {
                         Spacer(Modifier.height(4.dp))

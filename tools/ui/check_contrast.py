@@ -56,6 +56,10 @@ TOKENS = {
     "onSuccessSoft":      ("FF153B2A", "FFD5EEE0"),
     "onSuccessSoftMuted": ("FF516D5E", "FF9EC6B0"),
     "successStrong":      ("FF117A56", "FF3FD69B"),
+    # Texto e iconos sobre el naranja de marca. Negro en los dos modos: el blanco que
+    # usaba el esquema claro daba 2,84, por debajo incluso del 3,0 del texto grande.
+    "onOrange":           ("FF000000", "FF000000"),
+    "orange":             ("FFFF6B35", "FFFF6B35"),
 }
 FIJOS_TEMA = {
     "OrangePrimary": "FFFF6B35", "OrangeLight": "FFFF8E53", "OrangeDark": "FFE85520",
@@ -71,6 +75,7 @@ PARES_ACENTO = [
     ("onSuccessSoft", "successSoft"), ("onSuccessSoftMuted", "successSoft"),
     ("successStrong", "successSoft"), ("successStrong", "surface"),
     ("textPrimary", "surface"), ("textSecondary", "surface"),
+    ("onOrange", "orange"),
 ]
 
 AA_NORMAL, AA_GRANDE = 4.5, 3.0
@@ -131,12 +136,21 @@ def analiza(ruta, modo):
     lineas = io.open(ruta, encoding="utf-8", errors="replace").read().split("\n")
     fondo = None   # (hex, linea, etiqueta, es_token)
     salida = []
+    nivel = 0
     for n, linea in enumerate(lineas, 1):
         if NUEVO_BLOQUE.match(linea):
             fondo = None
         if linea.strip().startswith("//"):
             continue
-        if fondo and n - fondo[1] > VENTANA:
+        # Profundidad de llaves al EMPEZAR la linea. Un fondo declarado en
+        # `Button(colors = ...)` solo vale dentro del bloque que viene detras: cuando
+        # las llaves vuelven a su nivel, el `Text` siguiente ya esta sobre el fondo de
+        # la pantalla, no sobre el boton. Sin esto salian once falsos positivos y una
+        # herramienta que siempre miente no la ejecuta nadie.
+        nivel_al_entrar = nivel
+        sin_texto = re.sub(r'"(\\.|[^"\\])*"', '""', linea)
+        nivel += sin_texto.count("{") - sin_texto.count("}")
+        if fondo and (nivel_al_entrar <= fondo[4] or n - fondo[1] > VENTANA):
             fondo = None
         if FONDO.search(linea):
             r = resuelve(linea, modo)
@@ -146,7 +160,7 @@ def analiza(ruta, modo):
                 if a:
                     hexa = mezcla(hexa, TOKENS["background"][modo].upper(), float(a.group(1)))
                     etq += " @%s" % a.group(1)
-                fondo = (hexa, n, etq, es_tok)
+                fondo = (hexa, n, etq, es_tok, nivel_al_entrar)
             continue
         if not fondo or not PINTA_TEXTO.search(linea):
             continue
