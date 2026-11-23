@@ -125,6 +125,41 @@ el **modelo del dispositivo**.
 
 Tres cosas, por orden de lo que cuesta decidirlas. **Cada una en su commit**, no mezcladas.
 
+**0. BLOQUEAR USUARIOS — va primero: tapa un incumplimiento ya declarado.**
+
+El 2026-11-23, al rehacer el cuestionario de clasificación, se respondió **No** a *"¿La
+aplicación incluye la capacidad de bloquear usuarios o contenido generado por usuarios?"*.
+Es la verdad —comprobado en el modelo `User`, en las reglas, en las 17 funciones y en el
+cliente: no existe ni una cadena de texto— pero la **política de contenido generado por
+usuarios de Play pide tres cosas: denunciar, moderar y bloquear**, y solo hay las dos
+primeras. Queda por escrito ante Google que falta la tercera.
+
+⚠️ **No confundirlo con lo que ya hay**, que son otras dos cosas:
+- *Denunciar*: a las 3 denuncias el contenido se oculta **para todos** (`UMBRAL_DENUNCIAS`,
+  y `filter { it.reportCount < 3 }` en comentarios y valoraciones).
+- *`banned`*: desactiva la cuenta entera, lo ejecuta el admin con `manageUser.js ban`.
+
+Bloquear es **individual e inmediato**: "yo no quiero volver a ver a esta persona", sin
+depender de que otros tres opinen igual ni de que intervenga nadie.
+
+⚠️ **Hacerlo de verdad o no hacerlo.** La vía barata —filtrar en el cliente y ya— no es
+bloquear, es ocultar: el otro sigue viendo tu perfil, comentando tus platos y siguiéndote,
+y tú solo dejas de enterarte. Un botón que dice "Bloquear" y hace eso **es peor que no
+tenerlo**, porque promete una protección que no da. Alcance mínimo:
+
+1. Subcolección `users/{uid}/bloqueados/{otroUid}`, con regla de que solo el dueño la lee y
+   la escribe.
+2. **Reglas de servidor** que impidan al bloqueado seguirte y comentar tus platos, con
+   `exists()` sobre esa subcolección. Esto es lo que lo hace real, y es la parte que cuesta
+   pensar.
+3. Filtrado en el cliente en **todas** las listas: feed, comentarios, valoraciones,
+   seguidores, liga y notificaciones. Olvidar una sola pantalla es el fallo clásico y es
+   justo donde reaparece quien creías bloqueado. Es la parte que cuesta no olvidar.
+
+**Y al terminar, volver al cuestionario de clasificación** (Contenido de la aplicación →
+Clasificaciones del contenido → *Iniciar nuevo cuestionario*) y cambiar esa única respuesta
+a **Sí**. Rehacerlo es gratis y se puede repetir.
+
 **1. El naranja, la mitad que falta.** `onPrimary` arregló los botones; siguen en 2,84 la
 pastilla de nota del detalle y del feed (`★ 9,9`, `★ 10,0`), los chips de filtro de
 `ExploreScreen` y `AddPlateScreen`, el chip de categoría sobre la foto, el banner de reto,
