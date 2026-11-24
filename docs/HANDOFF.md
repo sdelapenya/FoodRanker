@@ -42,6 +42,95 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🧾 LAS DECLARACIONES DE PLAY, PUESTAS AL DÍA (2026-11-24)
+
+Con la v28 ya en producción, se corrigieron las declaraciones que seguían describiendo la
+app con anuncios. Cuatro quedaron **listas para enviar a revisión**: Anuncios, ID de
+publicidad, Seguridad de los datos y Clasificaciones del contenido.
+
+#### ⚠️⚠️ HAY DOS APPS EN LA CONSOLA Y SE TRABAJÓ UN RATO EN LA EQUIVOCADA
+
+La cuenta `sdelapenya1991@` tiene **FoodRanker y Eligr**. Las pantallas de *Contenido de la
+aplicación* son idénticas y no se ve el nombre sin mirar la cabecera. Se rehízo entero el
+cuestionario de clasificación y se cambió el ID de publicidad **en Eligr** antes de darse
+cuenta.
+
+**Cómo se detectó, que es lo que hay que recordar:** las fechas de la lista de
+declaraciones no cuadraban entre una visita y otra. En una, *Datos de inicio de sesión*
+ponía 1 sept; en la otra, 20 nov — y nosotros sabíamos que esa se tocó **el 20 de
+noviembre**. Un apartado no se actualiza solo: si las fechas retroceden o avanzan sin que
+hayas hecho nada, estás mirando otra app.
+
+⚠️ **Pendiente en Eligr**: descartar esos cambios desde su *Resumen de publicación*
+mientras sigan sin enviar. Su clasificación quedó descrita con las respuestas de
+FoodRanker (platos, comentarios, fotos de comida) y con el correo `foodranker.app@`.
+
+#### 🔴 El hallazgo: el AD_ID seguía declarado como compartido para publicidad
+
+El formulario de Seguridad de los datos era del 2 de noviembre, de cuando AdMob seguía
+sirviendo. Exportándolo a CSV (botón *Exportar a CSV*, mucho más fiable que ir pantalla por
+pantalla) apareció esto:
+
+```
+PSL_DEVICE_ID : PSL_DATA_USAGE_ONLY_SHARED               → true
+PSL_DEVICE_ID : DATA_USAGE_SHARING_PURPOSE : PSL_ADVERTISING → true
+```
+
+Es decir: **la ficha declaraba que se comparte el identificador de dispositivo con terceros
+con fines publicitarios**, justo al lado del "No contiene anuncios" recién guardado. Era el
+residuo de AdMob, y la contradicción más seria de las que había. Quitado: ahora la ficha
+dice *"No se comparten datos con terceros"*.
+
+Otros tres arreglos del mismo formulario:
+- **Historial de búsquedas**: estaba marcado y **no corresponde**. Comprobado en el código:
+  no hay historial, no se persiste nada y Analytics no registra ni un término (los eventos
+  son `plate_published`, `plate_liked`, `plate_rated`… ninguno de búsqueda).
+- Faltaban **"Otra información"** (bio, ciudad y web del perfil) y **"Otros mensajes en la
+  aplicación"** (los comentarios).
+- *Interacciones con la aplicación* estaba como opcional; no lo es, Analytics no tiene
+  interruptor.
+
+⚠️ **La ubicación no sale en la vista previa y es correcto**: al declararla **efímera** —no
+se almacena, solo se usa en el momento de la búsqueda— Play la recoge en el formulario pero
+no la enseña en la ficha.
+
+#### La clasificación sube de 3+ a 12+, y está bien
+
+PEGI pasa a *Control parental*, USK a 12 e IARC a 12+, con los descriptores "Supervisión
+parental recomendada" e "Interacción de usuarios". Lo empuja la combinación de **contenido
+generado por usuarios como origen principal + interacción + contenido en línea**.
+
+⚠️ **La de septiembre estaba mal.** Una app donde la gente sube fotos y se comenta entre sí
+no es apta para 3 años; si salió 3+ fue porque alguna respuesta no reflejaba la app —muy
+probablemente la de *contenido en línea*, que es **Sí**: el APK no trae ni un plato, todo
+llega del servidor—. Esto no es una pérdida, es una corrección.
+
+Dos respuestas que costaron discusión y conviene no volver a equivocar:
+- *"¿Capacidad de bloquear usuarios **o** contenido?"* → **Sí**. Con ese "o" basta la
+  moderación de contenido, que sí existe (`moderatePlateImage` + umbral de 3 denuncias).
+  **No es la misma pregunta que la política de UGC**, que pide bloqueo entre usuarios.
+- *"¿Capacidad de informar?"* → **Sí**, evidentemente: hay denuncia de platos, comentarios
+  y valoraciones.
+
+#### Lo que NO había que tocar
+
+*Contenido y audiencia objetivo* ya estaba en **18 y más** — lo correcto: marcar 13-17
+mete la app en los requisitos de apps dirigidas a menores, y por debajo de 13 en la
+política de familias. *Política de Privacidad* apunta a la URL buena; lo que cambió hoy es
+el contenido de la página, no la URL. Salud, financieras y gubernamentales siguen sin
+aplicar.
+
+#### Lo que queda, por orden
+
+1. Enviar los cuatro cambios a revisión.
+2. **Quitar la app de AdMob** (`apps.admob.com`). Mientras el inventario siga de alta,
+   Google sigue viendo un editor con monetización activa.
+3. **Borrar `awardAdXp`** de `functions` — pero **no antes de que quede poca gente en v26**:
+   esos clientes conservan el botón de anuncio recompensado y llaman a esa función.
+4. **Declarar no operador**. Plazo: 1 de febrero de 2027.
+5. Archivar el producto de suscripción (ya no afecta a la ficha: Play quitó solo "Compras
+   en la aplicación" al ver que el binario no lleva la librería de facturación).
+
 ### 🔴 NADIE TIENE CACHÉ OFFLINE DE FIRESTORE, Y NO ES UNA CARRERA (2026-11-23)
 
 Crashlytics avisó de dos no críticos nuevos en la 1.11. El primero,
