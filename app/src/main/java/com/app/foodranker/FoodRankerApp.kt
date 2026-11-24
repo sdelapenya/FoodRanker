@@ -4,6 +4,7 @@ import android.app.Application
 import com.app.foodranker.utils.AnalyticsManager
 import com.app.foodranker.utils.CloudinaryManager
 import com.app.foodranker.utils.ErrorMapper
+import com.app.foodranker.utils.FirestoreCache
 import com.app.foodranker.utils.FoodRankerMessagingService
 import com.app.foodranker.utils.NotificationHelper
 import com.app.foodranker.utils.RemoteConfigManager
@@ -17,6 +18,11 @@ class FoodRankerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // LO PRIMERO, y el orden importa: los ajustes de Firestore solo se pueden aplicar
+        // antes de la primera operación contra Firestore, y más abajo en este mismo método
+        // `saveCurrentToken()` escribe el token del dispositivo. Si esto se mueve detrás,
+        // la app se queda sin caché offline para todo el que tenga sesión. Ver FirestoreCache.
+        FirestoreCache.aplicar()
         // Antes que cualquier otro uso de Firebase: las llamadas que salgan antes de
         // instalar el proveedor viajan sin token de App Check.
         AppCheckInstaller.install()

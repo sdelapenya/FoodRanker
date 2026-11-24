@@ -42,6 +42,40 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ LA CACHÉ OFFLINE DE FIRESTORE, ARREGLADA Y PROBADA SIN RED (2026-11-24)
+
+Arreglado el fallo que dejaba al **100% de los usuarios con sesión sin modo offline**.
+
+**El arreglo**: nuevo `utils/FirestoreCache.kt` con un `aplicar()` idempotente, llamado como
+**primera sentencia** de `FoodRankerApp.onCreate()`, antes de `AppCheckInstaller.install()`
+y mucho antes de `saveCurrentToken()`, que era quien arrancaba Firestore por delante.
+`FirebaseModule.provideFirestore` se queda en un `getInstance()` a secas.
+
+⚠️ **La regla que hay que respetar**: cualquier cosa que se añada a `onCreate()` y toque
+Firestore tiene que ir **después** de `FirestoreCache.aplicar()`. Está escrito en los dos
+sitios, en el `onCreate` y en el KDoc de la clase. Se deja el `try/catch` reportando a
+Crashlytics para que, si alguien vuelve a colar un acceso por delante, no se pierda en
+silencio como ocurrió durante meses.
+
+#### La prueba, que esta vez no es un logcat limpio
+
+Medido **antes y después en el mismo emulador**, con la misma sesión:
+
+| | avisos `Firestore settings skipped` |
+|---|---|
+| v28 de Play (sin el arreglo), en el Redmi | **1** |
+| v28 en el emulador, sin el arreglo | **1** |
+| con el arreglo | **0** |
+
+Y la prueba de verdad, que es la que cuenta: **cortar la red** (`svc wifi disable`,
+`svc data disable`), matar la app y volver a abrirla. Con el cartel **"Sin conexión"** en
+rojo, el feed aparece **entero**: platos, notas, locales y el contador de la liga. Eso solo
+puede salir de la caché en disco. Antes del arreglo Firestore trabajaba con caché **en
+memoria**, que muere con el proceso: al reiniciar sin red no habría habido nada que mostrar.
+
+El `try/catch` **no saltó** (0 líneas de `FirestoreCache` en el log), así que los ajustes se
+aplicaron de verdad; no es que se haya silenciado el aviso.
+
 ### ✅ TODO PUBLICADO Y VERIFICADO DESDE FUERA (2026-11-24)
 
 Los 7 cambios enviados a revisión ya están publicados. Comprobado **contra la ficha pública
@@ -419,7 +453,10 @@ letra oscura y una pastilla con letra blanca, los dos naranjas.
 
 Al terminar: `python -I tools/ui/check_contrast.py` y mirarlo en el móvil en los dos temas.
 
-**1-bis. La caché de Firestore, que hoy no tiene nadie.** Ver la sección de arriba: un
+**1-bis. ~~La caché de Firestore~~ — HECHO el 2026-11-24, ver arriba.** (queda aquí
+tachado y no borrado: era el punto de más impacto de la lista.)
+
+**1-bis-original.** Ver la sección de arriba: un
 `getInstance()` en `onCreate` arranca Firestore antes de que Hilt aplique los ajustes, y la
 app se queda sin offline para todos. Es el arreglo de más impacto de los tres y el más
 pequeño.
