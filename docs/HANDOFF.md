@@ -42,6 +42,56 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ TODO PUBLICADO Y VERIFICADO DESDE FUERA (2026-11-24)
+
+Los 7 cambios enviados a revisión ya están publicados. Comprobado **contra la ficha pública
+y los servicios reales**, no contra la consola:
+
+| Qué | Resultado |
+|---|---|
+| "Contiene anuncios" en es-ES / en-GB / en-US | **fuera de los tres** |
+| "Compras en la aplicación" | fuera |
+| Precio "2,99 €" y el párrafo de Premium | **cero menciones** |
+| Descripción nueva en los tres idiomas | sí, con `favourite`/`favorite` y `catalogue`/`catalog` bien |
+| "o con tu correo y una contraseña" | sí (el alta por correo ya no se oculta) |
+| Clasificación | 12+ |
+| `privacy/terms` y sus `-en` en gh-pages | 200, cero frases viejas |
+| `app-ads.txt` | cero menciones al ID de editor |
+| Regla de `referrals` desplegada | sí |
+| Errores en las funciones (últimas 24 h) | ninguno |
+| Funciones desplegadas | 18 |
+
+⚠️ **Un falso positivo que puede despistar al repetir la comprobación**: buscar "Premium
+subscription" en `terms-en.html` da 1 resultado, pero es la frase **nueva** ("The Premium
+subscription existed up to version 1.10 and has been withdrawn"). Las frases viejas de
+verdad —"offers an optional subscription that removes ads", "The free version of FoodRanker
+shows ads"— están a cero.
+
+#### ⏳ Lo que NO se puede cerrar hoy, y de qué depende cada cosa
+
+**1. Borrar `awardAdXp`** (sigue desplegada, confirmado en `functions:list`). Depende de que
+las **solicitudes de anuncios en AdMob lleguen a cero**; iban por 76 semanales. Mientras
+haya peticiones, hay clientes en v22/v26/v27 con el botón de anuncio recompensado. Mirar el
+número dentro de una semana.
+
+**2. Probar la app en dispositivo.** Hoy no se pudo: el Redmi no estaba conectado. Queda
+pendiente, en concreto, **ver la tabla de la liga con datos** —el arreglo de contraste
+(`Color.White` → `surface`) está verificado por cálculo pero no en pantalla— y **cualquier
+día que no sea lunes**, porque la liga reinicia los lunes y esa pantalla no llega a pintar
+filas.
+
+**3. Descartar los cambios que quedaron en Eligr.** Su cuestionario de clasificación se
+rehízo con las respuestas de FoodRanker y el correo `foodranker.app@`. Mientras sigan sin
+enviar, se descartan desde el *Resumen de publicación* de Eligr.
+
+**4. Archivar el producto de suscripción** (Monetización → Productos → Suscripciones). Ya no
+afecta a la ficha —Play quitó "Compras en la aplicación" solo, al ver que el binario no
+lleva la librería de facturación—, así que es limpieza, no urgencia.
+
+**5. Verificar que el perfil público muestra el estado de no operador.** La sección "Acerca
+del proveedor" solo se muestra a usuarios del EEE y Reino Unido, y no sale en el HTML que
+devuelve una petición sin navegador. Comprobarlo desde el móvil, en la ficha de Play.
+
 ### ✅ ADMOB CERRADO Y DECLARADO NO OPERADOR (2026-11-24)
 
 Cerrado el asunto que venía desde el 22 de noviembre. La cadena completa: sin SDK en el
