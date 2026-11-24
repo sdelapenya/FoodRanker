@@ -42,6 +42,80 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ ADMOB CERRADO Y DECLARADO NO OPERADOR (2026-11-24)
+
+Cerrado el asunto que venía desde el 22 de noviembre. La cadena completa: sin SDK en el
+binario (v28) → sin bloques en AdMob → sin `app-ads.txt` → declaración de **no operador**.
+
+#### AdMob: la app NO se puede borrar, y "Ocultar" no sirve de nada
+
+⚠️ **Dato verificado en la documentación de Google, no supuesto.** La primera idea fue
+eliminar la app de AdMob, y la consola solo ofrece **Ocultar**. Buscando antes de pulsar:
+
+- **Ocultar no afecta al servicio de anuncios**, ni a los ingresos, ni a los informes. Las
+  apps ocultas **pueden seguir generando ingresos**. Solo ordena la lista.
+- **Una app de AdMob, una vez configurada, no se puede eliminar.** No existe la opción.
+- Lo que la propia ayuda recomienda para dejar de monetizar es **quitar los bloques de
+  anuncios**, y eso **es irreversible**.
+
+Hecho: los **3 bloques eliminados**. Sin bloques no hay nada que servir, que es lo único
+que de verdad apaga la publicidad.
+
+Ver: https://support.google.com/admob/answer/6061403 (ocultar) y
+https://support.google.com/admob/answer/3125713 (quitar bloques).
+
+**De paso se entendió por qué los ingresos eran 0,11 €/mes**: la app estaba en *"Serv.
+anuncios limitado"* y *"Debe revisarse"*, con el nombre de paquete vacío y sin vincular a
+Play. Llevaba meses con publicidad a medio gas: el coste de imagen completo y el ingreso
+casi nulo.
+
+⚠️ La entrada de **"Aplicaciones por confirmar"** se deja **sin tocar**: "Finalizar
+configuración" la daría de alta y "No es mi aplicación" sería falso. Desaparecerá sola.
+
+#### `app-ads.txt`: borrado y desplegado
+
+Era el único rastro **público**: declaraba `pub-6291919286572988` autorizado a vender
+inventario. Borrado de `hosting/public/` y desplegado (`firebase deploy --only
+hosting:links`).
+
+⚠️ **La URL sigue devolviendo HTTP 200 y es correcto**: el hosting tiene un `rewrite` con
+`source: "**"` hacia `/open.html`, así que cualquier ruta inexistente responde la página de
+apertura. Lo que importa es que devuelve **`text/html`** y **cero** menciones al ID de
+editor; el estándar exige `text/plain`, así que los rastreadores lo tratan como ausente.
+
+Antes de desplegar se comprobó que `index.html` y `open.html` locales eran **idénticos** a
+los servidos, para no pisar nada, y después que los tres deep links (`/plate/`, `/user/`,
+`/invite/`) siguen respondiendo.
+
+#### No operador, declarado
+
+*Cuenta de desarrollador → Información de la cuenta → Declarar estado* → **No comerciante**.
+
+⚠️ **La declaración es de la CUENTA, no de la app.** En esta hay dos, FoodRanker y Eligr;
+se confirmó que Eligr también es gratuita y sin anuncios antes de declarar.
+
+**Qué se publica a partir de ahora** (en "Asistencia de la aplicación", en todo el mundo):
+el **nombre legal completo** —el del perfil de pagos, con los dos apellidos, no el nombre
+de desarrollador—, el correo y el país. En "Acerca del proveedor", solo en EEE y Reino
+Unido, la frase de que el proveedor no se ha identificado como operador.
+
+**Lo que NO se publica: ni la dirección postal ni el teléfono.** Que era justo el motivo de
+todo esto.
+
+⚠️ **Si algún día se vuelve a monetizar, hay que volver y cambiar la declaración.** No es un
+trámite que se firma y se olvida: describe lo que haces en cada momento.
+
+**El plazo del 1 de febrero de 2027 queda cerrado**, y sin cuota de autónomo, sin cita con
+la gestoría y sin publicar datos de contacto físicos.
+
+#### Lo único que queda de AdMob
+
+1. **Vigilar las solicitudes de anuncios** en AdMob: estaban en **76 semanales**. Cuando
+   lleguen a cero, ya no queda nadie con versiones viejas pidiendo publicidad y **entonces
+   se puede borrar `awardAdXp`** de `functions`.
+2. `ADMOB_TEST_DEVICE_IDS` sigue en `build.gradle.kts` como `buildConfigField` y en
+   `local.properties`. Código muerto desde que se borró `AdManager`. Quitarlo en la v29.
+
 ### 🪤 "DECLARACIÓN DE ID DE PUBLICIDAD INCOMPLETA": ERA UN CANAL DE PRUEBA OLVIDADO (2026-11-24)
 
 Tras poner el ID de publicidad en **No**, Play bloqueó el envío a revisión con *"Declaración
