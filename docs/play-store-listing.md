@@ -9,6 +9,15 @@ de Play Store → selector de idioma arriba → **Añadir traducciones** → `en
 castellano (`es-ES`) es el idioma por defecto de la ficha y ya está puesto; compara antes
 de sobrescribirlo, que lo de abajo es una reescritura, no una copia de lo que hay.
 
+⚠️ **Hay TRES descripciones configuradas**, no dos: es-ES, en-GB y en-US.
+
+⚠️ **Hasta el 2026-11-24 este fichero NO reflejaba lo publicado.** Lo que había aquí
+era una reescritura que nunca llegó a pegarse, y mientras tanto la ficha real anunciaba
+una "versión Premium (2,99 €/mes)" que este documento ni siquiera mencionaba — o sea
+que no servía ni para saber qué decía la tienda. Los textos de abajo son los que
+**están publicados** desde esa fecha. Si se vuelve a tocar la ficha, actualizar esto el
+mismo día.
+
 Límites de Play: nombre 30 caracteres, descripción breve 80, descripción completa 4000.
 Las cuentas están comprobadas (`tools/i18n/check_listing.py`).
 
@@ -31,43 +40,27 @@ Descubre, puntúa y comparte los mejores platos del mundo, plato a plato.
 ### Descripción completa
 
 ```
-En FoodRanker no se puntúan restaurantes: se puntúan platos.
-
-Porque en un sitio de cinco estrellas te puede llegar una pasta mediocre, y en el bar de
-abajo hacer la mejor tortilla de la ciudad. Lo que quieres saber no es si el local está
-bien, es qué pedir cuando te sientes.
+¿Cuántas veces has entrado a un restaurante con buenas reseñas... y has pedido justo el plato que no merecía la pena? FoodRanker no puntúa locales, puntúa platos concretos: cada plato de cada restaurante o bar tiene su propia ficha, con su propia valoración.
 
 QUÉ PUEDES HACER
 
-• Publicar un plato con su foto, el local donde lo comiste y lo que te pareció.
-• Puntuarlo por sabor, presentación y disfrute, y apuntar lo que pagaste.
-• Ver el ranking de los mejores platos del mundo, de tu ciudad o de la gente a la que
-  sigues.
-• Entrar en un sitio y mirar "Qué pido aquí": los platos que otros ya han valorado ahí.
-• Guardar los que te apetezcan para cuando toque, y ordenarlos en listas.
-• Seguir a quien come como tú, comentar y descubrir por dónde anda.
+- Descubre los platos mejor valorados cerca de ti o en tu ciudad, ordenados por puntuación real de otros usuarios.
+- Valora un plato que hayas probado y ayuda a que el ranking sea de fiar.
+- Publica un plato nuevo con una foto: cada plato queda ligado a su local exacto, así que si otro usuario ya lo subió, se suma tu valoración en vez de crear un duplicado.
+- Guarda tus platos favoritos para volver a ellos cuando quieras.
+- Comenta y lee lo que opinan otros sobre un plato antes de pedirlo.
+- Sigue tu progreso: gana experiencia, sube de nivel y consigue insignias a medida que participas.
+- Compite en la liga semanal de tu ciudad.
 
-LAS NOTAS SON DE QUIEN SE LO HA COMIDO
+CALIDAD Y CONFIANZA
 
-Para puntuar un plato hay que confirmar que lo has probado. No hay notas de oídas ni de
-haber pasado por delante. Y cada foto se revisa automáticamente antes de publicarse: si
-no es comida, no entra.
-
-CUANTO MÁS APORTES, MÁS LEJOS LLEGAS
-
-Ganas XP por publicar, puntuar y comentar, y subes por seis niveles, de Novato Foodie a
-Leyenda Foodie. Hay seis logros que desbloquear, un reto cada semana y una liga semanal:
-global y de tu ciudad. El podio se lleva XP y quien gana se lleva el distintivo.
+Toda foto que se publica pasa por una revisión automática que rechaza lo que no sea comida, así que el catálogo se mantiene limpio. Los puntos de experiencia y los niveles se calculan siempre en el servidor: nadie puede inflarlos manipulando la app.
 
 GRATIS Y SIN ANUNCIOS
 
-FoodRanker es gratis, no enseña anuncios y no hay nada que comprar dentro: ni suscripción,
-ni funciones de pago, ni límites que se quiten pagando. Todo lo que hace la app lo hace
-igual para todo el mundo.
+FoodRanker es gratis, no enseña anuncios y no hay nada que comprar dentro: ni suscripción, ni funciones de pago, ni límites que se quiten pagando. Todo lo que hace la app lo hace igual para todo el mundo.
 
-Disponible en castellano e inglés.
-
-Los platos se comen mejor contados. Empieza por el último que te sorprendió.
+Entra con tu cuenta de Google o con tu correo y una contraseña, y empieza a construir, junto a tu ciudad, la respuesta a la pregunta que de verdad importa: no "¿es bueno este sitio?", sino "¿qué pido aquí?".
 ```
 
 ---
@@ -89,44 +82,68 @@ Discover, rate and share the best dishes in the world, one plate at a time.
 ### Descripción completa
 
 ```
-FoodRanker does not rate restaurants. It rates dishes.
-
-Because a five-star place can still bring you a forgettable pasta, and the café on your
-corner might do the best omelette in town. What you actually want to know is not whether
-the place is any good — it is what to order once you sit down.
+How many times have you walked into a restaurant with great reviews... and ordered the one dish that wasn't worth it? FoodRanker doesn't rate venues, it rates individual dishes: every dish in every restaurant or bar has its own page, with its own score.
 
 WHAT YOU CAN DO
 
-• Post a dish with its photo, the place you ate it and what you made of it.
-• Rate it on taste, presentation and enjoyment, and note what you paid.
-• Browse the best dishes in the world, in your city, or from the people you follow.
-• Walk into somewhere and check "What should I order here": the dishes other people have
-  already rated at that exact place.
-• Save the ones you fancy for later and sort them into lists.
-• Follow people who eat like you do, leave comments and see what they are finding.
+- Discover the best-rated dishes near you or in your city, ranked by real scores from other users.
+- Rate a dish you have actually tried and help keep the ranking trustworthy.
+- Post a new dish with a photo: every dish is tied to its exact venue, so if someone already added it, your rating joins theirs instead of creating a duplicate.
+- Save your favourite dishes and come back to them whenever you like.
+- Comment, and read what others think about a dish before you order it.
+- Track your progress: earn XP, level up and unlock badges as you take part.
+- Compete in your city's weekly league.
 
-SCORES COME FROM PEOPLE WHO ATE THE DISH
+QUALITY AND TRUST
 
-Before you can rate something, you confirm you have actually tried it. No scores from
-hearsay or from walking past. And every photo is checked automatically before it goes
-live: if it is not food, it does not get in.
-
-THE MORE YOU PUT IN, THE FURTHER YOU GET
-
-You earn XP for posting, rating and commenting, and climb six levels from Rookie Foodie
-to Foodie Legend. There are six achievements to unlock, a new challenge every week, and a
-weekly league — both global and for your own city. The podium takes XP, and the winner
-takes the badge.
+Every photo goes through an automatic check that rejects anything that is not food, so the catalogue stays clean. XP and levels are always worked out on the server: nobody can inflate them by tampering with the app.
 
 FREE, AND NO ADS
 
-FoodRanker is free, it shows no ads and there is nothing to buy inside it: no subscription,
-no paid features, no limits you can pay to lift. Everything the app does, it does the same
-for everybody.
+FoodRanker is free, it shows no ads and there is nothing to buy inside it: no subscription, no paid features, no limits you can pay to lift. Everything the app does, it does the same for everybody.
 
-Available in English and Spanish.
+Sign in with your Google account or with your email and a password, and start building, together with your city, the answer to the question that really matters: not "is this place any good?", but "what should I order here?".
+```
 
-Food is better when it gets talked about. Start with the last dish that surprised you.
+---
+
+## Inglés (en-US)
+
+Idéntico al de en-GB **salvo dos palabras**, que es lo único que cambia entre las dos
+variantes en este texto: favourite → favorite y catalogue → catalog. Hay que pegarlo
+igualmente: si en-US se queda vacío, Play sirve el del idioma por defecto, que es el
+castellano.
+
+### Nombre
+
+```
+FoodRanker
+```
+
+### Descripción completa
+
+```
+How many times have you walked into a restaurant with great reviews... and ordered the one dish that wasn't worth it? FoodRanker doesn't rate venues, it rates individual dishes: every dish in every restaurant or bar has its own page, with its own score.
+
+WHAT YOU CAN DO
+
+- Discover the best-rated dishes near you or in your city, ranked by real scores from other users.
+- Rate a dish you have actually tried and help keep the ranking trustworthy.
+- Post a new dish with a photo: every dish is tied to its exact venue, so if someone already added it, your rating joins theirs instead of creating a duplicate.
+- Save your favorite dishes and come back to them whenever you like.
+- Comment, and read what others think about a dish before you order it.
+- Track your progress: earn XP, level up and unlock badges as you take part.
+- Compete in your city's weekly league.
+
+QUALITY AND TRUST
+
+Every photo goes through an automatic check that rejects anything that is not food, so the catalog stays clean. XP and levels are always worked out on the server: nobody can inflate them by tampering with the app.
+
+FREE, AND NO ADS
+
+FoodRanker is free, it shows no ads and there is nothing to buy inside it: no subscription, no paid features, no limits you can pay to lift. Everything the app does, it does the same for everybody.
+
+Sign in with your Google account or with your email and a password, and start building, together with your city, the answer to the question that really matters: not "is this place any good?", but "what should I order here?".
 ```
 
 ---
