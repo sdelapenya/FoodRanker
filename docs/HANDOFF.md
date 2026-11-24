@@ -42,6 +42,34 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🪤 "DECLARACIÓN DE ID DE PUBLICIDAD INCOMPLETA": ERA UN CANAL DE PRUEBA OLVIDADO (2026-11-24)
+
+Tras poner el ID de publicidad en **No**, Play bloqueó el envío a revisión con *"Declaración
+de ID de publicidad incompleta"*, con el formulario mostrando "No" y **Guardar
+deshabilitado**. El mensaje no dice nada de lo que pasa de verdad.
+
+**La causa:** Play no valida esa declaración contra lo que escribes, sino contra **el
+manifest de todos tus artefactos ACTIVOS**, y el canal **Prueba cerrada - Alpha** seguía
+con la **22 (1.8)**, de agosto, que lleva el SDK de AdMob entero y declara
+`com.google.android.gms.permission.AD_ID`. Producción y prueba interna sí estaban en la 28.
+
+**La solución:** pausar ese canal (*Gestionar canal → Pausar*). Es inmediato, reversible y
+**no pasa por revisión**, que es justo lo que hace falta cuando lo que está bloqueado es
+precisamente enviar a revisión.
+
+⚠️ **Lo que NO funciona, para no perder el tiempo:** recargar, y el truco de marcar Sí →
+guardar → No → guardar. Se probó y el bloqueo seguía. Ojo además con ese truco: al marcar
+"Sí" Play exige **una finalidad** o Guardar no se habilita, así que ni siquiera se puede
+completar sin declarar una finalidad falsa durante unos segundos.
+
+⚠️ **Y no era solo un problema de formulario.** Quien tuviera la app instalada desde ese
+canal **estaba viendo anuncios de AdMob** mientras la ficha declaraba que no hay ninguno.
+Pausarlo no fue un truco para desatascar la consola: es lo que hace cierta la declaración.
+
+**Regla para la próxima:** antes de declarar algo sobre permisos o SDKs, mirar **los cuatro
+canales** —producción, interna, cerrada y abierta— y comprobar que ninguno sirve una
+versión anterior al cambio. Un canal de pruebas olvidado es un artefacto activo.
+
 ### 🧾 LAS DECLARACIONES DE PLAY, PUESTAS AL DÍA (2026-11-24)
 
 Con la v28 ya en producción, se corrigieron las declaraciones que seguían describiendo la
