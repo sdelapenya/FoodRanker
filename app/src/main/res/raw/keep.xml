@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fija por nombre las cadenas que el reductor de recursos se llevaba por delante.
+
+  `isShrinkResources` las listaba como "Unused resources" y las borraba de
+  resources.arsc, aunque el código compilado SÍ lee esos campos de R. Una de ellas
+  (cd_like) la pinta cada tarjeta de plato, así que era un Resources.NotFoundException
+  en la pantalla principal, en release y nunca en debug.
+
+  No se usan con getIdentifier(): son referencias normales a R. Aun así el reductor
+  no las ve, que es exactamente el caso para el que existe este fichero.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/cd_like,@string/cd_unlike,@string/vm_saved,@string/vm_unsaved,@string/vm_save_fail" />

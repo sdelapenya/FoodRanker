@@ -47,15 +47,23 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            // Apagado a propósito. Estaba BORRANDO cinco cadenas que el código sí pide
-            // (cd_like, cd_unlike, vm_saved, vm_unsaved, vm_save_fail): salían en su lista
-            // de "Unused resources" aunque las clases compiladas leen esos campos de R, y
+            // Encendido desde la v29, con `res/raw/keep.xml` como red.
+            //
+            // Estuvo apagado porque BORRABA cinco cadenas que el código sí pide (cd_like,
+            // cd_unlike, vm_saved, vm_unsaved, vm_save_fail): salían en su lista de
+            // "Unused resources" aunque las clases compiladas leen esos campos de R, y
             // desaparecían de resources.arsc. Una de ellas la pinta cada tarjeta de plato,
             // así que era un Resources.NotFoundException en la pantalla principal, en
-            // release y nunca en debug. Encendido 8,12 MB, apagado 8,49: 370 KB por no
-            // tener que adivinar cuál se va a llevar la próxima vez.
-            // Antes de volver a encenderlo: comprobar el APK con tools/i18n/check_apk.py.
-            isShrinkResources = false
+            // release y nunca en debug.
+            //
+            // `keep.xml` las fija por nombre, que es la solución documentada para
+            // exactamente este caso y que nunca se había probado. Medido: 7.396.463 bytes
+            // apagado frente a 6.952.132 encendido, 434 KB menos, y las 598 cadenas y
+            // plurales del proyecto siguen en el APK con sus dos idiomas.
+            //
+            // ⚠️ Si se añade una cadena que el reductor no vea, va a `keep.xml`, no aquí.
+            // Al tocar texto o recursos: comprobar el APK con tools/i18n/check_apk.py.
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
 
             // ⚠️ Esta linea HOY NO HACE NADA, y el aviso de Play sobre los simbolos de
