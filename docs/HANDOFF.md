@@ -42,6 +42,90 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ⚠️ EL NARANJA NO ESTABA HECHO, Y LA CULPA ERA DEL CHECKER (2026-11-26, tarde)
+
+**Lo que pasó, porque la lección vale más que el arreglo.** El commit `fe1aa79` cerró "la
+otra mitad del naranja" apoyándose en que `check_contrast.py` daba **0 críticos**. Al abrir
+la app en el emulador, la **primera pantalla** tenía la nota `★ 10,0` en **blanco sobre
+naranja**, a 2,84. El detalle del plato, igual. El checker estaba ciego.
+
+⚠️ **Dar por bueno un arreglo visual porque una herramienta dice que sí, sin abrir la app,
+es el mismo error que costó las v24 y v25** — solo que esta vez el que mentía era el
+script. **Si el cambio se ve, hay que verlo.**
+
+#### Los tres fallos del checker, y cómo se comprobó que estaban arreglados
+
+Cada uno se probó **contra el código roto** (con `git stash`) antes de darlo por bueno. La
+primera versión del arreglo seguía dando 0: si no se prueba así, no se sabe.
+
+1. **No veía los fondos.** El patrón era `Surface\(\s*color\s*=`, que solo caza
+   `Surface(color = X)` **todo en una línea**, y así no se escribe casi nunca.
+2. **Y aun viéndolos, los tiraba.** La invalidación por nivel de llaves se disparaba en la
+   propia línea `) {`, donde el nivel todavía no ha subido: el fondo recién puesto se iba a
+   la basura justo antes de llegar al texto. Este era el bueno.
+3. **A los iconos les exigía 4,5.** WCAG les pide 3,0, y el docstring del propio fichero ya
+   lo decía; el código no, porque un `Icon(tint = ...)` no lleva `fontSize`.
+
+Medido: **0 críticos → 60** sobre el mismo código.
+
+Y dos cosas para que no mienta en la otra dirección: el `containerColor` de un `Scaffold`
+ya no cuenta como fondo de sus *slots* (los iconos del `topBar` del perfil van sobre el
+degradado naranja, y salían como "blanco sobre casi blanco, 1,05"), y hay una marca
+**`// contraste-ok: <motivo>`** para silenciar lo deliberado, como el logotipo.
+
+#### Arreglado: 14 sitios, y una pastilla gemela que se había quedado atrás
+
+De `Color.White` a `FoodTheme.colors.onOrange`, de 2,84 a **7,41**: la nota del feed y la
+del detalle, el chip de categoría sobre la foto, el banner de reto, el botón de guardar del
+perfil, el de subir plato con su progreso, las dos pastillas de `ShareCard` y la de
+`PlateCard`.
+
+⚠️ **Había DOS pastillas de racha gemelas en `DiscoverScreen`**, no una. El commit anterior
+arregló la de `CountdownTickerRow` y **la otra se quedó rota**, con su `0xFFFF6D00` clavado.
+Ahora las dos usan `OrangePrimary` + `onOrange` y hay un aviso en el código de que son
+gemelas. Es el fallo clásico de "me dejé una".
+
+**Verificado en pantalla**, emulador a 720x1640 y 320 dpi, en los dos temas.
+
+#### Y de paso: los 8 textos que se cortaban a mitad de palabra
+
+`maxLines` sin `overflow` (el defecto de Compose es `Clip`, no `Ellipsis`). Eran los títulos
+de tarjeta de plato que llevaban apuntados sin fecha, más la ciudad del feed, el banner de
+reto, la tarjeta de compartir y tres del perfil. **Quedan 0.**
+
+#### ⏳ QUEDAN 16 SITIOS POR TRIAR — y NO todos son fallos
+
+El checker arreglado encuentra 16 sitios más. **No aplicarlos a ciegas**: hay al menos un
+falso positivo identificado y algunos son decisiones de diseño.
+
+| `screens/addplate/AddPlateScreen.kt:183` | OrangePrimary sobre surface | 2.84 |
+| `screens/addplate/AddPlateScreen.kt:529` | Color.White sobre 0xFFFF8C42 | 2.31 |
+| `screens/addplate/VenuePicker.kt:169` | textSecondary sobre OrangePrimary @0.06 | 4.30 |
+| `screens/addplate/VenuePicker.kt:196` | textSecondary sobre SuccessGreen @0.10 | 4.20 |
+| `screens/addplate/VenuePicker.kt:226` | OrangePrimary sobre surface | 2.84 |
+| `screens/auth/EmailAuthSheet.kt:200` | Color.White sobre OrangePrimary | 2.84 |
+| `screens/challenge/ChallengeBanner.kt:87` | OrangePrimary sobre Color.White | 2.84 |
+| `screens/discover/DiscoverScreen.kt:377` | OrangePrimary sobre surface | 2.84 |
+| `screens/discover/DiscoverScreen.kt:442` | Color.White sobre OrangePrimary | 2.84 |
+| `screens/explore/ExploreScreen.kt:408` | Color.White sobre OrangePrimary | 2.84 |
+| `screens/platedetail/PlateDetailScreen.kt:342` | OrangePrimary sobre surface | 2.84 |
+| `screens/platedetail/PlateDetailScreen.kt:508` | textSecondary @0.5 sobre surface | 1.98 |
+| `screens/profile/ProfileScreen.kt:1238` | OrangePrimary sobre surface | 2.84 |
+| `screens/profile/ProfileScreen.kt:1662` | 0xFFD32F2F sobre OrangePrimary | 1.76 |
+| `screens/profile/ProfileScreen.kt:1666` | 0xFFD32F2F sobre OrangePrimary | 1.76 |
+| `screens/profile/ProfileScreen.kt:335` | OrangePrimary sobre surface | 2.84 |
+
+**Lo que ya se sabe de esta lista:**
+- `ProfileScreen:1662` y `:1666` (rojo sobre naranja, 1,76) son **falso positivo**: es el
+  botón de borrar plato, con borde rojo, y el naranja viene de un botón anterior. El
+  emparejamiento está mal.
+- `PlateDetailScreen:508` (`textSecondary @0.5`, 1,98) es texto **deshabilitado**; mirar si
+  es intencionado antes de tocarlo.
+- Los `@0.06` y `@0.10` de `VenuePicker` (4,20-4,30) se quedan a un pelo de 4,5: son fondos
+  casi transparentes y el arreglo es subir el texto, no el fondo.
+- Los seis **`OrangePrimary sobre surface`** son de la misma familia que la cuenta atrás ya
+  arreglada: les toca `FoodTheme.colors.orangeStrong`. Son los más claros de la lista.
+
 ### ✅ LA V29, HECHA: SIETE COMMITS, TODO MEDIDO (2026-11-26)
 
 La lista de la v29 está **aplicada entera menos el bloqueo entre usuarios**, que se mueve a
