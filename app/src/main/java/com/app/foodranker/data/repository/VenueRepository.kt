@@ -92,6 +92,10 @@ class VenueRepository @Inject constructor(
                     null
                 ).await()
         } catch (e: Exception) {
+            // La cancelación no es "no se pudo obtener la ubicación": es que el usuario se
+            // ha ido de la pantalla. Devolver `null` aquí hace que quien llamó siga
+            // adelante sin ubicación, buscando locales para nadie. Se relanza.
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.w(TAG, "No se pudo obtener la ubicación: ${e.message}")
             null
         }

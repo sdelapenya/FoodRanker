@@ -77,4 +77,30 @@ object Fallos {
             recordException(e)
         }
     }
+
+    /**
+     * `Result.failure(e)` que **no se traga la cancelación**.
+     *
+     * ## Por qué hace falta, teniendo ya [reportar]
+     *
+     * [reportar] arregla los 64 `catch` que pasan por él, pero los repositorios no lo
+     * llaman: devuelven el fallo al que llamó, con `catch (e: Exception) {
+     * Result.failure(e) }`, y que un `get()` falle no es un bug que haya que reportar.
+     *
+     * El problema es que ese `catch` **también captura la cancelación**. Cuando el usuario
+     * sale de una pantalla, el scope del ViewModel se cancela, el `await()` de Firestore
+     * lanza `CancellationException`… y en vez de propagarse, se empaqueta en un
+     * `Result.failure`. El `onFailure` de arriba se ejecuta tan contento y le **pinta un
+     * error al usuario por una carga que él mismo canceló al irse**. Es justo lo que el
+     * KDoc de esta clase describe, en los sitios que no pasan por [reportar].
+     *
+     * Se usa igual que `Result.failure`, y por eso vive aquí y no suelto: para que el
+     * relanzado esté en el **mismo fichero** que el de [reportar] y se vean los dos juntos.
+     *
+     * @throws CancellationException si [e] lo es.
+     */
+    fun <T> fallo(e: Throwable): Result<T> {
+        if (e is CancellationException) throw e
+        return Result.failure(e)
+    }
 }

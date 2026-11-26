@@ -59,6 +59,43 @@ class FallosTest {
         Fallos.reportar(Exception("DEADLINE_EXCEEDED"), "prueba: timeout")
     }
 
+    // ── Fallos.fallo(): el camino de los repositorios ────────────────────────────
+
+    @Test
+    fun `fallo() relanza la cancelacion en vez de empaquetarla`() {
+        // El bug que arregla: `catch (e: Exception) { Result.failure(e) }` convertía la
+        // cancelación en un Result.failure, el `onFailure` de arriba se ejecutaba y al
+        // usuario le salía un error por una carga que él mismo canceló al salir de la
+        // pantalla.
+        val cancelacion = CancellationException("Job was cancelled")
+        try {
+            val r: Result<String> = Fallos.fallo(cancelacion)
+            fail("tenía que haber relanzado, y devolvió $r")
+        } catch (e: CancellationException) {
+            assertTrue(e === cancelacion)
+        }
+    }
+
+    @Test
+    fun `fallo() devuelve un Result fallido para todo lo demas`() {
+        // Lo normal: un fallo de red o de permisos sí tiene que llegar al que llamó, que
+        // es quien sabe qué enseñarle al usuario.
+        val e = Exception("PERMISSION_DENIED")
+        val r: Result<String> = Fallos.fallo(e)
+        assertTrue(r.isFailure)
+        assertTrue(r.exceptionOrNull() === e)
+    }
+
+    @Test
+    fun `fallo() NO se confunde con un mensaje que hable de cancelacion`() {
+        // Misma trampa que en reportar(): "CANCELLED" en el texto de un Exception normal
+        // no es una CancellationException, y tragárselo sería perder el error de verdad.
+        val e = Exception("CANCELLED: la llamada se canceló")
+        val r: Result<String> = Fallos.fallo(e)
+        assertTrue(r.isFailure)
+        assertTrue(r.exceptionOrNull() === e)
+    }
+
     @Test
     fun `un fallo del entorno NO se relanza`() {
         // La cancelación se relanza y el fallo de red no: son caminos distintos y es fácil

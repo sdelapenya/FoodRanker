@@ -8,6 +8,7 @@ import com.app.foodranker.data.model.PlateCategory
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.app.foodranker.utils.Fallos
 
 @Singleton
 class PlateRepository @Inject constructor(
@@ -28,7 +29,7 @@ class PlateRepository @Inject constructor(
                 .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
-            Result.failure(e)
+            Fallos.fallo(e)
         }
     }
 
@@ -47,7 +48,7 @@ class PlateRepository @Inject constructor(
                 .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
-            Result.failure(e)
+            Fallos.fallo(e)
         }
     }
 
@@ -63,7 +64,7 @@ class PlateRepository @Inject constructor(
                 .soloPublicos()
             Result.success(plates)
         } catch (e: Exception) {
-            Result.failure(e)
+            Fallos.fallo(e)
         }
     }
 
@@ -96,7 +97,7 @@ class PlateRepository @Inject constructor(
             }.await()
             Result.success(nowLiked)
         } catch (e: Exception) {
-            Result.failure(e)
+            Fallos.fallo(e)
         }
     }
 }

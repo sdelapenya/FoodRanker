@@ -26,6 +26,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.app.foodranker.utils.Fallos
 
 /** El usuario cerró la hoja de cuentas. No es un error: no se le muestra nada. */
 class SignInCancelledException : Exception("Login cancelado por el usuario")
@@ -202,7 +203,7 @@ class AuthRepository @Inject constructor(
             syncUserDocument(firebaseUser, mapOf("name" to displayName))
             Result.success(firebaseUser)
         } catch (e: Exception) {
-            Result.failure(e)
+            Fallos.fallo(e)
         }
     }
 
@@ -217,7 +218,7 @@ class AuthRepository @Inject constructor(
         auth.sendPasswordResetEmail(email.trim()).await()
         Result.success(Unit)
     } catch (e: Exception) {
-        Result.failure(e)
+        Fallos.fallo(e)
     }
 
     // Si la Activity se recrea mientras el navegador está abierto (giro de pantalla, poca
@@ -247,7 +248,7 @@ class AuthRepository @Inject constructor(
             syncUserDocument(firebaseUser, result.additionalUserInfo?.profile)
             Result.success(firebaseUser)
         } catch (e: Exception) {
-            Result.failure(e)
+            Fallos.fallo(e)
         }
     }
 
