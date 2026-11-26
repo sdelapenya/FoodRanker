@@ -125,7 +125,7 @@ fun PlateCard(
                 ) {
                     Text(
                         "★ ${"%.1f".format(plate.averageScore)}",
-                        color = Color.White,
+                        color = FoodTheme.colors.onOrange,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
@@ -153,7 +153,8 @@ fun PlateCard(
                     "${plate.city}, ${plate.country}",
                     fontSize = 11.sp,
                     color = OrangePrimary,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (onLike != null) {
                     Spacer(modifier = Modifier.height(6.dp))

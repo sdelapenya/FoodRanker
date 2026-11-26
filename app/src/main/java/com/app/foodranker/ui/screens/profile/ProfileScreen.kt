@@ -86,6 +86,7 @@ import com.app.foodranker.utils.ShareManager
 import com.app.foodranker.utils.formatCompact
 import com.app.foodranker.viewmodel.AuthViewModel
 import com.app.foodranker.viewmodel.ProfileViewModel
+import androidx.compose.ui.text.style.TextOverflow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1188,7 +1189,7 @@ private fun EditProfileSheet(
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(22.dp), color = FoodTheme.colors.onOrange)
                 } else {
-                    Text(stringResource(R.string.prof_save_changes), fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.prof_save_changes), fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange)
                 }
             }
         }
@@ -1600,7 +1601,8 @@ private fun EditPlateSheet(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = FoodTheme.colors.textPrimary,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             // El nombre solo se puede corregir, no cambiar: el id del documento lleva
@@ -1714,7 +1716,7 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
                 ) {
                     Text(
                         "⭐ ${"%.1f".format(plate.averageScore)}",
-                        color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        color = FoodTheme.colors.onOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                     )
                 }
@@ -1735,8 +1737,8 @@ fun PlateGridItem(plate: Plate, modifier: Modifier = Modifier, showEditButton: B
                 }
             }
             Column(modifier = Modifier.padding(8.dp)) {
-                Text(plate.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FoodTheme.colors.textPrimary, maxLines = 1)
-                Text("${plate.city}, ${plate.country}", fontSize = 11.sp, color = FoodTheme.colors.textSecondary, maxLines = 1)
+                Text(plate.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FoodTheme.colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${plate.city}, ${plate.country}", fontSize = 11.sp, color = FoodTheme.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (plate.likes > 0) {
                     Text("❤️ ${plate.likes.formatCompact()}", fontSize = 11.sp, color = OrangePrimary)
                 }

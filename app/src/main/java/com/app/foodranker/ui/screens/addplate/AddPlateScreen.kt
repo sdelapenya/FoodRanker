@@ -442,13 +442,13 @@ fun AddPlateScreen(
                                         CircularProgressIndicator(
                                             progress = { pct / 100f },
                                             modifier = Modifier.size(22.dp),
-                                            color = Color.White,
+                                            color = FoodTheme.colors.onOrange,
                                             strokeWidth = 2.5.dp
                                         )
-                                        Text(stringResource(R.string.add_uploading, pct), color = Color.White, fontSize = 14.sp)
+                                        Text(stringResource(R.string.add_uploading, pct), color = FoodTheme.colors.onOrange, fontSize = 14.sp)
                                     }
                                 } else {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = FoodTheme.colors.onOrange)
                                 }
                             } else {
                                 Text(stringResource(R.string.add_publish), fontSize = 16.sp, fontWeight = FontWeight.Bold)

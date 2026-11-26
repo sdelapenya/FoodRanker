@@ -17,6 +17,7 @@ import com.app.foodranker.ui.theme.*
 import com.app.foodranker.viewmodel.ChallengeViewModel
 import androidx.compose.ui.res.stringResource
 import com.app.foodranker.R
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun ChallengeBanner(
@@ -51,7 +52,7 @@ fun ChallengeBanner(
                         Surface(shape = RoundedCornerShape(8.dp), color = OrangePrimary) {
                             Text(
                                 stringResource(R.string.ch_weekly),
-                                fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color.White,
+                                fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = FoodTheme.colors.onOrange,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -61,7 +62,7 @@ fun ChallengeBanner(
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(challenge.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
-                    Text(challenge.description, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
+                    Text(challenge.description, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (uiState.isParticipating) {

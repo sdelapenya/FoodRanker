@@ -309,7 +309,7 @@ fun PlateDetailScreen(
                                     ) {
                                         Text(
                                             "${plate.categoryType.emoji} " + plate.categoryType.categoryName(),
-                                            color = Color.White,
+                                            color = FoodTheme.colors.onOrange,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp,
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -411,7 +411,7 @@ fun PlateDetailScreen(
                                         ) {
                                             Text(
                                                 "★ ${"%.1f".format(plate.averageScore)}  ·  ${plate.totalRatings.votesLabel()}",
-                                                color = Color.White,
+                                                color = FoodTheme.colors.onOrange,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
@@ -1401,7 +1401,7 @@ fun RatingBottomSheet(
                 } else {
                     Text(
                         if (isEditMode) stringResource(R.string.det_update_rating) else stringResource(R.string.det_publish_rating),
-                        fontWeight = FontWeight.Bold, color = Color.White
+                        fontWeight = FontWeight.Bold, color = FoodTheme.colors.onOrange
                     )
                 }
             }

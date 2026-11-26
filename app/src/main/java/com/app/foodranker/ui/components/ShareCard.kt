@@ -20,6 +20,7 @@ import coil.compose.AsyncImage
 import com.app.foodranker.data.model.Plate
 import com.app.foodranker.data.model.categoryType
 import com.app.foodranker.ui.theme.*
+import androidx.compose.ui.text.style.TextOverflow
 
 /**
  * ⚠️ Los colores de esta tarjeta están clavados **a propósito**, y es el único sitio de la
@@ -110,7 +111,7 @@ fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
                 ) {
                     Text(
                         "#$cityRank en ${plate.city}",
-                        color = Color.White,
+                        color = FoodTheme.colors.onOrange,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
@@ -132,13 +133,15 @@ fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
-                maxLines = 2
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 "${plate.restaurantName} · ${plate.city}",
                 color = Color.White.copy(alpha = 0.80f),
                 fontSize = 13.sp,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -148,7 +151,7 @@ fun ShareCard(plate: Plate, cityRank: Int = 0, modifier: Modifier = Modifier) {
                 ) {
                     Text(
                         "★ ${"%.1f".format(plate.averageScore)}/10",
-                        color = Color.White,
+                        color = FoodTheme.colors.onOrange,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)

@@ -505,11 +505,15 @@ private fun MissionCard(progress: Int, goal: Int, streak: Int = 0) {
                     if (streak >= 2) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFF6D00)
+                            // ⚠️ Esta pastilla de racha es la GEMELA de la de
+                            // `CountdownTickerRow`, más abajo en este mismo fichero. Las dos
+                            // estaban en blanco sobre un `0xFFFF6D00` clavado a mano, y al
+                            // arreglar solo aquella esta se quedó rota. Si se toca una, la otra.
+                            color = OrangePrimary
                         ) {
                             Text(
                                 pluralStringResource(R.plurals.streak_days, streak, streak),
-                                color = Color.White,
+                                color = FoodTheme.colors.onOrange,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -694,7 +698,7 @@ private fun RankedPlateCard(
             ) {
                 Text(
                     "★ ${"%.1f".format(plate.averageScore)}",
-                    color = Color.White,
+                    color = FoodTheme.colors.onOrange,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)

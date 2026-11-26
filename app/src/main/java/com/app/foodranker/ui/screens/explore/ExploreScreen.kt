@@ -40,6 +40,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.app.foodranker.R
+import androidx.compose.ui.text.style.TextOverflow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -423,7 +424,8 @@ private fun ExploreGridCard(plate: com.app.foodranker.data.model.Plate, onClick:
                     "${plate.city}, ${plate.country}",
                     color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.75f),
                     fontSize = 11.sp,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
