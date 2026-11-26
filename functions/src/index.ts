@@ -1063,25 +1063,53 @@ export const onRatingCreated = onDocumentCreated(
 
     // Update plate score + mark processed (idempotent)
     let processed = false;
+    // La nota que de verdad se ha incorporado al plato. Puede no ser la del evento de
+    // alta: ver el comentario de dentro de la transacción. El aviso al autor tiene que
+    // enseñar esta, no la del evento, o le llegaría un "te han puesto un 5" cuando el
+    // voto que ha entrado es un 8.
+    let avgIncorporado: number = avgScore;
     try {
       await db.runTransaction(async (tx) => {
         const ratingDoc = await tx.get(snap.ref);
         if (ratingDoc.get("processed") === true) return;
 
+        // ⚠️ SE INCORPORA LA NOTA VIVA, NO LA DEL EVENTO DE ALTA.
+        //
+        // `rating` es la foto del documento en el momento del alta, y puede estar vieja:
+        // alta y edición seguidas generan dos eventos y la entrega no respeta el orden.
+        // Si la edición llega primero, `onRatingUpdated` se sale sin tocar nada —todavía
+        // no hay nada que reconciliar, ver su comentario— y llega aquí el alta con la
+        // nota ANTIGUA.
+        //
+        // Y esto no se arreglaba solo. Al escribir aquí el sello se dispara otro evento de
+        // edición, pero ese evento muere en la primera guarda de `onRatingUpdated`, que
+        // solo sigue adelante si cambió una nota, `wouldOrderAgain` o el precio — y este
+        // sello no toca ninguno de los tres. Resultado: el plato se quedaba con la nota
+        // vieja para siempre, y encima el propio rating acababa con un `averageScore` que
+        // no cuadraba con sus notas.
+        //
+        // Leyendo `ratingDoc` —el documento vivo, dentro de la transacción— da igual en
+        // qué orden lleguen los eventos: lo que se incorpora y lo que se sella es lo que
+        // de verdad hay escrito. Es el mismo principio que ya aplica `onRatingUpdated`:
+        // el evento solo dice "algo pasó", el valor bueno se lee del documento.
+        const vivo = ratingDoc.data()!;
+        const avgVivo = ratingAverage(vivo);
+        const repiteVivo: boolean | null =
+          typeof vivo.wouldOrderAgain === "boolean" ? (vivo.wouldOrderAgain as boolean) : null;
+
         const plateDoc = await tx.get(plateRef);
         const oldAvg = (plateDoc.get("averageScore") as number) || 0;
         const oldCount = (plateDoc.get("totalRatings") as number) || 0;
         const count = oldCount + 1;
-        const avg = (oldAvg * oldCount + avgScore) / count;
+        const avg = (oldAvg * oldCount + avgVivo) / count;
         const oldRepeats = (plateDoc.get("wouldOrderAgainCount") as number) || 0;
         const oldResponses = (plateDoc.get("wouldOrderAgainResponses") as number) || 0;
-        const answered = typeof rating.wouldOrderAgain === "boolean";
 
         tx.update(plateRef, {
           averageScore: avg,
           totalRatings: count,
-          wouldOrderAgainCount: rating.wouldOrderAgain === true ? oldRepeats + 1 : oldRepeats,
-          wouldOrderAgainResponses: answered ? oldResponses + 1 : oldResponses,
+          wouldOrderAgainCount: repiteVivo === true ? oldRepeats + 1 : oldRepeats,
+          wouldOrderAgainResponses: repiteVivo !== null ? oldResponses + 1 : oldResponses,
           rankingScore: rankingScoreFor(avg, count),
         });
         // Se reescribe también la nota del propio rating: el cliente manda la suya, y un
@@ -1093,10 +1121,11 @@ export const onRatingCreated = onDocumentCreated(
         // `before` del evento, que es justo lo que no aguanta un desorden de entrega.
         tx.update(snap.ref, {
           processed: true,
-          averageScore: avgScore,
-          appliedAvg: avgScore,
-          appliedWouldOrderAgain: answered ? (rating.wouldOrderAgain as boolean) : null,
+          averageScore: avgVivo,
+          appliedAvg: avgVivo,
+          appliedWouldOrderAgain: repiteVivo,
         });
+        avgIncorporado = avgVivo;
         processed = true;
       });
     } catch (err) {
@@ -1133,7 +1162,7 @@ export const onRatingCreated = onDocumentCreated(
           fromUserName: rating.userName ?? "Alguien",
           plateId,
           plateName: plateData.name ?? "",
-          score: avgScore,
+          score: avgIncorporado,
           isRead: false,
           createdAt: Date.now(),
         });
@@ -1632,11 +1661,34 @@ export const onRatingDeleted = onDocumentDeleted(
 
     const plateRef = db.collection("plates").doc(plateId);
 
+    // ⚠️ ACTA DE IDEMPOTENCIA, porque aquí no hay dónde sellar.
+    //
+    // Los triggers de Firestore son **at-least-once**: el mismo borrado puede entregarse
+    // dos veces. `onRatingCreated` y `onRatingUpdated` se defienden sellando el propio
+    // documento del rating, pero en un borrado ese documento ya no existe, así que no hay
+    // sitio donde dejar la marca.
+    //
+    // El `oldCount <= 0` de abajo solo salva el caso de que fuera el único voto. Con el
+    // plato teniendo otros, una segunda entrega volvía a restar: el contador bajaba de más
+    // y la media quedaba desviada, sin forma de notarlo después.
+    //
+    // La marca va en una subcolección del plato, escrita en la MISMA transacción que la
+    // resta: o entran las dos o no entra ninguna. Los clientes no pueden ni leerla —
+    // `firestore.rules` no declara subcolecciones bajo `plates` y lo no declarado se
+    // deniega—, y se va con el plato cuando `onPlateDeleted` lo borra.
+    const actaRef = plateRef.collection("eventosAplicados").doc(event.id);
+
     try {
       await db.runTransaction(async (tx) => {
         const plateDoc = await tx.get(plateRef);
+        // Las lecturas, todas juntas y antes de escribir: Firestore no deja leer después.
+        const actaDoc = await tx.get(actaRef);
         // Cascada de onPlateDeleted: el plato ya no está y no hay nada que recalcular.
         if (!plateDoc.exists) return;
+        if (actaDoc.exists) {
+          logger.info(`onRatingDeleted: evento ${event.id} ya aplicado, se ignora`);
+          return;
+        }
 
         const oldCount = (plateDoc.get("totalRatings") as number) || 0;
         if (oldCount <= 0) return;
@@ -1661,6 +1713,10 @@ export const onRatingDeleted = onDocumentDeleted(
           wouldOrderAgainCount: repeats,
           wouldOrderAgainResponses: responses,
           rankingScore: rankingScoreFor(avg, count),
+        });
+        tx.set(actaRef, {
+          ratingId: event.params.ratingId,
+          aplicadoEn: Date.now(),
         });
       });
     } catch (err) {
@@ -2333,6 +2389,10 @@ export const onPlateDeleted = onDocumentDeleted(
         deleteQueryBatch(db.collection("ratings").where("plateId", "==", plateId)),
         deleteQueryBatch(db.collection("comments").where("plateId", "==", plateId)),
         deleteQueryBatch(db.collection("saves").where("plateId", "==", plateId)),
+        // Firestore NO borra las subcolecciones al borrar el documento padre, así que el
+        // acta de idempotencia de `onRatingDeleted` se quedaría huérfana. No molesta a
+        // nadie, pero es basura que se acumula y nadie volvería a mirar.
+        deleteQueryBatch(db.collection("plates").doc(plateId).collection("eventosAplicados")),
       ]);
       logger.info(`Cascade delete complete for plate ${plateId}`);
     } catch (err) {
