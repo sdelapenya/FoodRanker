@@ -42,6 +42,79 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🔎 LA AUDITORÍA DE CODEX, VERIFICADA UNA POR UNA (2026-11-26)
+
+Cuatro hallazgos. **Dos eran reales y están arreglados**, uno ya estaba en el plan y otro es
+de bajo impacto. Lo importante es que **ninguno se dio por bueno sin comprobarlo**.
+
+| Hallazgo | Veredicto |
+|---|---|
+| Bloqueo entre usuarios | **Ya estaba**, movido a la v30 con su coste medido |
+| Alta y edición de una valoración | **CONFIRMADO, y peor de lo que decía** → arreglado |
+| Borrado sin desduplicar | **CONFIRMADO** → arreglado |
+| Denuncias y avisos multidispositivo | Cierto, bajo impacto; lo de avisos ya estaba documentado |
+
+#### 1. El alta incorporaba la nota del EVENTO, no la viva
+
+`onRatingCreated` usaba `snap.data()`, la foto del documento al crearse. Alta y edición
+seguidas generan dos eventos y la entrega no respeta el orden: si la edición llega primero,
+`onRatingUpdated` se sale sin tocar nada —correcto— y luego el alta incorpora la **nota
+antigua**.
+
+⚠️ **Y no se arreglaba solo, que es lo que el informe no vio.** Al sellar, el alta escribe
+en el rating y eso dispara otro evento de edición… que **muere en la primera guarda** de
+`onRatingUpdated`, la que solo deja pasar cambios de nota, `wouldOrderAgain` o precio. El
+sello no toca ninguno de los tres. Resultado: el plato se quedaba con la nota vieja **para
+siempre**, y el propio rating acababa con un `averageScore` que no cuadraba con sus notas.
+
+Arreglado leyendo el documento **vivo** dentro de la transacción: el mismo principio que
+`onRatingUpdated` ya aplicaba y explica. El aviso al autor también usa ya la nota
+incorporada.
+
+#### 2. El borrado no se podía desduplicar
+
+Los triggers son *at-least-once* y aquí **no hay dónde sellar**: el documento ya no existe.
+El `oldCount <= 0` solo salvaba el caso de que fuera el único voto.
+
+Acta en `plates/{id}/eventosAplicados/{eventId}`, en la **misma transacción** que la resta.
+Cerrada a los clientes (las reglas no declaran subcolecciones bajo `plates`, y lo no
+declarado se deniega) y limpiada por `onPlateDeleted`, porque **Firestore no borra
+subcolecciones al borrar el padre**.
+
+#### ✅ Y la pregunta que el informe dejaba abierta: ¿ha pasado ya?
+
+**No.** Auditoría de solo lectura por la API REST sobre **69 valoraciones y 59 platos**:
+
+1. el sello (`appliedAvg`) contra las notas vivas → **0 descuadres**
+2. el `averageScore` de cada rating contra sus notas → **0**
+3. los agregados de cada plato contra la suma de sellos → **0**
+
+El fallo existía en el código pero no ha llegado a morder. Los dos arreglos son preventivos.
+
+⚠️ **Y una lección de método, otra vez.** El primer intento de auditoría daba **59
+valoraciones corruptas y 0 platos descuadrados**. Esa contradicción era la pista: si 59
+votos estuvieran mal, los platos tendrían que estarlo. **La fórmula del script estaba mal,
+no los datos.** `ratingAverage` usa **tres** ejes ponderados (0,50 sabor / 0,20
+presentación / 0,30 satisfacción) y **no usa `valueScore`**; el script hacía la media
+simple de cuatro. Si se vuelve a auditar, copiar los pesos de `functions/src/index.ts`.
+
+#### ⏳ PENDIENTE: `functions` NO está desplegado con esto
+
+Los dos arreglos están **solo en el repo**. Desplegar es una acción hacia fuera y se decide
+aparte. Y ojo al hacerlo: `firebase deploy --only functions` preguntará por **`awardAdXp`**,
+que sigue viva en la nube y ya no está en el código — **decir que NO** hasta que las
+solicitudes de AdMob lleguen a cero.
+
+#### Lo de bajo impacto, para no volver a mirarlo
+
+- **Crear una denuncia sin incrementar el contador**: la regla valida el prefijo de la
+  clave y `reportedByUserId`, pero no exige el incremento. Lo peor que consigue alguien es
+  **gastarse su propia denuncia** sobre un destino que no existe; no afecta a nadie más,
+  porque lo que oculta contenido es el contador, y ese sí está protegido.
+- **Avisos a un solo `fcmToken`**: el cliente ya registra instalaciones y el servidor
+  todavía lee el campo del perfil. Es una migración a medias **ya documentada en el código**
+  (ver `firestore.rules`, `users/{userId}/dispositivos`), no un hallazgo nuevo.
+
 ### ✅ CERRADO EL TRAGADO DE CANCELACIONES (2026-11-26, noche)
 
 Pendiente abierto desde el **2026-11-16**. Estaba a medias y nadie lo había comprobado:
