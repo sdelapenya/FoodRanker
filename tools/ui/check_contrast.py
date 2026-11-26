@@ -111,7 +111,32 @@ TOKEN = re.compile(r"FoodTheme\.colors\.(\w+)")
 NOMBRADO = re.compile(r"\b(OrangePrimary|OrangeLight|OrangeDark|StarYellow|SuccessGreen|ErrorRed|Color\.White|Color\.Black)\b")
 ALPHA = re.compile(r"\.copy\(\s*alpha\s*=\s*([0-9.]+)f?\s*\)")
 # Fondo de verdad. `contentColor` NO entra: es el color del contenido, no del fondo.
+#
+# ⚠️ `Surface\(\s*color\s*=` solo caza `Surface(color = X)` TODO EN UNA LINEA, y asi no
+# se escribe casi nunca. Lo normal es:
+#
+#     Surface(
+#         shape = RoundedCornerShape(20.dp),
+#         color = OrangePrimary
+#     ) {
+#
+# Con solo este patron el script se perdia CATORCE pastillas y chips de texto blanco
+# sobre el naranja de marca -- la nota "★ 10,0" del feed y del detalle, el chip de
+# categoria, el banner de reto, dos pastillas de racha... -- y daba "0 criticos"
+# mientras estaban ahi, a la vista, en la primera pantalla de la app. Por eso ahora
+# hay ademas un seguimiento de la lista de argumentos de `Surface(` (ver SURFACE_ABRE
+# y el uso en `analiza`): dentro de ella, un `color =` suelto ES el fondo.
 FONDO = re.compile(r"(containerColor\s*=|Surface\(\s*color\s*=|\.background\()")
+SURFACE_ABRE = re.compile(r"\bSurface\s*\(")
+# ⚠️ El `containerColor` de un `Scaffold` NO es el fondo de lo que va en sus slots.
+# `Scaffold(containerColor = background, topBar = { ... })` pinta el cuerpo, pero los
+# iconos del `topBar` van sobre la cabecera -- en el perfil, sobre un degradado naranja.
+# Emparejarlos daba cuatro "blanco sobre casi blanco, contraste 1,05" que son mentira.
+SCAFFOLD_ABRE = re.compile(r"\bScaffold\s*\(")
+COLOR_SUELTO = re.compile(r"^\s*color\s*=")
+# Marca para silenciar un caso deliberado, en la misma linea o en la de encima:
+#     // contraste-ok: es el logotipo, y WCAG exime los logotipos
+CONTRASTE_OK = re.compile(r"//\s*contraste-ok")
 PINTA_TEXTO = re.compile(r"\b(color|tint)\s*=")
 GRANDE = re.compile(r"fontSize\s*=\s*(\d+)\.sp")
 NEGRITA = re.compile(r"FontWeight\.(Bold|SemiBold|ExtraBold|Black)")
@@ -134,14 +159,29 @@ def resuelve(txt, modo):
 
 def analiza(ruta, modo):
     lineas = io.open(ruta, encoding="utf-8", errors="replace").read().split("\n")
-    fondo = None   # (hex, linea, etiqueta, es_token)
+    fondo = None   # (hex, linea, etiqueta, es_token, nivel)
     salida = []
     nivel = 0
+    # Parentesis abiertos de un `Surface(` cuya lista de argumentos seguimos leyendo.
+    # Mientras sea > 0, un `color =` suelto es el fondo del Surface.
+    en_surface = 0
+    en_scaffold = 0   # ver SCAFFOLD_ABRE
     for n, linea in enumerate(lineas, 1):
         if NUEVO_BLOQUE.match(linea):
             fondo = None
         if linea.strip().startswith("//"):
             continue
+        sin_txt_par = re.sub(r'"(\\.|[^"\\])*"', '""', linea)
+        if SCAFFOLD_ABRE.search(sin_txt_par):
+            en_scaffold = 12      # lineas durante las que se ignora un containerColor
+        elif en_scaffold:
+            en_scaffold -= 1
+        if SURFACE_ABRE.search(sin_txt_par):
+            # desde el `Surface(` hasta el final de la linea
+            resto = sin_txt_par[sin_txt_par.index("Surface") :]
+            en_surface = max(0, resto.count("(") - resto.count(")"))
+        elif en_surface:
+            en_surface = max(0, en_surface + sin_txt_par.count("(") - sin_txt_par.count(")"))
         # Profundidad de llaves al EMPEZAR la linea. Un fondo declarado en
         # `Button(colors = ...)` solo vale dentro del bloque que viene detras: cuando
         # las llaves vuelven a su nivel, el `Text` siguiente ya esta sobre el fondo de
@@ -150,9 +190,37 @@ def analiza(ruta, modo):
         nivel_al_entrar = nivel
         sin_texto = re.sub(r'"(\\.|[^"\\])*"', '""', linea)
         nivel += sin_texto.count("{") - sin_texto.count("}")
-        if fondo and (nivel_al_entrar <= fondo[4] or n - fondo[1] > VENTANA):
-            fondo = None
-        if FONDO.search(linea):
+        # ⚠️ El fondo NO se puede invalidar por nivel hasta que su bloque ha ABIERTO.
+        #
+        # Con `Surface(color = X) {` todo en una linea, la llave entra en la misma
+        # linea del fondo y el `Text` de dentro ya esta un nivel mas abajo: la
+        # comprobacion funciona. Pero con la forma normal
+        #
+        #     Surface(
+        #         color = OrangePrimary
+        #     ) {
+        #
+        # el fondo se declara ANTES de la llave, asi que en la linea `) {` el nivel
+        # todavia no ha subido, `nivel_al_entrar <= fondo[4]` sale cierto y el fondo se
+        # tiraba a la basura justo antes de llegar al texto. Ese era el motivo real de
+        # que el script no viera catorce pastillas blancas sobre naranja. `abierto`
+        # (fondo[5]) aguanta el fondo vivo hasta que su bloque empieza de verdad.
+        if fondo:
+            ya_abierto = fondo[5]          # abierto ANTES de esta linea
+            if n - fondo[1] > VENTANA:
+                fondo = None
+            elif ya_abierto and nivel_al_entrar <= fondo[4]:
+                # el bloque se cerro: lo que venga ya no esta sobre este fondo
+                fondo = None
+            elif not ya_abierto and nivel > fondo[4]:
+                # esta linea es la que abre el bloque (`) {`). Se marca abierto, pero el
+                # nivel NO se comprueba hasta la siguiente: aqui `nivel_al_entrar` sigue
+                # valiendo lo de antes de la llave y caducaria el fondo recien puesto.
+                fondo = fondo[:5] + (True,)
+        es_fondo = FONDO.search(linea) or (en_surface and COLOR_SUELTO.match(linea))
+        if es_fondo and en_scaffold and "containerColor" in linea:
+            continue
+        if es_fondo:
             r = resuelve(linea, modo)
             if r:
                 hexa, etq, es_tok = r
@@ -160,7 +228,7 @@ def analiza(ruta, modo):
                 if a:
                     hexa = mezcla(hexa, TOKENS["background"][modo].upper(), float(a.group(1)))
                     etq += " @%s" % a.group(1)
-                fondo = (hexa, n, etq, es_tok, nivel_al_entrar)
+                fondo = (hexa, n, etq, es_tok, nivel_al_entrar, False)
             continue
         if not fondo or not PINTA_TEXTO.search(linea):
             continue
@@ -179,10 +247,31 @@ def analiza(ruta, modo):
             continue
         tam = GRANDE.search(linea)
         sp = int(tam.group(1)) if tam else 14
-        umbral = AA_GRANDE if (sp >= 18 or (sp >= 14 and NEGRITA.search(linea))) else AA_NORMAL
+        # ⚠️ Un ICONO no es texto: WCAG le pide 3,0, no 4,5. El docstring de arriba ya lo
+        # decia desde el principio, pero el codigo no lo hacia: como un `Icon(tint = ...)`
+        # no lleva `fontSize`, caia en el 14sp por defecto y se le exigia 4,5. Eso convertia
+        # en "fallo" cada icono gris sobre un circulo gris que en realidad cumple.
+        es_icono = "Icon" in linea or "tint" in linea
+        if es_icono:
+            umbral = AA_GRANDE
+        else:
+            umbral = AA_GRANDE if (sp >= 18 or (sp >= 14 and NEGRITA.search(linea))) else AA_NORMAL
         c = contraste(hexa, fondo[0])
-        # alta confianza: fondo escrito a mano y texto que SI cambia con el tema
-        critico = (not fondo[3]) and txt_es_token
+        # Alta confianza, dos casos distintos:
+        #
+        #  a) fondo escrito a mano y texto que SI cambia con el tema -> uno de los dos
+        #     modos va a fallar casi siempre. Es el patron original de este script.
+        #  b) fondo Y texto los dos de valor CONOCIDO (un token, un color de marca o un
+        #     literal). Aqui no hay nada que adivinar: el contraste es el que es, en los
+        #     dos temas. Esto antes caia en el saco de "ruido" y por eso el script decia
+        #     "0 criticos" con catorce pastillas blancas sobre naranja en pantalla. Un
+        #     par del que se saben los dos lados no es ruido: es una medicion.
+        conocidos = (fondo[3] or fondo[2].startswith("0x") or fondo[2] in FIJOS_TEMA)
+        conocidos = conocidos and (txt_es_token or etq.startswith("0x") or etq in FIJOS_TEMA)
+        critico = ((not fondo[3]) and txt_es_token) or conocidos
+        # Escape para los casos deliberados (un logotipo, que WCAG exime).
+        if CONTRASTE_OK.search(linea) or (n >= 2 and CONTRASTE_OK.search(lineas[n - 2])):
+            critico = False
         if c < umbral:
             salida.append((n, fondo[1], fondo[2], etq, c, umbral, critico))
     return salida
