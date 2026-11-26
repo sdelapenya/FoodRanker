@@ -143,12 +143,33 @@ con servicios reales). Antes el script traía el id de producción escrito, que 
 que no debe aparecer en una prueba. Y si no contesta ningún emulador, lo dice en una línea
 en vez de morir en la primera escritura.
 
-#### ⏳ PENDIENTE: `functions` NO está desplegado con esto
+#### ✅ DESPLEGADO el 2026-11-26 a las 20:36
 
-Los dos arreglos están **solo en el repo**. Desplegar es una acción hacia fuera y se decide
-aparte. Y ojo al hacerlo: `firebase deploy --only functions` preguntará por **`awardAdXp`**,
-que sigue viva en la nube y ya no está en el código — **decir que NO** hasta que las
-solicitudes de AdMob lleguen a cero.
+⚠️ **Se desplegaron SOLO las tres funciones tocadas**, y esa es la forma de hacerlo
+mientras `awardAdXp` siga viva en la nube sin estar en el código:
+
+```bash
+npx firebase-tools deploy --only functions:onRatingCreated,functions:onRatingDeleted,functions:onPlateDeleted --project foodranker-51270
+```
+
+Un `--only functions` a secas **pregunta si borrar `awardAdXp`**, y hay que decir que no
+hasta que las solicitudes de AdMob lleguen a cero. Con el despliegue acotado la pregunta no
+aparece: el filtro no considera las demás para borrado.
+
+**Comprobado después, no supuesto:**
+
+| | |
+|---|---|
+| funciones en la nube | **18, lista idéntica** a la de antes del despliegue |
+| `awardAdXp` | presente y `ACTIVE`, con su fecha del 21 de noviembre intacta |
+| las tres tocadas | `updateTime` 20:36 del 26, estado `ACTIVE` |
+| avisos o errores desde el despliegue | **0** |
+| auditoría de datos repetida | 69 valoraciones, 59 platos, **0 descuadres** |
+
+⚠️ Un intento previo en segundo plano salió con **código 127 sin mensaje de error**,
+parándose en "Loading and analyzing source code". No llegó a subir nada —las tres
+funciones tienen la hora del segundo intento, el que sí terminó—, pero si vuelve a pasar:
+repetirlo en primer plano, que ahí sí se ve todo.
 
 #### Lo de bajo impacto, para no volver a mirarlo
 
