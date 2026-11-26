@@ -335,6 +335,13 @@ private fun RankingTopBar(
                 // Logo
                 Surface(shape = RoundedCornerShape(10.dp), color = OrangePrimary, modifier = Modifier.size(32.dp)) {
                     Box(contentAlignment = Alignment.Center) {
+                        // contraste-ok: es el LOGOTIPO de la marca, y WCAG 2.1 exime
+                        // expresamente los logotipos del contraste mínimo (1.4.3). Esta "F"
+                        // blanca sobre el naranja da 2,84, igual que las pastillas que sí se
+                        // pasaron a `onOrange` en la v29 — la diferencia es que aquellas son
+                        // texto que hay que LEER y esta es la identidad de la app. Si se
+                        // cambia a negro, el icono de launcher y el de la ficha de Play
+                        // dejan de parecerse a la cabecera.
                         Text("F", color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
                     }
                 }
