@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-23
+**Actualizado:** 2026-11-26
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -41,6 +41,117 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### ✅ LA V29, HECHA: SIETE COMMITS, TODO MEDIDO (2026-11-26)
+
+La lista de la v29 está **aplicada entera menos el bloqueo entre usuarios**, que se mueve a
+la v30 por tamaño (abajo, con el número). Siete commits, cada cosa en el suyo.
+
+| # | Commit | Qué |
+|---|---|---|
+| 1 | `deb6473` | `keep.xml` + reductor de recursos |
+| 2 | `32383c0` | fuera `billing-ktx` y `firebase-storage` |
+| 3 | `fe1aa79` | la otra mitad del naranja |
+| 4 | `cc466c0` | "1 platos" → plurales |
+| 5 | `91259f8` | BOM de Compose 2024.09 → 2026.06 |
+| 6 | `fe28a16` | la fecha de los avisos y el idioma |
+| 7 | `335576b` | limpieza de código muerto del lint |
+
+#### Lo que pesa el resultado, paso a paso
+
+| | APK release |
+|---|---|
+| punto de partida (v28) | 7.396.463 |
+| + `keep.xml` y reductor encendido | 6.952.132 |
+| + fuera billing y firebase-storage | 6.901.387 |
+| + BOM de Compose 21 meses más nuevo | 7.318.756 |
+| + limpieza del lint | **7.318.556** |
+| | **−77.907 bytes, con 21 meses de Compose dentro** |
+
+#### Tres hallazgos que no estaban en ninguna lista
+
+**1. El BOM de Compose llevaba en 2024.09.00**, de septiembre de 2024, con Kotlin en 2.3.21.
+Funcionaba porque el compilador de Compose viaja con Kotlin, pero el runtime y material3
+tenían dos años. ⚠️ **El techo no es el último BOM**: desde `2026.08.00`,
+`material3-ripple` exige compilar contra la **API 37**, que pide AGP 9. Comprobado versión
+a versión, no supuesto. O sea que **Compose está en la misma cadena de AGP 9 que Hilt y
+Places**: son tres, no dos.
+
+**2. `keep.xml` funciona, y eran 434 KB, no 370.** Lo que había que demostrar no es que
+compile, es que no se lleva texto: verificado volcando `resources.arsc` con `aapt2`, las
+**598 cadenas y plurales** del proyecto siguen en el APK con sus dos idiomas.
+
+**3. `billing-ktx` no se iba sola por no usarla.** Tenía cero usos y aun así metía en el
+manifest publicado `com.android.vending.BILLING`, el `InAppBillingService.BIND`, el
+servicio del *billing test companion* y **dos activities** (`ProxyBillingActivity` y
+`...V2`) — y esas activities son justo lo que impedía a R8 tirar las clases. La app
+publicada **declaraba que hacía facturación** mientras la ficha dice que no hay compras.
+
+#### Y un bug que solo se vio al subir Compose
+
+El lint del BOM nuevo trae `NonObservableLocale`, **como error**: la fecha de los avisos de
+más de una semana se formateaba con `Locale.getDefault()` dentro de una Composable. Con el
+**selector de idioma propio** de esta app, al cambiarlo el mes se quedaba en el idioma
+anterior hasta que algo recompusiera la lista. Arreglado con `LocalConfiguration.current`.
+
+⚠️ El arreglo que propone el lint, `LocalLocale.current.platformLocale`, **no existe en
+esta versión de Compose** — comprobado buscándolo en los `.aar`. El check va por delante de
+la API. Cuando aparezca, es el reemplazo bueno.
+
+#### ⏳ LO QUE FALTA: VERLO EN PANTALLA
+
+Todo lo de arriba está verificado por medición, build y herramienta. **Dos cosas son
+visuales y nadie las ha visto todavía**, y este proyecto ya perdió dos versiones por dar
+por bueno un arreglo visual sin reproducirlo:
+
+1. **La cabecera de la liga en los dos temas** — la cuenta atrás en `orangeStrong` y la
+   pastilla de racha con letra negra sobre el naranja de marca. La racha necesita
+   `voteStreak >= 2`, así que hay que votar dos días seguidos o tocar las SharedPreferences
+   de `daily_mission`.
+2. **"1 plato" en singular** — en el detalle de un plato y en dos sitios del perfil, con una
+   colección de **un solo** plato.
+
+Banco de pruebas, de la lección de la v24/v25: `wm size 720x1640`, `wm density 320` y el
+overlay `navbar.threebutton`.
+
+#### El bloqueo entre usuarios se va a la v30, y aquí está el número
+
+Medido para que la estimación no sea a ojo: hay **107 consultas a Firestore** repartidas en
+14 ficheros, y las reglas tendrían que consultar la lista de bloqueados en **cinco**
+colecciones (`plates`, `ratings`, `comments`, `follows`, `reports`). El botón es lo de
+menos; lo difícil es no olvidarse de una pantalla, que es justo donde reaparece quien
+creías bloqueado. No cabe junto a lo demás.
+
+#### Lo que el lint sigue diciendo y NO hay que tocar
+
+Quedan 75 avisos y **0 errores** (venía de 89 y 1). De los que quedan, estos están
+descartados **con motivo**, para no gastar otra tarde en ellos:
+
+- **`CredentialManagerMisuse`** en `AuthRepository`: falso positivo. El `catch (e:
+  Exception)` ya trata `NoCredentialException` cayendo al navegador, documentado ahí mismo.
+- **`Typos`: "Vision" → "Visión"**: es "Google Cloud Vision", nombre de producto.
+- **Los 6 `PluralsCandidate`** que quedan ya están resueltos a mano: `ntf_days_ago` tiene su
+  `if (d == 1L)`, `ntf_new_plates` su `if (plateCount > 1)`, y `notif_league_b_other` es una
+  posición en la liga, no un recuento.
+- **`StaticFieldLeak`** en `RemoteConfigManager`: `FirebaseRemoteConfig` es un singleton con
+  el contexto de aplicación.
+- **`MonochromeLauncherIcon`** y la fusión de `mipmap-anydpi-v26`: tocan el icono, que ya
+  dio un problema en este proyecto, y hay que **verlos** antes de darlos por buenos.
+- **`ExifInterface`**: pasar a la de AndroidX añade una dependencia para callar un aviso,
+  sin un fallo de rotación demostrado detrás. Si aparecen fotos torcidas, es el primer sitio
+  donde mirar.
+
+#### De la revisión, lo que salió sano (para no repetirla)
+
+0 `!!` en todo el código · 0 `Icon`/`Image` sin `contentDescription` (52 con texto, 44 con
+`null` a propósito) · 0 cadenas sin usar · 0 TODO/FIXME · `firestore.rules` **idéntico byte
+a byte** al desplegado y los 19 índices también · 0 errores en las functions en 3 días · las
+reglas bien cerradas (el `reports/{uid}_{docId}` determinista impide denunciar dos veces, y
+no hay `update` ni `delete` ahí) · los cinco triggers que dan XP son idempotentes.
+
+⚠️ Dos cosas de infraestructura que no mira nadie: Firestore está con
+**`DELETE_PROTECTION_DISABLED`** y **sin point-in-time recovery**. La protección contra
+borrado es gratis.
 
 ### ✅ LA CACHÉ OFFLINE DE FIRESTORE, ARREGLADA Y PROBADA SIN RED (2026-11-24)
 
@@ -396,7 +507,7 @@ Para ubicarlo hace falta abrir el error en Crashlytics y leer dos cosas: la **cl
 log** (la cadena que se pasa a `Fallos.reportar`, del estilo "descubrir: cargar platos") y
 el **modelo del dispositivo**.
 
-### 📋 LO QUE ENTRA EN LA V29 (lista cerrada, leer al abrirla)
+### 📋 LA LISTA CON LA QUE SE ABRIÓ LA V29 (ya aplicada, ver arriba)
 
 Tres cosas, por orden de lo que cuesta decidirlas. **Cada una en su commit**, no mezcladas.
 
