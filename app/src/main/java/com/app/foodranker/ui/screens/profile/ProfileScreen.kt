@@ -1,5 +1,6 @@
 package com.app.foodranker.ui.screens.profile
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.app.foodranker.R
 import android.os.Build
@@ -1352,7 +1353,7 @@ private fun CollectionsSection(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(col.name, fontWeight = FontWeight.SemiBold, color = FoodTheme.colors.textPrimary)
-                            Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
+                            Text(pluralStringResource(R.plurals.prof_list_plates, col.plateIds.size, col.plateIds.size), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
                         }
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -1392,7 +1393,7 @@ private fun CollectionsSection(
                     Text(col.emoji, fontSize = 22.sp)
                     Text(col.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FoodTheme.colors.textPrimary)
                     Spacer(Modifier.weight(1f))
-                    Text(stringResource(R.string.prof_list_plates, col.plateIds.size), fontSize = 13.sp, color = FoodTheme.colors.textSecondary)
+                    Text(pluralStringResource(R.plurals.prof_list_plates, col.plateIds.size, col.plateIds.size), fontSize = 13.sp, color = FoodTheme.colors.textSecondary)
                 }
 
                 if (isLoadingCollectionPlates) {

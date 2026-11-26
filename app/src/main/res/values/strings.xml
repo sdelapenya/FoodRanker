@@ -218,7 +218,10 @@
     <string name="det_price_one">💰 1 person paid %1$s %2$s</string>
     <string name="det_price_usual">💰 usually costs %1$s %2$s</string>
     <string name="det_repeat_pct">👍 %1$d %% would order it again</string>
-    <string name="det_list_plates">%1$d dishes</string>
+    <plurals name="det_list_plates">
+        <item quantity="one">%1$d dish</item>
+        <item quantity="other">%1$d dishes</item>
+    </plurals>
     <string name="det_user_fallback">User</string>
     <string name="det_would_raise">Would raise the dish</string>
     <string name="det_would_lower">Would lower the dish</string>
@@ -306,7 +309,10 @@
     <string name="prof_understood">Got it</string>
     <string name="prof_xp">%1$d XP</string>
     <string name="prof_city_rank_value">#%1$d in %2$s</string>
-    <string name="prof_list_plates">%1$d dishes</string>
+    <plurals name="prof_list_plates">
+        <item quantity="one">%1$d dish</item>
+        <item quantity="other">%1$d dishes</item>
+    </plurals>
     <string name="league_out_of_top">You are outside the Top 20</string>
     <string name="league_out_hint">Rate more dishes this week to show up in the ranking.</string>
     <string name="league_your_position">Your position</string>

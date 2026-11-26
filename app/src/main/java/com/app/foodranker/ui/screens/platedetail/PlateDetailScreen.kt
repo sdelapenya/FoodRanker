@@ -706,7 +706,7 @@ fun PlateDetailScreen(
                             Text(col.emoji, fontSize = 24.sp)
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(col.name, fontWeight = FontWeight.Medium, color = if (alreadyAdded) FoodTheme.colors.textSecondary else FoodTheme.colors.textPrimary)
-                                Text(stringResource(R.string.det_list_plates, col.plateIds.size), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
+                                Text(pluralStringResource(R.plurals.det_list_plates, col.plateIds.size, col.plateIds.size), fontSize = 12.sp, color = FoodTheme.colors.textSecondary)
                             }
                             if (alreadyAdded) {
                                 Text(stringResource(R.string.det_already_added), fontSize = 12.sp, color = SuccessGreen, fontWeight = FontWeight.Medium)
