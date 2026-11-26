@@ -98,6 +98,42 @@ no los datos.** `ratingAverage` usa **tres** ejes ponderados (0,50 sabor / 0,20
 presentación / 0,30 satisfacción) y **no usa `valueScore`**; el script hacía la media
 simple de cuatro. Si se vuelve a auditar, copiar los pesos de `functions/src/index.ts`.
 
+#### ✅ Y las dos secuencias, ejercitadas de verdad
+
+El aviso vino de la propia revisión externa: el diff y la auditoría de datos **no
+ejercitan** las secuencias. Cierto. Ahora hay
+**`functions/scripts/pruebaCarreras.js`**, que invoca los handlers reales contra el
+emulador de Firestore.
+
+⚠️ **El emulador entrega los triggers EN ORDEN**, así que dejándolo a su aire la secuencia
+mala no sale nunca. Lo que sí se puede es llamar a `.run(evento)` con un evento
+**fabricado** y forzar el estado exacto que produce la carrera.
+
+**Lo que valida la prueba es que se corrió también contra el código anterior:**
+
+| | resultado |
+|---|---|
+| con el arreglo | **11 comprobaciones OK** |
+| sin el arreglo | **7 MAL** |
+
+Y así salió que el caso B es **peor de lo que parecía**: la segunda entrega no solo bajaba
+el contador, dejaba el plato en `totalRatings=0` y **media 0** — hundido en el ranking.
+
+⚠️ **Un fallo de la primera versión de la prueba, que casi se cuela**: `limpia()` borraba
+los documentos pero **no sus subcolecciones** (Firestore no lo hace, tampoco en el
+emulador), así que el acta de idempotencia sobrevivía entre ejecuciones y el caso B daba
+OK **aunque el código no tuviera el arreglo**. La prueba se mentía sola.
+
+**Para volver a correrla:**
+
+```bash
+export JAVA_HOME=/c/Users/User/.jdks/ms-21.0.9     # firebase-tools ya NO admite Java < 21
+npx firebase-tools emulators:start --only firestore --project foodranker-51270
+cd functions && npm run build && node scripts/pruebaCarreras.js
+```
+
+Se planta si no hay `FIRESTORE_EMULATOR_HOST`: no puede tocar producción ni por error.
+
 #### ⏳ PENDIENTE: `functions` NO está desplegado con esto
 
 Los dos arreglos están **solo en el repo**. Desplegar es una acción hacia fuera y se decide
