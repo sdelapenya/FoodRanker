@@ -215,12 +215,24 @@ async function casoB() {
   console.log("emulador:", process.env.FIRESTORE_EMULATOR_HOST,
     "| proyecto:", process.env.GCLOUD_PROJECT,
     sinHostExplicito ? "(host por defecto)" : "(host del entorno)");
-  // Que conteste alguien, y decirlo claro. Sin esto, un emulador apagado daba un error de
+  // Que conteste alguien, y decirlo RÁPIDO. Sin esto, un emulador apagado daba un error de
   // red enterrado en la primera escritura y parecía un fallo de la prueba.
-  try {
-    await db.collection("__ping").doc("__ping").get();
-  } catch (e) {
-    console.error(`\nNo contesta ningún emulador en ${process.env.FIRESTORE_EMULATOR_HOST}.`);
+  //
+  // ⚠️ El sondeo es TCP a pelo, no una lectura de Firestore. Con una lectura funcionaba
+  // igual pero tardaba varios segundos: el cliente de Firestore reintenta antes de darse
+  // por vencido, y quien lanza la prueba sin el emulador se come esa espera sin saber por
+  // qué. Abrir el socket contesta en milisegundos.
+  const [maquina, puerto] = HOST.replace(/^\[|\]$/g, "").split(":");
+  const alcanzable = await new Promise((resolve) => {
+    const s = require("net").connect({ host: maquina, port: Number(puerto) });
+    const fin = (ok) => { s.destroy(); resolve(ok); };
+    s.setTimeout(1500);
+    s.once("connect", () => fin(true));
+    s.once("timeout", () => fin(false));
+    s.once("error", () => fin(false));
+  });
+  if (!alcanzable) {
+    console.error(`\nNo contesta ningún emulador en ${HOST}.`);
     console.error("Arráncalo primero (ver la cabecera de este fichero).");
     process.exit(2);
   }
