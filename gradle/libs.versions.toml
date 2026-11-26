@@ -9,7 +9,13 @@ junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.1"
-composeBom = "2024.09.00"
+# ⚠️ 2026.06.01 es el TECHO con AGP 8.10.1 y compileSdk 36, no un descuido. Comprobado
+# version a version: desde 2026.08.00, `material3-ripple` exige compilar contra la API 37,
+# que pide AGP 9. O sea que Compose esta en la MISMA cadena que Hilt y Places (ver
+# docs/HANDOFF.md): el dia que entre AGP 9, suben los tres.
+# Antes estaba en 2024.09.00, de septiembre de 2024. Cuesta 180 KB y trae 21 meses de
+# arreglos. Al subirlo: 84 tests en verde y release construida.
+composeBom = "2026.06.01"
 places = "4.1.0"
 
 [libraries]
