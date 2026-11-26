@@ -42,6 +42,61 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ "1 PLATO" VISTO, Y EL CONTRASTE TRIADO HASTA EL FINAL (2026-11-26, noche)
+
+#### El plural, verificado creando una lista de verdad y borrándola
+
+No se podía ver sin datos, así que se creó una lista `PruebaBorrar` en la cuenta de revisión,
+se le metió un plato, se miró y se borró. **Comprobado después contra Firestore por la API
+REST: no queda ningún documento con ese nombre.**
+
+| | |
+|---|---|
+| castellano, hoja "Añadir a lista" | **"1 plato"** |
+| inglés, pestaña del perfil | **"1 dish"** |
+| con 0 platos | "0 platos" / "0 dishes" |
+
+⚠️ **Dato que confirma que el fallo era real y visible**: las **dos** listas que existen en
+producción, de usuarios de verdad, **tienen un plato cada una**. Llevaban desde siempre
+diciendo "1 platos".
+
+De paso se verificó el **cambio de idioma en vivo** (castellano → inglés → castellano) sin
+reiniciar la app, que es lo que toca el arreglo de `LocalConfiguration` de los avisos.
+
+#### El contraste, triado entero: 24 → 14
+
+De los 16 que quedaban, **ocho eran texto y se han arreglado**; el resto no son fallos:
+
+| Qué | Cuántos | Por qué se queda |
+|---|---|---|
+| Gráficos a 2,84 | 5 | WCAG les pide 3,0, no 4,5, y faltan 0,16. Barras de progreso, el `+` de la barra, el pin de localización y los subrayados de pestaña. Oscurecerlos sería cambiar el naranja de marca en elementos que no se leen. |
+| Falso positivo | 2 | `ProfileScreen:1662/1666`: el botón de borrar plato, con borde rojo; el naranja viene de un botón anterior. Emparejamiento mal hecho. |
+| Texto deshabilitado | 1 | `PlateDetailScreen:508`, `textSecondary @0.5`. Es el estado "apagado" a propósito. |
+| Blanco sobre degradado | 1 | `AddPlateScreen:529`, el hueco de la foto. 18sp en negrita sobre un degradado naranja. Arreglarlo es **rediseñar el degradado**, decisión de producto, no de accesibilidad. |
+
+#### ⚠️ EL PRIMER INTENTO CON LAS PESTAÑAS NO HIZO NADA, Y A OJO PARECÍA QUE SÍ
+
+Se cambió el `contentColor` del `TabRow`… pero **cada `Tab` fija el color de su propio
+`Text` y lo pisa**. Mirando la captura parecía arreglado.
+
+**Se descubrió midiendo los PÍXELES de la captura**, no mirándola: el rótulo seguía en
+`#FF6B35`. Desde entonces la verificación de color se hace así, y es lo que hay que repetir:
+
+| | claro | oscuro |
+|---|---|---|
+| "Top", "Ranking", cuenta atrás | **#C64600 → 4,91** | **#FF8A50 → 7,29** |
+
+El lector de PNG va sin dependencias (zlib + desfiltrado de scanlines), así que no hace
+falta instalar nada: `adb exec-out screencap -p` y contar colores dominantes en un recuadro.
+
+#### Las tarjetas de `VenuePicker` llevaban un acento suave hecho a mano
+
+`OrangePrimary.copy(alpha = 0.06f)` y `SuccessGreen.copy(alpha = 0.10f)` con texto del tema
+encima: 4,20 y 4,30. Y en **tema oscuro** un naranja al 6% sobre negro no es el acento del
+tema, es otra cosa. Pasan a los pares que **ya existían** para esto (`accentSoft` /
+`onAccentSoft(Muted)` y `successSoft` / `onSuccessSoft(Muted)`), y sus iconos a las
+variantes fuertes.
+
 ### ⚠️ EL NARANJA NO ESTABA HECHO, Y LA CULPA ERA DEL CHECKER (2026-11-26, tarde)
 
 **Lo que pasó, porque la lección vale más que el arreglo.** El commit `fe1aa79` cerró "la
