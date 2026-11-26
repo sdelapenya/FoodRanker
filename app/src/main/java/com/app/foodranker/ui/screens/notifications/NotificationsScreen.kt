@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.app.foodranker.R
@@ -267,6 +268,21 @@ private fun timeAgo(timestamp: Long): String {
             val d = TimeUnit.MILLISECONDS.toDays(diff)
             if (d == 1L) stringResource(R.string.ntf_day_ago) else stringResource(R.string.ntf_days_ago, d.toInt())
         }
-        else -> SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(timestamp))
+        // ⚠️ El idioma se lee de `LocalConfiguration`, NO de `Locale.getDefault()`.
+        //
+        // Lo cazó el lint que trae el BOM de Compose 2026.06 (`NonObservableLocale`, y lo
+        // da como error, no como aviso): `Locale.getDefault()` dentro de una Composable se
+        // lee una vez y Compose no se entera de que ha cambiado. En esta app importa más
+        // que en la mayoría, porque tiene **selector de idioma propio**: al cambiarlo, el
+        // mes de este formato ("12 nov" / "12 Nov") se quedaba en el idioma anterior hasta
+        // que algo recompusiera la lista por otro motivo.
+        //
+        // El arreglo que propone el lint, `LocalLocale.current.platformLocale`, **no existe
+        // todavía** en esta versión de Compose (comprobado); `LocalConfiguration` sí, y
+        // leerlo es lo que hace que esta Composable se recomponga al cambiar el idioma.
+        else -> {
+            val cfg = LocalConfiguration.current
+            SimpleDateFormat("dd MMM", cfg.locales[0]).format(Date(timestamp))
+        }
     }
 }
