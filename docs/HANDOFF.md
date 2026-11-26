@@ -113,7 +113,7 @@ mala no sale nunca. Lo que sí se puede es llamar a `.run(evento)` con un evento
 
 | | resultado |
 |---|---|
-| con el arreglo | **11 comprobaciones OK** |
+| con el arreglo | **12 comprobaciones OK** |
 | sin el arreglo | **7 MAL** |
 
 Y así salió que el caso B es **peor de lo que parecía**: la segunda entrega no solo bajaba
@@ -132,7 +132,16 @@ npx firebase-tools emulators:start --only firestore --project foodranker-51270
 cd functions && npm run build && node scripts/pruebaCarreras.js
 ```
 
-Se planta si no hay `FIRESTORE_EMULATOR_HOST`: no puede tocar producción ni por error.
+⚠️ **La primera versión del script prometía una protección que no daba.** Ponía
+`FIRESTORE_EMULATOR_HOST` por defecto y **después** comprobaba si estaba puesta: esa
+condición no podía ser cierta nunca. Lo cazó la revisión externa al reproducir la prueba.
+
+Ahora las guardas son dos y **están comprobadas disparando**: el host tiene que ser de
+loopback, y el proyecto tiene que llevar prefijo **`demo-`** (la convención de Firebase
+para proyectos que solo existen en el emulador; con ella las librerías se niegan a hablar
+con servicios reales). Antes el script traía el id de producción escrito, que es justo el
+que no debe aparecer en una prueba. Y si no contesta ningún emulador, lo dice en una línea
+en vez de morir en la primera escritura.
 
 #### ⏳ PENDIENTE: `functions` NO está desplegado con esto
 

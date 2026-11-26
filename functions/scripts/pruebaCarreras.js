@@ -19,20 +19,44 @@
  *
  * ## Cómo se usa
  *
- *   npx firebase-tools emulators:start --only firestore --project foodranker-51270
- *   node functions/scripts/pruebaCarreras.js
+ *   export JAVA_HOME=/c/Users/User/.jdks/ms-21.0.9   # firebase-tools ya NO admite Java < 21
+ *   npx firebase-tools emulators:start --only firestore --project demo-foodranker
+ *   cd functions && npm run build && node scripts/pruebaCarreras.js
  *
- * ⚠️ Habla SOLO con el emulador: si `FIRESTORE_EMULATOR_HOST` no está puesto, se planta
- * antes de tocar nada. Esto no puede correr contra producción ni por error.
+ * ⚠️ Habla SOLO con el emulador, y las dos guardas de abajo son de verdad: exige un host
+ * de loopback y un proyecto con prefijo `demo-`. Ver el comentario que las acompaña — la
+ * primera versión de este fichero prometía esa protección y NO la daba.
  */
 "use strict";
 
-process.env.FIRESTORE_EMULATOR_HOST =
-  process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080";
-process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "foodranker-51270";
-
-if (!process.env.FIRESTORE_EMULATOR_HOST) {
-  console.error("Sin FIRESTORE_EMULATOR_HOST. Abortado para no tocar producción.");
+// ⚠️ ESTA GUARDA ESTUVO MUERTA Y LA PROTECCIÓN QUE PROMETÍA ERA FALSA.
+//
+// La primera versión hacía `FIRESTORE_EMULATOR_HOST = process.env.X || "127.0.0.1:8080"`
+// y DESPUÉS comprobaba `if (!process.env.FIRESTORE_EMULATOR_HOST)`. Esa condición no podía
+// ser cierta nunca: la línea de arriba acababa de rellenarla. El comentario decía "no
+// puede correr contra producción ni por error" y no lo garantizaba nada.
+//
+// Ahora la comprobación va ANTES de poner ningún valor por defecto, y además:
+//
+//  • el host tiene que ser de loopback — si alguien exporta el de un Firestore real,
+//    se planta en vez de escribir en él;
+//  • el proyecto por defecto es `demo-foodranker`. El prefijo `demo-` es la convención
+//    de Firebase para proyectos que SOLO existen en el emulador: con él, las librerías
+//    se niegan a hablar con servicios reales. Antes ponía el id de producción, que es
+//    justo el que no debe aparecer en un script de pruebas.
+const HOST = process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080";
+const sinHostExplicito = !process.env.FIRESTORE_EMULATOR_HOST;
+const esLocal = /^(127\.0\.0\.1|\[::1\]|localhost):\d+$/.test(HOST);
+if (!esLocal) {
+  console.error(`FIRESTORE_EMULATOR_HOST apunta a "${HOST}", que no es loopback.`);
+  console.error("Abortado: esto solo corre contra un emulador local.");
+  process.exit(2);
+}
+process.env.FIRESTORE_EMULATOR_HOST = HOST;
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "demo-foodranker";
+if (!/^demo-/.test(process.env.GCLOUD_PROJECT)) {
+  console.error(`GCLOUD_PROJECT es "${process.env.GCLOUD_PROJECT}", sin prefijo demo-.`);
+  console.error("Abortado: usa un proyecto demo-* para que no pueda tocar nada real.");
   process.exit(2);
 }
 
@@ -188,7 +212,18 @@ async function casoB() {
 }
 
 (async () => {
-  console.log("emulador:", process.env.FIRESTORE_EMULATOR_HOST);
+  console.log("emulador:", process.env.FIRESTORE_EMULATOR_HOST,
+    "| proyecto:", process.env.GCLOUD_PROJECT,
+    sinHostExplicito ? "(host por defecto)" : "(host del entorno)");
+  // Que conteste alguien, y decirlo claro. Sin esto, un emulador apagado daba un error de
+  // red enterrado en la primera escritura y parecía un fallo de la prueba.
+  try {
+    await db.collection("__ping").doc("__ping").get();
+  } catch (e) {
+    console.error(`\nNo contesta ningún emulador en ${process.env.FIRESTORE_EMULATOR_HOST}.`);
+    console.error("Arráncalo primero (ver la cabecera de este fichero).");
+    process.exit(2);
+  }
   try {
     await casoA();
     await casoB();
