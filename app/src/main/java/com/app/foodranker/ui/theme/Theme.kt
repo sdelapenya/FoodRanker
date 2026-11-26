@@ -26,6 +26,7 @@ data class FoodRankerColorTokens(
     val onSuccessSoft:      Color,
     val onSuccessSoftMuted: Color,
     val successStrong:      Color,
+    val orangeStrong:       Color,
     // Texto e iconos SOBRE el naranja de marca. Negro, no blanco: blanco da 2,84.
     val onOrange:           Color,
     val isDark:     Boolean
@@ -48,6 +49,7 @@ val LocalFoodColors = staticCompositionLocalOf {
         onSuccessSoft      = OnSuccessSoftLight,
         onSuccessSoftMuted = OnSuccessSoftMutedLight,
         successStrong      = SuccessStrongLight,
+        orangeStrong       = OrangeStrongLight,
         onOrange           = Color.Black,
         isDark       = false
     )
@@ -114,6 +116,7 @@ fun FoodRankerTheme(
         onSuccessSoft      = OnSuccessSoftDark,
         onSuccessSoftMuted = OnSuccessSoftMutedDark,
         successStrong      = SuccessStrongDark,
+        orangeStrong       = OrangeStrongDark,
         onOrange           = Color.Black,
         isDark        = true
     ) else FoodRankerColorTokens(
@@ -132,6 +135,7 @@ fun FoodRankerTheme(
         onSuccessSoft      = OnSuccessSoftLight,
         onSuccessSoftMuted = OnSuccessSoftMutedLight,
         successStrong      = SuccessStrongLight,
+        orangeStrong       = OrangeStrongLight,
         onOrange           = Color.Black,
         isDark        = false
     )

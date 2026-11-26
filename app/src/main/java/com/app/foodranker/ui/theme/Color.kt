@@ -56,3 +56,15 @@ val OnSuccessSoftMutedDark  = Color(0xFF9EC6B0)
 // modo claro no vale en oscuro: 0xFF168963 sobre fondo oscuro se queda en 3,4.
 val SuccessStrongLight = Color(0xFF117A56)
 val SuccessStrongDark  = Color(0xFF3FD69B)
+
+// El naranja "fuerte", y es SOLO para texto. Mismo problema y misma solución que el verde
+// de arriba: `OrangePrimary` (0xFFFF6B35) es el naranja de marca y vale como fondo, como
+// icono y como logo, pero como LETRA sobre fondo claro se queda en 2,84 y WCAG AA pide
+// 4,5. No se toca el de marca —cambiarlo sería cambiar la identidad de la app—, se añade
+// una variante legible al lado.
+//
+// ⚠️ Hacen falta los dos, uno por tema: el oscurecido para claro no vale en oscuro ni al
+// revés. Medido: 0xFFC64600 da 4,91 sobre blanco, y 0xFFFF8A50 da 8,03 sobre el fondo
+// oscuro. Al cambiar cualquiera de los dos, pasar tools/ui/check_contrast.py.
+val OrangeStrongLight = Color(0xFFC64600)
+val OrangeStrongDark  = Color(0xFFFF8A50)

@@ -562,16 +562,26 @@ private fun CountdownTickerRow(countdownText: String, tickerMessage: String, vot
                 // Decía "Reset semanal del ranking", pero el ranking no se reinicia nunca: lo
                 // que vuelve a empezar cada lunes es la liga, como dice la línea de abajo.
                 Text(stringResource(R.string.league_ends_in), color = FoodTheme.colors.textSecondary, fontSize = 12.sp)
-                Text(countdownText, color = OrangePrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                // `orangeStrong`, no `OrangePrimary`: a 12sp en negrita esto es texto
+                // normal para WCAG (lo "grande" empieza en 14sp negrita), y el naranja de
+                // marca sobre el fondo claro se queda en 2,84 de los 4,5 que pide. Con el
+                // token sube a 4,91 en claro y 8,03 en oscuro, y sigue siendo naranja.
+                Text(countdownText, color = FoodTheme.colors.orangeStrong, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 if (voteStreak >= 2) {
                     Spacer(Modifier.weight(1f))
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFFF6D00)
+                        // Era un 0xFFFF6D00 clavado a mano: un segundo naranja, parecido
+                        // pero distinto al de marca, e idéntico en los dos temas porque no
+                        // pasaba por el tema. Ahora es el de marca y uno menos que mantener.
+                        color = OrangePrimary
                     ) {
                         Text(
                             pluralStringResource(R.plurals.streak_days, voteStreak, voteStreak),
-                            color = Color.White,
+                            // Blanco sobre este naranja da 2,82 y no llega ni a texto
+                            // grande. `onOrange` (negro) da 7,41. Es el mismo token que ya
+                            // usan los botones naranjas desde la v28.
+                            color = FoodTheme.colors.onOrange,
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
