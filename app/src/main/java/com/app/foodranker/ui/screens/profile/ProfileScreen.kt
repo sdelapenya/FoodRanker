@@ -340,19 +340,19 @@ fun ProfileScreen(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) },
                                 text = { Text(stringResource(R.string.prof_tab_my_plates, uiState.plates.size), fontWeight = FontWeight.Medium,
-                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) OrangePrimary else FoodTheme.colors.textSecondary) }
+                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.MY_PLATES) FoodTheme.colors.orangeStrong else FoodTheme.colors.textSecondary) }
                             )
                             Tab(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.SAVED) },
                                 text = { Text(stringResource(R.string.prof_tab_saved, uiState.savedPlates.size), fontWeight = FontWeight.Medium,
-                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED) OrangePrimary else FoodTheme.colors.textSecondary) }
+                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.SAVED) FoodTheme.colors.orangeStrong else FoodTheme.colors.textSecondary) }
                             )
                             Tab(
                                 selected = uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS,
                                 onClick = { viewModel.setTab(com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) },
                                 text = { Text(stringResource(R.string.prof_tab_lists, uiState.collections.size), fontWeight = FontWeight.Medium,
-                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) OrangePrimary else FoodTheme.colors.textSecondary) }
+                                    color = if (uiState.activeTab == com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS) FoodTheme.colors.orangeStrong else FoodTheme.colors.textSecondary) }
                             )
                         }
                     } else {
@@ -1235,7 +1235,7 @@ private fun LevelCard(xp: Int, badges: List<String>, leagueWins: Int = 0) {
                     }
                 }
                 if (level.number < 6) {
-                    Text("🎯 $nextXP XP", fontSize = 12.sp, color = OrangePrimary, fontWeight = FontWeight.Medium)
+                    Text("🎯 $nextXP XP", fontSize = 12.sp, color = FoodTheme.colors.orangeStrong, fontWeight = FontWeight.Medium)
                 }
             }
 

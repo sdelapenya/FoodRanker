@@ -197,7 +197,7 @@ fun EmailAuthSheet(
                     if (cargando) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(22.dp),
-                            color = androidx.compose.ui.graphics.Color.White,
+                            color = FoodTheme.colors.onOrange,
                             strokeWidth = 2.dp
                         )
                     } else {

@@ -84,7 +84,7 @@ fun ChallengeBanner(
                         ) {
                             Text(
                                 stringResource(R.string.ch_post_xp, challenge.xpReward),
-                                color = OrangePrimary,
+                                color = FoodTheme.colors.orangeStrong,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 11.sp
                             )

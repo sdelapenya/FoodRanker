@@ -405,7 +405,7 @@ private fun ExploreGridCard(plate: com.app.foodranker.data.model.Plate, onClick:
                 ) {
                     Text(
                         "★ ${"%.1f".format(plate.averageScore)}",
-                        color = androidx.compose.ui.graphics.Color.White,
+                        color = FoodTheme.colors.onOrange,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)

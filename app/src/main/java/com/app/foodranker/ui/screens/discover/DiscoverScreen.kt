@@ -377,7 +377,9 @@ private fun RankingTopBar(
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor   = FoodTheme.colors.surface,
-                contentColor     = OrangePrimary,
+                // `orangeStrong`: esto pinta la ETIQUETA de la pestana seleccionada, que es
+                // texto. El naranja de marca sobre la superficie clara da 2,84.
+                contentColor     = FoodTheme.colors.orangeStrong,
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
@@ -406,7 +408,11 @@ private fun RankingTopBar(
                                 fontSize = 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                color = if (selectedTab == index) OrangePrimary else FoodTheme.colors.textSecondary
+                                // ⚠️ Este color PISA al `contentColor` del TabRow de arriba:
+                                // cambiar solo aquel no mueve nada, que es lo que pasó al
+                                // primer intento. El naranja de marca a 13sp sobre la
+                                // superficie clara da 2,84; `orangeStrong`, 4,91.
+                                color = if (selectedTab == index) FoodTheme.colors.orangeStrong else FoodTheme.colors.textSecondary
                             )
                         }
                     )
@@ -431,8 +437,12 @@ private fun RankingNavBar(
             icon     = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
             label    = { Text(stringResource(R.string.nav_ranking), fontSize = 11.sp) },
             colors   = NavigationBarItemDefaults.colors(
+                // El ICONO se queda en el naranja de marca: es un gráfico, y WCAG le pide
+                // 3,0 en vez de 4,5. El RÓTULO no: son 11sp de texto, y a 2,84 no llega ni
+                // al umbral de los gráficos. Medido en una captura del emulador, que daba
+                // #FF6B35 en "Ranking" cuando el resto de la pantalla ya estaba corregido.
                 selectedIconColor = OrangePrimary,
-                selectedTextColor = OrangePrimary,
+                selectedTextColor = FoodTheme.colors.orangeStrong,
                 indicatorColor    = OrangePrimary.copy(alpha = 0.12f)
             )
         )

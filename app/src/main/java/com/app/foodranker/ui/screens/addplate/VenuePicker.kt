@@ -155,18 +155,23 @@ fun VenuePicker(
                 onClick = { onSelect(s) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                color = OrangePrimary.copy(alpha = 0.06f)
+                // Era `OrangePrimary.copy(alpha = 0.06f)`, un acento suave hecho a mano.
+                // El tema ya tiene el par para esto (`accentSoft` + `onAccentSoft(Muted)`),
+                // y usarlo arregla dos cosas: el texto secundario se quedaba en 4,30 de
+                // los 4,5, y en tema oscuro un naranja al 6% sobre fondo negro no es el
+                // mismo color que el acento del tema.
+                color = FoodTheme.colors.accentSoft
             ) {
                 Row(
                     Modifier.fillMaxWidth().padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(Icons.Default.Place, contentDescription = null, tint = OrangePrimary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Place, contentDescription = null, tint = FoodTheme.colors.orangeStrong, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(s.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = FoodTheme.colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(s.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = FoodTheme.colors.onAccentSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (s.address.isNotBlank()) {
-                            Text(s.address, fontSize = 11.sp, color = FoodTheme.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(s.address, fontSize = 11.sp, color = FoodTheme.colors.onAccentSoftMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -180,20 +185,21 @@ private fun SelectedVenue(venue: Venue, onClear: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        color = SuccessGreen.copy(alpha = 0.10f)
+        // Mismo caso que la tarjeta de sugerencia de arriba, en verde.
+        color = FoodTheme.colors.successSoft
     ) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(Icons.Default.Place, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.Place, contentDescription = null, tint = FoodTheme.colors.successStrong, modifier = Modifier.size(20.dp))
             Column(Modifier.weight(1f)) {
-                Text(venue.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = FoodTheme.colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(venue.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = FoodTheme.colors.onSuccessSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val place = listOf(venue.address.ifBlank { venue.city }, venue.country)
                     .filter { it.isNotBlank() }.joinToString(" · ")
                 if (place.isNotBlank()) {
-                    Text(place, fontSize = 11.sp, color = FoodTheme.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(place, fontSize = 11.sp, color = FoodTheme.colors.onSuccessSoftMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             IconButton(onClick = onClear) {
@@ -223,7 +229,7 @@ private fun ExistingDishChip(plate: Plate, onClick: () -> Unit) {
                 Text(
                     "★ %.1f".format(plate.averageScore),
                     fontSize = 10.sp,
-                    color = OrangePrimary,
+                    color = FoodTheme.colors.orangeStrong,
                     fontWeight = FontWeight.Bold
                 )
             }
