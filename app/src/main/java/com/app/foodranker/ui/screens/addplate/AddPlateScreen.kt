@@ -180,6 +180,10 @@ fun AddPlateScreen(
             LinearProgressIndicator(
                 progress = { if (currentStep == 1) 0.5f else 1f },
                 modifier = Modifier.fillMaxWidth().height(3.dp),
+                // contraste-ok: barra de progreso de 3dp, un GRÁFICO y no texto, así que
+                // WCAG le pide 3,0 y se queda en 2,84 — 0,16 corto. Oscurecerla sería
+                // cambiar el naranja de marca en algo que no se lee, y además el paso en
+                // el que vas lo dice el texto de debajo ("Paso 1 de 2").
                 color = OrangePrimary,
                 trackColor = FoodTheme.colors.divider
             )
@@ -518,7 +522,22 @@ private fun PhotoPickerSection(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color(0xFFFF8C42), OrangePrimary, Color(0xFFBF3D10)))),
+                    // ⚠️ DEGRADADO OSCURECIDO POR LEGIBILIDAD, no por estética.
+                    //
+                    // Era `FF8C42 → FF6B35 → BF3D10`, y encima van dos textos BLANCOS. Medido
+                    // sobre una captura real del emulador, no calculado contra el código: el
+                    // título ("Foto obligatoria") caía en 3,03 —pasa por los pelos, porque a
+                    // 18sp en negrita cuenta como texto grande y le basta 3,0— pero el
+                    // subtítulo, a 13sp, se quedaba en **3,13 de los 4,5** que le tocan. Y el
+                    // checker ni lo señalaba, porque mide contra la franja más clara y el
+                    // texto cae en otra.
+                    //
+                    // La franja de en medio es la que importa: es donde se centra la columna
+                    // de texto. `CE4310` da 4,74 al blanco; `FF6B35` daba 2,84.
+                    //
+                    // Sigue siendo el naranja de la marca, solo que más profundo. Si se vuelve
+                    // a aclarar, hay que bajar los textos a `onOrange` o no se leen.
+                    .background(Brush.verticalGradient(listOf(OrangePrimary, Color(0xFFCE4310), Color(0xFFA33308)))),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -529,7 +548,12 @@ private fun PhotoPickerSection(
                     Text(stringResource(R.string.add_photo_required), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text(
                         stringResource(R.string.add_photo_hint),
-                        color = Color.White.copy(alpha = 0.8f),
+                        // Blanco ENTERO, sin el `.copy(alpha = 0.8f)` que llevaba. Medido
+                        // sobre la captura: con el alpha se renderiza como #F1D8CE y, aun
+                        // con el degradado ya oscurecido, se quedaba en 4,21 de los 4,5 que
+                        // pide un texto de 13sp. Sin él, 5,73. El atenuado no aportaba
+                        // jerarquía que no diera ya el tamaño frente al título de 18sp.
+                        color = Color.White,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center
                     )

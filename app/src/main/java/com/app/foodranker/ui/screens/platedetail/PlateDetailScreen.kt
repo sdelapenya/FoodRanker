@@ -339,6 +339,9 @@ fun PlateDetailScreen(
                                         Icon(
                                             Icons.Default.LocationOn,
                                             contentDescription = null,
+                                            // contraste-ok: chincheta decorativa. El local y
+                                            // la ciudad van escritos justo al lado, así que no
+                                            // hay información que dependa de verla.
                                             tint = OrangePrimary,
                                             modifier = Modifier.size(16.dp)
                                         )
@@ -505,7 +508,10 @@ fun PlateDetailScreen(
                                                 commentText = new
                                             }
                                         },
-                                        placeholder = { Text(stringResource(R.string.det_write_comment), color = FoodTheme.colors.textSecondary.copy(alpha = 0.5f)) },
+                                        // Sin el `.copy(alpha = 0.5f)` que llevaba: `textSecondary` YA es el gris
+                                        // atenuado del tema, y volver a bajarlo a la mitad dejaba
+                                        // la instrucción del campo en 1,98 de contraste. Ahora 4,83.
+                                        placeholder = { Text(stringResource(R.string.det_write_comment), color = FoodTheme.colors.textSecondary) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
                                         shape = RoundedCornerShape(20.dp),

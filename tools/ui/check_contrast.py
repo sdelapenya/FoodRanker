@@ -251,7 +251,10 @@ def analiza(ruta, modo):
         # decia desde el principio, pero el codigo no lo hacia: como un `Icon(tint = ...)`
         # no lleva `fontSize`, caia en el 14sp por defecto y se le exigia 4,5. Eso convertia
         # en "fallo" cada icono gris sobre un circulo gris que en realidad cumple.
-        es_icono = "Icon" in linea or "tint" in linea
+        # Un indicador de progreso tampoco es texto: es un gráfico, umbral 3,0. Sin esto
+        # se le exigían 4,5 a una barra de 3dp y a un spinner, que no se leen.
+        es_icono = ("Icon" in linea or "tint" in linea
+                    or "ProgressIndicator" in linea)
         if es_icono:
             umbral = AA_GRANDE
         else:
@@ -270,7 +273,23 @@ def analiza(ruta, modo):
         conocidos = conocidos and (txt_es_token or etq.startswith("0x") or etq in FIJOS_TEMA)
         critico = ((not fondo[3]) and txt_es_token) or conocidos
         # Escape para los casos deliberados (un logotipo, que WCAG exime).
-        if CONTRASTE_OK.search(linea) or (n >= 2 and CONTRASTE_OK.search(lineas[n - 2])):
+        #
+        # ⚠️ Mira hasta 8 líneas hacia arriba, no una. La primera versión solo miraba la
+        # inmediatamente anterior y las marcas no suprimían nada: un motivo que merezca
+        # escribirse nunca cabe en una línea, y el comentario acaba a cuatro o cinco del
+        # sitio marcado. Se corta al llegar a una línea que no sea comentario, para que
+        # una marca no se escape y silencie el bloque siguiente.
+        exento = CONTRASTE_OK.search(linea) is not None
+        k = n - 2
+        while not exento and k >= 0 and n - k <= 8:
+            anterior = lineas[k].strip()
+            if CONTRASTE_OK.search(anterior):
+                exento = True
+                break
+            if anterior and not anterior.startswith(("//", "*", "/*")):
+                break
+            k -= 1
+        if exento:
             critico = False
         if c < umbral:
             salida.append((n, fondo[1], fondo[2], etq, c, umbral, critico))

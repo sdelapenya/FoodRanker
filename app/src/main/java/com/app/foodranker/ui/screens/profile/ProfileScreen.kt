@@ -332,6 +332,9 @@ fun ProfileScreen(
                                             com.app.foodranker.viewmodel.ProfileTab.COLLECTIONS -> 2
                                         }]
                                     ),
+                                    // contraste-ok: el SUBRAYADO de la pestaña, no su rótulo.
+                                    // Los tres rótulos ya usan `orangeStrong`; esto es el
+                                    // gráfico que los acompaña.
                                     color = OrangePrimary
                                 )
                             }
@@ -1659,10 +1662,17 @@ private fun EditPlateSheet(
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = null,
+                    // contraste-ok: FALSO POSITIVO del checker. Esto es un OutlinedButton
+                    // con borde rojo sobre la superficie del tema; el naranja contra el que
+                    // lo mide viene de un botón anterior del mismo bloque. El rojo sobre la
+                    // tarjeta clara cumple de sobra.
                     tint = Color(0xFFD32F2F),
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
+                // contraste-ok: mismo falso positivo que el icono de arriba — el naranja
+                // contra el que lo mide el checker es de otro botón del mismo bloque, no
+                // el fondo de este.
                 Text(stringResource(R.string.prof_delete_plate), fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
             }
         }

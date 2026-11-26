@@ -102,8 +102,8 @@ android {
         applicationId = "com.app.foodranker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "1.11"
+        versionCode = 29
+        versionName = "1.12"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProp("CLOUDINARY_CLOUD_NAME")}\"")

@@ -383,6 +383,10 @@ private fun RankingTopBar(
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        // contraste-ok: el SUBRAYADO de la pestaña, no su rótulo. Es un
+                        // gráfico y la información ya la da el rótulo, que sí se pasó a
+                        // `orangeStrong`. Dejarlo en el naranja de marca mantiene el
+                        // subrayado reconocible.
                         color    = OrangePrimary
                     )
                 }
@@ -456,7 +460,10 @@ private fun RankingNavBar(
                         .background(OrangePrimary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    // El "+" es el control principal de la app, no un adorno: aunque WCAG
+                    // pida 3,0 a los gráficos y no 4,5, blanco sobre el naranja se queda en
+                    // 2,84 y no llega ni a eso. Con `onOrange` sube a 7,41.
+                    Icon(Icons.Default.Add, contentDescription = null, tint = FoodTheme.colors.onOrange, modifier = Modifier.size(22.dp))
                 }
             },
             label  = { Text(stringResource(R.string.nav_upload), fontSize = 11.sp) },

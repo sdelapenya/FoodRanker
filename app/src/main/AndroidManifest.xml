@@ -108,6 +108,27 @@
         android:theme="@style/Theme.FoodRanker"
         tools:targetApi="31">
 
+        <!-- ⚠️ APAGA LA RECOGIDA DEL ID DE PUBLICIDAD POR PARTE DE ANALYTICS.
+             Es el interruptor DOCUMENTADO por Firebase para esto
+             (firebase.google.com/docs/analytics/android/configure-data-collection),
+             y hace falta porque el SDK lo recoge POR DEFECTO en Android.
+
+             Ya estaba cubierto de otra forma: con `targetSdk 36` y sin el permiso
+             `com.google.android.gms.permission.AD_ID` (que se quita más arriba con
+             `tools:node="remove"`), Play Services devuelve el identificador en ceros
+             — y eso va por el targetSdk de la app, no por la versión del móvil, así
+             que vale para todo el parque.
+
+             Entonces, ¿por qué añadirlo? Porque la declaración de Play dice que NO
+             recogemos el identificador, y hasta ahora eso se deducía de la AUSENCIA de
+             un permiso y del comportamiento de la plataforma. Con esta línea, el
+             manifest lo dice; no hay que reconstruir el razonamiento cada vez que
+             alguien vea los `ACCESS_ADSERVICES_*` que mete la librería de medición y
+             se asuste. Si algún día se vuelve a monetizar, esto se quita con el resto. -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
+
         <!-- FileProvider para compartir imágenes -->
         <provider
             android:name="androidx.core.content.FileProvider"

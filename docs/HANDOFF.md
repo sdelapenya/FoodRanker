@@ -42,6 +42,81 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ LOS TRES PUNTOS DE LA REVISIÓN EXTERNA, RESUELTOS (2026-11-26, noche)
+
+#### 1. El ID de publicidad: ya no se deduce, se declara
+
+El manifest **no** tenía el interruptor documentado por Firebase, y el SDK recoge el
+identificador **por defecto** en Android. Añadido en `<application>`:
+
+```xml
+<meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
+```
+
+⚠️ **Corrección de una hipótesis mía que era falsa.** Pensé que había un hueco en Android
+8–12 porque el permiso `AD_ID` solo se exige desde Android 13. **No es así**: el requisito
+va por el **targetSdk de la app**, no por la versión del móvil. Con `targetSdk 36` y el
+permiso quitado, Play Services ya devolvía el identificador **en ceros en todo el parque**.
+
+Entonces, ¿por qué añadirlo? Porque la declaración de Play dice que no lo recogemos y eso
+se deducía de la *ausencia* de un permiso más el comportamiento de la plataforma. Ahora lo
+dice el manifest, y nadie tiene que rehacer el razonamiento al ver los `ACCESS_ADSERVICES_*`
+que mete la librería de medición (esos se quedan: son del Privacy Sandbox y quitarlos no
+está documentado como forma de desactivar nada).
+
+#### 2. El contraste: de "14 avisos" a **0 críticos**, sin maquillar
+
+El problema que señalaban era real: *14* se lee como *14 fallos* cuando ya estaban triados.
+La solución no es una tabla aparte, es que **la herramienta diga la verdad**. Para eso
+estaba la marca `// contraste-ok:`, con el motivo escrito **en el sitio**.
+
+Tres cosas más, y dos son fallos de la herramienta:
+
+- **Los indicadores de progreso son gráficos**, umbral 3,0 y no 4,5. El detector de iconos
+  no los cazaba porque no llevan `tint`.
+- **La marca solo miraba UNA línea por encima**, así que no suprimía nada: un motivo que
+  merezca escribirse no cabe en una línea. Ahora mira hasta 8, y corta al salir del bloque
+  de comentario para que no se escape al siguiente.
+- `PlateDetailScreen:508` no era "texto deshabilitado": era el **marcador del campo de
+  comentario** con un `alpha 0.5` sobre un gris ya atenuado, en **1,98**. Arreglado (4,83).
+
+Y el `+` de la barra inferior pasa a `onOrange`: es el control principal de la app, y
+blanco sobre naranja no llegaba ni al 3,0 de los gráficos.
+
+#### ⚠️ El degradado de "Publicar plato": lo encontró la MEDICIÓN, no el checker
+
+Aquí está la lección. Midiendo los píxeles de una captura real salieron **las dos
+direcciones a la vez**:
+
+| | el checker decía | medido de verdad | |
+|---|---|---|---|
+| título "Foto obligatoria" | 2,31 | **3,03** | pasaba — el checker mide contra la franja más clara y el texto cae en otra |
+| subtítulo "Toca aquí…" | *no lo señalaba* | **3,13** | **fallaba** |
+
+O sea: el checker **sobreavisaba de uno e ignoraba el otro**. Arreglado oscureciendo el
+degradado (`FF8C42→FF6B35→BF3D10` pasa a `FF6B35→CE4310→A33308`) y quitando el `alpha 0.8`
+del subtítulo. **Medido después en pantalla: 5,20 y 5,72.**
+
+⚠️ **Conclusión de método: para color, la única verificación que vale es medir los píxeles
+de la captura.** El análisis estático sirve para encontrar candidatos, no para dar nada por
+bueno ni por malo.
+
+#### 3. Bloquear usuarios: la política SÍ lo exige, y esto corrige el handoff
+
+Comprobado en la política de Play, no de memoria: las apps con **contenido generado por
+usuarios de acceso público** deben permitir **denunciar usuarios y contenido Y BLOQUEAR
+usuarios**. FoodRanker tiene UGC público.
+
+⚠️ Esto **matiza lo que decía este documento más abajo**. Aquello era correcto sobre el
+*cuestionario IARC* (que pregunta "bloquear usuarios **o** contenido", y ahí cumplimos por
+la moderación). Pero la **política de contenido** es otra cosa y pide las dos.
+
+**Qué hacer, y por qué no es lo mismo que "no publicar la v29":** el hueco **ya existe en
+producción** desde siempre; la v29 no lo empeora, y a cambio trae el modo sin conexión, los
+contrastes y las cancelaciones. Retenerla no reduce la exposición a la política, solo
+retrasa arreglos. **Lo que sí hay que hacer es que el bloqueo sea la v30 y no "algún día".**
+Es decisión de cuenta, así que la toma Sergio.
+
 ### 🔎 LA AUDITORÍA DE CODEX, VERIFICADA UNA POR UNA (2026-11-26)
 
 Cuatro hallazgos. **Dos eran reales y están arreglados**, uno ya estaba en el plan y otro es
