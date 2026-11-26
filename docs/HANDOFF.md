@@ -42,6 +42,41 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ CERRADO EL TRAGADO DE CANCELACIONES (2026-11-26, noche)
+
+Pendiente abierto desde el **2026-11-16**. Estaba a medias y nadie lo había comprobado:
+`Fallos.reportar()` **sí** relanza la `CancellationException` desde hace tiempo, pero eso
+solo cubre los **64** `catch` que pasan por él. Los repositorios no lo llaman —devuelven el
+fallo al que llamó— y ahí la cancelación se empaquetaba en un `Result.failure`.
+
+El efecto: al salir de una pantalla, el `onFailure` de arriba se ejecutaba y **le pintaba un
+error al usuario por una carga que él mismo había cancelado al irse**.
+
+**Arreglo**: `Fallos.fallo<T>(e)`, mismo uso que `Result.failure` pero relanzando. Vive en
+el **mismo fichero** que `reportar()` a propósito, para que los dos relanzados se vean
+juntos y nadie arregle uno dejando el otro. Siete sitios (4 `PlateRepository`,
+3 `AuthRepository`), más `VenueRepository`, que devolvía `null` al fallar la ubicación.
+
+⚠️ **Los demás `catch` se quedan como están, y aquí está el motivo de cada uno** para no
+volver a auditarlos:
+
+- `ReferralManager` ya relanza todo lo que no sea `"already_referred"`.
+- Los dos del `signOut` en `AuthRepository` son **deliberados**: nunca bloquear el logout.
+- `ConnectivityObserver` y `NotificationHelper` son código **no suspendido**: ahí no hay
+  cancelación posible.
+
+**Tres tests nuevos** en `FallosTest` —que es lo que esta nota pedía desde el principio
+("va aparte, con su propia prueba")—: que relanza, que devuelve `Result.failure` para todo
+lo demás, y que **no se confunde con un `Exception` cuyo MENSAJE hable de cancelación**
+(la misma trampa que ya tenía `reportar`). **87 tests.**
+
+#### La forma de comprobar que el invariante sigue en pie
+
+`reportar()` solo protege si es la **primera sentencia** del `catch`. Hoy: **87 catch**,
+64 con `reportar` primero, 2 con `reportar` detrás de una clasificación sin efectos
+secundarios (`AddPlateViewModel`, `ProfileViewModel` — comprobados, son seguros) y el resto
+revisados arriba. Si alguien añade el `catch` 88, esto es lo que hay que volver a contar.
+
 ### ✅ "1 PLATO" VISTO, Y EL CONTRASTE TRIADO HASTA EL FINAL (2026-11-26, noche)
 
 #### El plural, verificado creando una lista de verdad y borrándola
