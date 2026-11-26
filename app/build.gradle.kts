@@ -177,7 +177,11 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-storage")
+    // Aquí había un `firebase-storage`. Se fue en la v29: lo único que lo tocaba era un
+    // `provideFirebaseStorage` en FirebaseModule que NADIE inyectaba. Las imágenes van a
+    // Cloudinary desde el principio, y el proyecto no tiene ni reglas de Storage
+    // desplegadas (la Rules API solo devuelve `cloud.firestore`), así que si algún día
+    // alguien lo hubiera usado habría fallado en tiempo de ejecución.
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-config")
@@ -227,7 +231,19 @@ dependencies {
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.animation:animation-core")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("com.android.billingclient:billing-ktx:8.0.0")
+    // Aquí había un `billing-ktx:8.0.0`. Se fue en la v29, al retirarse la suscripción
+    // Premium: no quedaba ni un uso en todo el proyecto —ni `BillingClient`, ni
+    // `BillingManager`, ni un import— y aun así seguía viajando en el binario publicado.
+    //
+    // ⚠️ El motivo por el que no bastaba con no usarla: declaraba en el manifest fusionado
+    // el permiso `com.android.vending.BILLING`, el `InAppBillingService.BIND`, el servicio
+    // del *billing test companion* y DOS activities (`ProxyBillingActivity` y `...V2`). Y
+    // esas activities del manifest son justo lo que impedía a R8 tirar las clases, que
+    // seguían en el dex. O sea: la app publicada declaraba que hacía facturación mientras
+    // la ficha de Play decía que no hay compras. Verificado en el AAB de la v28.
+    //
+    // Si algún día se vuelve a monetizar, esto vuelve, y con él hay que volver a declarar
+    // las compras en Play y rehacer la declaración de operador.
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Testing
