@@ -29,14 +29,12 @@ object HapticUtils {
                 VibrationEffect.createOneShot(durationMs, amplitude)
             )
         } else {
+            // Aqui dentro SDK_INT esta entre 26 y 30: el `if (>= O)` que habia era
+            // siempre cierto y su `else` (el vibrate(long) de toda la vida) codigo
+            // inalcanzable, porque minSdk es 26.
             @Suppress("DEPRECATION")
             val v = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v?.vibrate(VibrationEffect.createOneShot(durationMs, amplitude))
-            } else {
-                @Suppress("DEPRECATION")
-                v?.vibrate(durationMs)
-            }
+            v?.vibrate(VibrationEffect.createOneShot(durationMs, amplitude))
         }
     }
 }

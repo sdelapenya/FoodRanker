@@ -117,11 +117,11 @@ android {
         // en DiscoverViewModel — R8 elimina la clase entera en release, así que no
         // llega al binario (verificado buscándola en los dex del AAB).
         buildConfigField("String", "PEXELS_API_KEY",  "\"${localProp("PEXELS_API_KEY")}\"")
-        // IDs de dispositivo de prueba de AdMob, separados por comas. Van en
-        // local.properties (fuera de git) porque son de cada máquina/móvil, no del
-        // proyecto. Solo se aplican en debug: pinchar anuncios reales en tus propias
-        // pruebas es tráfico inválido y AdMob suspende cuentas por ello.
-        buildConfigField("String", "ADMOB_TEST_DEVICE_IDS", "\"${localProp("ADMOB_TEST_DEVICE_IDS")}\"")
+        // Aquí había un `ADMOB_TEST_DEVICE_IDS`. Código muerto desde que se borró
+        // `AdManager`: ni una línea lo leía. No era una fuga —R8 lo eliminaba, verificado
+        // buscando el campo y el ID literal en el dex del AAB de la v28: cero
+        // apariciones—, pero la entrada seguía en `local.properties` dando a entender que
+        // hacía falta para compilar.
         // Clave de Places para el cliente: solo autocompletado y búsqueda de locales
         // cercanos, que devuelven candidatos. Los datos canónicos del local los
         // resuelve la CF resolveVenue con una clave de servidor aparte. Restringir
