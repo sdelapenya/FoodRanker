@@ -42,7 +42,7 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
-### ✅ BLOQUEO ENTRE USUARIOS, COMPLETO (2026-11-27) — SIN DESPLEGAR
+### ✅ BLOQUEO ENTRE USUARIOS, COMPLETO (2026-11-27) — DESPLEGADO Y PROBADO EN EL MÓVIL
 
 Lo pedía la política de contenido generado por usuarios de Play: una app con contenido
 público tiene que dejar **denunciar y bloquear**. Denunciar ya estaba; bloquear, no.
@@ -105,16 +105,54 @@ descubrió quitando un filtro a propósito.
 | `functions/scripts/pruebaBloqueoTrigger.js` | `onBloqueoEscrito`: espejo, los dos seguimientos, doble entrega, y que nadie se bloquee a sí mismo |
 | `tools/ui/check_bloqueo_cliente.py` | 32 conversiones a modelo: filtro al lado o `// bloqueo-ok: <razón>`, con la razón obligatoria |
 
-#### ⚠️ QUÉ FALTA (esto es lo de retomar)
+#### ✅ DESPLEGADO Y PROBADO EN PRODUCCIÓN (2026-11-27, noche)
 
-1. **Nada está desplegado.** Ni `firestore.rules` ni `functions`. Van juntos y después del
-   cliente: desplegar las reglas solas haría cumplir bloqueos que todavía no se pueden crear.
-2. **Sin probar en móvil.** Hace falta el recorrido entero **con dos cuentas**: bloquear,
-   ver que desaparece de listados y perfil, que los seguimientos se deshacen en los dos
-   sentidos, y desbloquear. Es lo único que no cubre ningún script.
-3. **5 commits sin pushear** (`a033d20`, `b95effe`, `59ca59c`, `a80d72d`, `60a9899`).
-4. La v29 sigue pendiente de subir, y ahora además lleva el bloqueo.
+`firestore.rules` y `functions` desplegados (19 funciones, europe-west1, `awardAdXp`
+intacto). APK de release v29 instalada en el Redmi a mano — `adb install` da
+`INSTALL_FAILED_USER_RESTRICTED` porque el interruptor **"Instalar vía USB"** de Xiaomi
+está apagado, y eso no se activa desde el PC. Se instala abriendo el APK desde el gestor
+de archivos del propio móvil.
 
+**El recorrido entero, con dos cuentas de verdad** (`rNpwrHo3…` Sergio y
+`B8V8uOZyazcTnumJo6mvMzjriXo2` la de revisión), siguiendo los documentos con
+`functions/scripts/verBloqueo.js`, no la pantalla:
+
+| Lo que se probó | Resultado |
+|---|---|
+| bloquear desde la app escribe `users/A/bloqueados/B` | ✔ |
+| el disparador escribe el espejo `users/B/bloqueadoPor/A` | ✔ |
+| se deshacen **los dos** seguimientos, incluido `follows/B_A` — el que el cliente **no puede** borrar | ✔ |
+| el bloqueo **en el sentido contrario** (B bloquea a A): mismo espejo, mismos seguimientos fuera | ✔ |
+| desbloquear retira el espejo y **los seguimientos NO vuelven solos** | ✔ |
+| perfil de alguien bloqueado → *"perfil no disponible"* | ✔ |
+| **la lista de bloqueados sigue VACÍA cuando es el OTRO quien te bloqueó** | ✔ |
+| valoraciones y comentarios anteriores **siguen ahí** (5 y 4, sin tocar) | ✔ por diseño |
+
+Producción quedó **igual que al empezar**: cero bloqueos, cero seguimientos entre las dos
+cuentas, nada borrado.
+
+**La prueba que de verdad sirvió, y por qué.** El aviso de "te sigue" de una persona
+bloqueada **sigue en la base de datos** (el bloqueo no borra lo escrito), así que la
+campana es el único sitio por donde el bloqueo puede filtrarse con un dato real. Se
+comprobó que desaparece al bloquear **y que vuelve a aparecer al desbloquear**. Sin ese
+segundo paso, "no lo veo" no prueba nada: podría ser que el aviso no hubiera llegado nunca.
+**Una prueba sin control no es una prueba.**
+
+⚠️ **Y un cero que era mentira:** al buscar esos avisos miré primero en
+`users/{uid}/notifications`, que **no existe** — la ruta real es `notifications/{uid}/items`.
+Devolvió `0` y parecía una respuesta. **Una colección que no existe devuelve cero igual que
+una vacía**, y en Firestore eso no da error. Si no hubiera ido a comprobar la ruta en el
+código, habría dado por buena la mejor noticia posible sin haber leído nada.
+
+#### ⚠️ QUÉ FALTA
+
+1. **6 commits sin pushear** (`a033d20`, `b95effe`, `59ca59c`, `a80d72d`, `60a9899`,
+   `2941e5b`) — ⚠️ **hay código de servidor desplegado que no está en ningún remoto.**
+   Si este PC se muere, las reglas y el disparador que están corriendo en producción no
+   están en ninguna otra parte. GitHub **y** Gitea (ojo a la sección *Sync*).
+2. **La v29 sin subir a Play**, y ahora además lleva el bloqueo — que es justo lo que
+   pedía la política de contenido de Play, así que esta es la versión que conviene subir.
+3. `functions/scripts/verBloqueo.js` es nuevo y va en el commit que falte.
 
 ### ✅ LOS TRES PUNTOS DE LA REVISIÓN EXTERNA, RESUELTOS (2026-11-26, noche)
 
