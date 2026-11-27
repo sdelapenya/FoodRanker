@@ -25,6 +25,34 @@ service cloud.firestore {
       return existsAfter(ref) && !exists(ref);
     }
 
+    // ── BLOQUEO ENTRE USUARIOS ────────────────────────────────────────────────
+    //
+    // La lista vive en `users/{uid}/bloqueados/{otroUid}` y solo la toca su dueño (ver el
+    // match más abajo). Estas funciones SÍ pueden leerla aunque el cliente no pueda: las
+    // reglas se evalúan en el servidor, con acceso completo. Por eso la lista de quién has
+    // bloqueado queda privada y aun así se puede hacer cumplir en los dos sentidos.
+    //
+    // ⚠️ El bloqueo es SIMÉTRICO a propósito. Si solo mirase "A bloqueó a B", el bloqueado
+    // podría seguir comentando los platos de quien le bloqueó y seguirle: eso no es
+    // bloquear, es ocultar, y un botón que promete lo primero y hace lo segundo es peor
+    // que no tenerlo.
+    //
+    // Coste: cada comprobación son dos `exists()`. Sumado al `get()` del plato en
+    // comentarios y valoraciones son 3 accesos, de los 10 que permite Firestore por
+    // petición de documento. Si alguien añade más `get()` a esas reglas, contarlos.
+    function haBloqueado(quien, aQuien) {
+      return exists(/databases/$(database)/documents/users/$(quien)/bloqueados/$(aQuien));
+    }
+    function bloqueoEntre(otro) {
+      return haBloqueado(request.auth.uid, otro) || haBloqueado(otro, request.auth.uid);
+    }
+    // El autor de un plato, para las reglas que necesitan saber a quién afectaría la
+    // escritura. `get(...)` sobre un plato que no existe devuelve null, así que se usa el
+    // acceso con valor por defecto en vez de encadenar `.data.addedByUserId`.
+    function autorDelPlato(plateId) {
+      return get(/databases/$(database)/documents/plates/$(plateId)).data.get('addedByUserId', '');
+    }
+
     // Ejes de una valoración: 1..10. Ver docs/RATINGS.md.
     function scoreOk(v) { return v is number && v >= 1 && v <= 10; }
     // Campo opcional durante la convivencia de formatos: si no viene (cliente v12) o viene
@@ -105,6 +133,13 @@ service cloud.firestore {
       // referralCount y XP solo los escribe onReferralCreated Cloud Function via Admin SDK
 
       allow delete: if isOwner(userId);
+
+      // Lista de bloqueados. SOLO el dueño, ni leer ni escribir nadie más: saber a quién
+      // has bloqueado es información tuya. Las reglas de arriba la consultan igual, porque
+      // se evalúan en el servidor y no pasan por esta restricción.
+      match /bloqueados/{bloqueadoId} {
+        allow read, write: if isOwner(userId);
+      }
 
       // Token de avisos, uno por móvil. SOLO el dueño, a diferencia del documento de
       // perfil de arriba, que lo lee cualquiera con sesión iniciada (`isSignedIn`) —
@@ -260,6 +295,9 @@ service cloud.firestore {
                     // la media del plato se movería en esa diferencia inventada.
                     && !('appliedAvg' in request.resource.data)
                     && !('appliedWouldOrderAgain' in request.resource.data)
+                    // Tampoco se valora el plato de alguien con quien hay bloqueo: si no,
+                    // el bloqueado seguiría pudiendo hundir la nota de quien le bloqueó.
+                    && !bloqueoEntre(autorDelPlato(request.resource.data.plateId))
                     && !('aggregatedEventId' in request.resource.data);
       // Reportar una valoración: mismo patrón que plates/comments (solo +1, y el id
       // determinista del reporte impide contarlo dos veces). Hacía falta porque la
@@ -291,7 +329,10 @@ service cloud.firestore {
     // ── COMMENTS ───────────────────────────────────────────────
     match /comments/{commentId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    // No se comenta el plato de alguien con quien hay bloqueo de por medio.
+                    && !bloqueoEntre(autorDelPlato(request.resource.data.plateId));
       // Reportes: solo incremento de 1, mismo patrón que plates.reportCount.
       // get('reportCount', 0): un comentario creado por una app anterior a esta
       // feature no tiene el campo — sin el default, resource.data.reportCount sería
@@ -373,7 +414,9 @@ service cloud.firestore {
       // ID determinista followerId_followingId: evita duplicados
       allow create: if isSignedIn()
                     && request.resource.data.followerId == request.auth.uid
-                    && followId == request.resource.data.followerId + "_" + request.resource.data.followingId;
+                    && followId == request.resource.data.followerId + "_" + request.resource.data.followingId
+                    // Ni sigues a quien bloqueaste ni te sigue quien te bloqueó.
+                    && !bloqueoEntre(request.resource.data.followingId);
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.followerId == request.auth.uid;
     }
@@ -394,7 +437,10 @@ service cloud.firestore {
                       && request.resource.data.keys().hasAll(['type', 'fromUserId', 'createdAt'])
                       && request.resource.data.type == 'like'
                       && request.resource.data.fromUserId == request.auth.uid
-                      && request.resource.data.isRead == false;
+                      && request.resource.data.isRead == false
+                      // Y que el bloqueado no pueda meterte nada en el buzón: un 'like'
+                      // dispara push, así que sin esto el bloqueo se saltaría por ahí.
+                      && !bloqueoEntre(userId);
       }
     }
 
