@@ -27,6 +27,18 @@ git push ssh://git@localhost:222/sdelapenya/Foodranker.git main:main
 cd /; rm -rf \$D"
 ```
 
+⚠️ **La referencia local `gitea/main` se queda vieja y MIENTE.** Como el push va por
+el servidor y no por el remoto local, `refs/remotes/gitea/main` no se actualiza nunca — y
+desde el PC no se puede hacer `fetch` de Gitea, que es el mismo motivo por el que hay que
+dar este rodeo. Una revisión automatica leyo esa referencia el 2026-11-27 y dio Gitea por
+atrasado seis commits cuando estaba al dia. **Comprobar siempre contra el remoto de
+verdad**, y arreglar la referencia despues de empujar:
+
+```bash
+ssh -i ~/.ssh/codex_key sergio@192.168.1.19   'git ls-remote ssh://git@localhost:222/sdelapenya/Foodranker.git main'
+git update-ref refs/remotes/gitea/main <el sha que salga>
+```
+
 ⚠️ **Clon temporal y bare, a propósito**: la copia de trabajo del servidor
 (`/home/sergio/lab/apps/FoodRanker`) puede tener ramas divergidas y no hay que tocarla.
 ⚠️ El remoto `gitea` del servidor apunta a `https://git.sdelapenya.dev/...`, que pediría
