@@ -1,6 +1,6 @@
 # HANDOFF — FoodRanker (Play Store + producto)
 
-**Actualizado:** 2026-11-26
+**Actualizado:** 2026-11-27
 **Código (PC):** `e:\FoodRanker` · **Código (servidor):** `/home/sergio/lab/apps/FoodRanker`
 **GitHub:** https://github.com/sdelapenya/FoodRanker (público)
 **Gitea:** ssh://git@192.168.1.19:222/sdelapenya/foodranker.git — **por SSH puerto 222**, el HTTP 3000 solo escucha en loopback
@@ -41,6 +41,80 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 ---
 
 ## LO SIGUIENTE (retomar aquí)
+
+### ✅ BLOQUEO ENTRE USUARIOS, COMPLETO (2026-11-27) — SIN DESPLEGAR
+
+Lo pedía la política de contenido generado por usuarios de Play: una app con contenido
+público tiene que dejar **denunciar y bloquear**. Denunciar ya estaba; bloquear, no.
+
+**Simétrico**: ni ves a quien bloqueaste ni puede él seguirte, valorar tus platos,
+comentarlos ni darte un *like*.
+
+**Las cuatro piezas, y por qué cada una:**
+
+| Pieza | Qué resuelve |
+|---|---|
+| `firestore.rules` | impide INTERACTUAR. `users/{uid}/bloqueados/{otro}`, que solo lee su dueño — las reglas sí la leen, porque se evalúan en el servidor |
+| `onBloqueoEscrito` | lo que el cliente NO puede: el espejo `bloqueadoPor` y deshacer **los dos** seguimientos |
+| `BloqueoRepository` + `sinBloqueados()` | impide VER. Las dos listas en un solo conjunto |
+| `tools/ui/check_bloqueo_cliente.py` | que no se olvide una pantalla no depende de que alguien se acuerde |
+
+**El espejo `bloqueadoPor` es el truco que hace falta entender.** Para ocultar en los dos
+sentidos, el móvil necesita saber que le han bloqueado — y las reglas le prohíben leer la
+lista del otro, cosa que no se toca: a quién has bloqueado es tuyo y nadie debe poder
+enumerarlo. Así que el trigger escribe el reverso en `users/{yo}/bloqueadoPor/{otro}`, que
+solo yo leo, y con `write: if false`. **Esa mitad es la importante**: si el cliente pudiera
+escribirlo, cualquiera haría desaparecer contenido de la app de otra persona sin que ella
+hubiera bloqueado nada, y sin forma de deshacerlo porque su lista estaría vacía.
+
+**Dos sitios NO se filtran, y están razonados en el código:**
+
+- **La liga.** `LeagueScreen` pinta el puesto con `index + 1`: quitar una fila renumera a
+  los de abajo, dos personas verían clasificaciones distintas y la que se comenta fuera de
+  la app sería mentira para alguna. Una clasificación es un objeto compartido.
+- **Los platos que ya existen en un local**, al publicar. El id es `venueId__dishSlug`:
+  ocultar el de alguien bloqueado invita a crearlo otra vez y la publicación falla contra
+  un documento que el usuario no puede ver ni entender.
+
+#### ⚠️ EL FALLO QUE CASI SE DESPLIEGA, Y LA LECCIÓN
+
+La primera versión de la regla buscaba al autor del plato con **`get()`**. La app crea el
+plato y su valoración inicial **en el mismo lote** (`AddPlateViewModel`), y `get()` lee el
+estado ANTERIOR, donde el plato todavía no existe. Un `get()` sobre un documento
+inexistente **no devuelve un null esquivable con un valor por defecto**: revienta la
+evaluación con *service call error* y **deniega el lote entero**. Con eso desplegado,
+**nadie habría podido publicar un plato**. Va con `existsAfter`/`getAfter`.
+
+Y los once casos de simetría pasaban igual, porque **ninguno probaba una creación de
+valoración**. *Pasar no era señal de nada.*
+
+Lo mismo volvió a pasar con el comprobador de cliente: buscaba el filtro en las 30 líneas
+siguientes y daba por cubierta una conversión **usando el filtro de la de al lado**. Se
+descubrió quitando un filtro a propósito.
+
+> **La lección, por tercera vez en este proyecto: un comprobador que no se ha visto fallar
+> con el código roto no vale nada.** Los dos se arreglaron solo porque se probaron contra
+> la versión rota. Hazlo siempre.
+
+#### Las pruebas, y qué cubre cada una
+
+| Script | Qué prueba |
+|---|---|
+| `tools/rules/check_bloqueo.py` | **24 casos** contra el motor REAL (`firebaserules:test`). No escribe en ninguna base |
+| `functions/scripts/pruebaLotePublicar.js` | el lote de publicar, **ejecutado** contra el emulador con el SDK de cliente — el `check_bloqueo.py` lo *modela* con mocks, esto lo corre |
+| `functions/scripts/pruebaBloqueoTrigger.js` | `onBloqueoEscrito`: espejo, los dos seguimientos, doble entrega, y que nadie se bloquee a sí mismo |
+| `tools/ui/check_bloqueo_cliente.py` | 32 conversiones a modelo: filtro al lado o `// bloqueo-ok: <razón>`, con la razón obligatoria |
+
+#### ⚠️ QUÉ FALTA (esto es lo de retomar)
+
+1. **Nada está desplegado.** Ni `firestore.rules` ni `functions`. Van juntos y después del
+   cliente: desplegar las reglas solas haría cumplir bloqueos que todavía no se pueden crear.
+2. **Sin probar en móvil.** Hace falta el recorrido entero **con dos cuentas**: bloquear,
+   ver que desaparece de listados y perfil, que los seguimientos se deshacen en los dos
+   sentidos, y desbloquear. Es lo único que no cubre ningún script.
+3. **5 commits sin pushear** (`a033d20`, `b95effe`, `59ca59c`, `a80d72d`, `60a9899`).
+4. La v29 sigue pendiente de subir, y ahora además lleva el bloqueo.
+
 
 ### ✅ LOS TRES PUNTOS DE LA REVISIÓN EXTERNA, RESUELTOS (2026-11-26, noche)
 
