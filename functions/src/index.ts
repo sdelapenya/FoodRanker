@@ -896,9 +896,33 @@ async function avisarASeguidores(authorId: string, plateId: string, plateName: s
       .get();
     if (seguidores.empty) return;
 
-    await Promise.all(seguidores.docs.map(async (f) => {
-      const followerId = f.get("followerId") as string | undefined;
-      if (!followerId || followerId === authorId) return;
+    // Seguidores con bloqueo de por medio, fuera.
+    //
+    // Las reglas impiden CREAR un seguimiento nuevo cuando hay bloqueo, pero no deshacen
+    // los que ya existían: si A seguía a B y luego se bloquean, el seguimiento sigue ahí.
+    // Y este aviso lo escribe el Admin SDK, que no pasa por las reglas, así que B le
+    // seguiría apareciendo a A en la campana cada vez que publicase. La app borra el
+    // seguimiento al bloquear; esto es la segunda cerradura, para los seguimientos que
+    // quedaran de antes y para cuando el borrado del cliente no llegue a completarse.
+    const ids = [...new Set(seguidores.docs
+      .map((f) => f.get("followerId") as string | undefined)
+      .filter((id): id is string => !!id && id !== authorId))];
+    if (ids.length === 0) return;
+
+    // Una consulta para la lista del autor y un solo `getAll` para el sentido contrario,
+    // en vez de dos lecturas por seguidor.
+    const [bloqueadosPorAutor, listasDeLosSeguidores] = await Promise.all([
+      db.collection("users").doc(authorId).collection("bloqueados").limit(500).get(),
+      db.getAll(...ids.map((id) =>
+        db.collection("users").doc(id).collection("bloqueados").doc(authorId))),
+    ]);
+    const bloqueaElAutor = new Set(bloqueadosPorAutor.docs.map((d) => d.id));
+    const meBloquean = new Set(
+      listasDeLosSeguidores.filter((d) => d.exists).map((d) => d.ref.parent.parent!.id));
+    const destinatarios = ids.filter((id) => !bloqueaElAutor.has(id) && !meBloquean.has(id));
+    if (destinatarios.length === 0) return;
+
+    await Promise.all(destinatarios.map(async (followerId) => {
       const ref = db.collection("notifications").doc(followerId)
         .collection("items").doc(`newplate_${authorId}_${dia}`);
       await ref.set({
@@ -913,7 +937,9 @@ async function avisarASeguidores(authorId: string, plateId: string, plateName: s
         createdAt: Date.now(),
       }, { merge: true });
     }));
-    logger.info(`Plato ${plateId}: avisados ${seguidores.size} seguidores de ${authorId}`);
+    const omitidos = ids.length - destinatarios.length;
+    logger.info(`Plato ${plateId}: avisados ${destinatarios.length} seguidores de ${authorId}` +
+      (omitidos > 0 ? ` (${omitidos} omitidos por bloqueo)` : ""));
   } catch (err) {
     logger.warn(`Plato ${plateId}: no se pudo avisar a los seguidores:`, err);
   }

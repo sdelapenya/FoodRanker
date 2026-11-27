@@ -37,20 +37,38 @@ service cloud.firestore {
     // bloquear, es ocultar, y un botón que promete lo primero y hace lo segundo es peor
     // que no tenerlo.
     //
-    // Coste: cada comprobación son dos `exists()`. Sumado al `get()` del plato en
-    // comentarios y valoraciones son 3 accesos, de los 10 que permite Firestore por
-    // petición de documento. Si alguien añade más `get()` a esas reglas, contarlos.
+    // Coste: cada comprobación son dos `exists()`. En comentarios y valoraciones se suman
+    // el `existsAfter()` y el `getAfter()` del plato: 4 accesos, de los 10 que permite
+    // Firestore por petición de documento. El `update` de valoraciones es el peor caso,
+    // porque tiene dos ramas y la de denuncias gasta otros 2: 6. Si alguien añade más
+    // accesos a esas reglas, contarlos.
     function haBloqueado(quien, aQuien) {
       return exists(/databases/$(database)/documents/users/$(quien)/bloqueados/$(aQuien));
     }
     function bloqueoEntre(otro) {
       return haBloqueado(request.auth.uid, otro) || haBloqueado(otro, request.auth.uid);
     }
-    // El autor de un plato, para las reglas que necesitan saber a quién afectaría la
-    // escritura. `get(...)` sobre un plato que no existe devuelve null, así que se usa el
-    // acceso con valor por defecto en vez de encadenar `.data.addedByUserId`.
-    function autorDelPlato(plateId) {
-      return get(/databases/$(database)/documents/plates/$(plateId)).data.get('addedByUserId', '');
+    // Bloqueo entre quien escribe y el autor del plato al que afecta la escritura.
+    //
+    // ⚠️ Va con `existsAfter`/`getAfter`, NO con `get`, y esto no es un detalle: la app
+    // publica el plato y su valoración inicial **en el mismo lote** (AddPlateViewModel).
+    // `get` lee el estado ANTERIOR al lote, donde el plato todavía no existe, y un `get`
+    // sobre un documento inexistente no devuelve un null que se pueda esquivar con un
+    // valor por defecto: revienta la evaluación con "service call error" y **deniega el
+    // lote entero**. O sea, con `get` nadie podría publicar un plato. El valor por defecto
+    // de `.get(campo, x)` solo cubre un campo ausente en un documento que SÍ existe.
+    // Comprobado contra el motor real antes de desplegar; el caso vive en
+    // tools/rules/check_bloqueo.py y no debe quitarse.
+    //
+    // `existsAfter` mira el estado posterior al lote, así que ve el plato que se está
+    // creando junto a la valoración. Si no hay plato no hay autor a quien bloquear y la
+    // función dice que no hay bloqueo: eso deja ese caso exactamente como estaba antes de
+    // existir el bloqueo, sin abrir nada nuevo. Lo de comparar el autor con '' evita
+    // además construir una ruta con un segmento vacío, que sería otro error de evaluación.
+    function bloqueoConAutorDe(plateId) {
+      let ref = /databases/$(database)/documents/plates/$(plateId);
+      let autor = existsAfter(ref) ? getAfter(ref).data.get('addedByUserId', '') : '';
+      return autor != '' && bloqueoEntre(autor);
     }
 
     // Ejes de una valoración: 1..10. Ver docs/RATINGS.md.
@@ -232,6 +250,13 @@ service cloud.firestore {
           && resource.data.status == 'approved'
         ) ||
         // Like: el usuario NO estaba en la lista, ahora SÍ
+        //
+        // Con bloqueo de por medio, no. El aviso ya se denegaba en notifications/items,
+        // pero denegar solo el aviso dejaba el like puesto: el uid del bloqueado se
+        // quedaba en `likedByUsers`, que es justo lo que el autor ve en "quién ha
+        // interactuado". Bloquear el aviso y no la interacción es media medida.
+        // El UNLIKE de abajo sigue permitido a propósito: quitar algo tuyo debe poderse
+        // siempre, y si no, un like anterior al bloqueo se quedaría pegado para siempre.
         (
           changedKeys().hasOnly(['likes', 'likedByUsers'])
           && !resource.data.likedByUsers.hasAll([request.auth.uid])
@@ -239,6 +264,9 @@ service cloud.firestore {
           && request.resource.data.likedByUsers.hasAll([request.auth.uid])
           && request.resource.data.likedByUsers.size() == resource.data.likedByUsers.size() + 1
           && request.resource.data.likes == resource.data.likes + 1
+          // Va la ÚLTIMA de la rama a propósito: es lo único de aquí que lee documentos
+          // (dos `exists`), y así un like mal formado se descarta antes de gastarlos.
+          && !bloqueoEntre(resource.data.addedByUserId)
         ) ||
         // Unlike: el usuario SÍ estaba en la lista, ahora NO
         (
@@ -297,7 +325,7 @@ service cloud.firestore {
                     && !('appliedWouldOrderAgain' in request.resource.data)
                     // Tampoco se valora el plato de alguien con quien hay bloqueo: si no,
                     // el bloqueado seguiría pudiendo hundir la nota de quien le bloqueó.
-                    && !bloqueoEntre(autorDelPlato(request.resource.data.plateId))
+                    && !bloqueoConAutorDe(request.resource.data.plateId)
                     && !('aggregatedEventId' in request.resource.data);
       // Reportar una valoración: mismo patrón que plates/comments (solo +1, y el id
       // determinista del reporte impide contarlo dos veces). Hacía falta porque la
@@ -308,8 +336,13 @@ service cloud.firestore {
                     && request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1
                     && denunciaCreadaAhora(ratingId);
       // El autor puede actualizar sus puntuaciones y comentario (no userId/plateId/createdAt)
+      //
+      // También mira el bloqueo, y no es redundante con el `create`: una valoración
+      // anterior al bloqueo seguiría siendo editable, y bajarla a un 1 hace exactamente
+      // el mismo daño que crearla con un 1, que es lo que el `create` impide.
       allow update: if isSignedIn()
                     && resource.data.userId == request.auth.uid
+                    && !bloqueoConAutorDe(resource.data.plateId)
                     && changedKeys().hasOnly([
                          'flavorScore', 'presentationScore', 'satisfactionScore',
                          'valueScore', 'averageScore', 'comment',
@@ -332,7 +365,7 @@ service cloud.firestore {
       allow create: if isSignedIn()
                     && request.resource.data.userId == request.auth.uid
                     // No se comenta el plato de alguien con quien hay bloqueo de por medio.
-                    && !bloqueoEntre(autorDelPlato(request.resource.data.plateId));
+                    && !bloqueoConAutorDe(request.resource.data.plateId);
       // Reportes: solo incremento de 1, mismo patrón que plates.reportCount.
       // get('reportCount', 0): un comentario creado por una app anterior a esta
       // feature no tiene el campo — sin el default, resource.data.reportCount sería
