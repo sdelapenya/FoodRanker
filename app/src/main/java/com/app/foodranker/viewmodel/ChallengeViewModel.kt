@@ -41,6 +41,7 @@ class ChallengeViewModel @Inject constructor(
                     .limit(5).get().await()
 
                 val active = snap.documents
+                    // bloqueo-ok: un reto semanal no lo escribe ningún usuario.
                     .mapNotNull { it.toObject(WeeklyChallenge::class.java)?.copy(id = it.id) }
                     .firstOrNull { it.endDate >= now }
 

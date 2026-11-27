@@ -169,6 +169,12 @@ class AddPlateViewModel @Inject constructor(
                 venueDishes = firestore.collection("plates")
                     .whereEqualTo("venueId", venueId)
                     .limit(50).get().await()
+                    // bloqueo-ok: los platos que YA existen en este local, para no
+                    // duplicarlos. Filtrarlos sería peor que enseñarlos: el id de un plato
+                    // es venueId__dishSlug, así que ocultar el de alguien bloqueado
+                    // invitaría a crearlo otra vez y la publicación fallaría contra un
+                    // documento que el usuario no puede ver ni entender. Aquí no hay nombre
+                    // ni foto de nadie: es la carta del restaurante.
                     .documents.mapNotNull { it.toObject(Plate::class.java) }
                     .sortedByDescending { it.totalRatings }
             } catch (e: Exception) {
@@ -414,6 +420,7 @@ class AddPlateViewModel @Inject constructor(
                 .orderBy("startDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(5).get().await()
             val active = snap.documents
+                // bloqueo-ok: un reto semanal no lo escribe ningún usuario.
                 .mapNotNull { it.toObject(com.app.foodranker.data.model.WeeklyChallenge::class.java)?.copy(id = it.id) }
                 .firstOrNull { it.endDate >= now } ?: return
 

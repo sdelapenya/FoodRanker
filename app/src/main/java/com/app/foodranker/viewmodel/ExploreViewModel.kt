@@ -19,6 +19,8 @@ import javax.inject.Inject
 import androidx.annotation.StringRes
 import com.app.foodranker.R
 import com.app.foodranker.utils.Fallos
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 data class UserResult(
     val id: String = "",
@@ -51,6 +53,7 @@ enum class SortOption(@StringRes val label: Int) {
 
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
+    private val bloqueos: BloqueoRepository,
     private val firestore: FirebaseFirestore
 ) : ViewModel() {
 
@@ -166,6 +169,7 @@ class ExploreViewModel @Inject constructor(
             allPlatesCache = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                 .soloPublicos()
+                .sinBloqueados(bloqueos.ocultos.value)
             cacheLoadedAt = System.currentTimeMillis()
 
             applyLocalFilters()

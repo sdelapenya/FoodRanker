@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 data class NotificationsUiState(
     val notifications: List<FoodNotification> = emptyList(),
@@ -22,7 +24,8 @@ data class NotificationsUiState(
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val bloqueos: BloqueoRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationsUiState())
@@ -82,7 +85,13 @@ class NotificationsViewModel @Inject constructor(
                         isRead = doc.get("isRead") == true,
                         createdAt = doc.getLong("createdAt") ?: 0L
                     )
-                }.sortedByDescending { it.createdAt }
+                }
+                    // Los avisos que esa persona dejó ANTES del bloqueo siguen en la
+                    // campana con su nombre y su foto. Las reglas impiden los nuevos; esto
+                    // se ocupa de los viejos. Los del sistema traen fromUserId vacío y no
+                    // los toca, porque un uid nunca lo está.
+                    .sinBloqueados(bloqueos.ocultos.value)
+                    .sortedByDescending { it.createdAt }
 
                 // Mostrar primero, marcar leídas después (el usuario ya las ve)
                 _uiState.value = NotificationsUiState(notifications = notifications, isLoading = false)

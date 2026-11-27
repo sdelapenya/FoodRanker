@@ -76,6 +76,9 @@ class LeagueViewModel @Inject constructor(
                     .limit(20)
                     .get().await()
 
+                // bloqueo-ok: la liga va entera a propósito. LeagueScreen pinta el puesto
+                // con index + 1, así que quitar una fila renumeraría a los de abajo y dos
+                // usuarios verían clasificaciones distintas. Ver el KDoc de Bloqueo.kt.
                 val entries = snap.documents.mapNotNull { it.toObject(LeagueEntry::class.java) }
                 val rankIndex = entries.indexOfFirst { it.userId == userId }
                 val userRank = if (rankIndex >= 0) rankIndex + 1 else 0

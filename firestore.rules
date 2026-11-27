@@ -159,6 +159,22 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+      // El reverso: quién te ha bloqueado A TI. Lo escribe SOLO el trigger
+      // onBloqueoEscrito via Admin SDK, nunca el cliente.
+      //
+      // Hace falta porque el bloqueo oculta en los dos sentidos y tu móvil no puede
+      // saber que te han bloqueado: la lista del otro no la puede leer, y eso no se
+      // toca. Así que el servidor refleja aquí el reverso, donde solo tú lo ves.
+      //
+      // ⚠️ `write: if false` es la mitad importante. Si el cliente pudiera escribir
+      // aquí, cualquiera podría meter un uid en el `bloqueadoPor` de otra persona y
+      // hacerle desaparecer contenido ajeno de la app sin que ella hubiera bloqueado
+      // nada — y sin forma de deshacerlo, porque su lista de bloqueados estaría vacía.
+      match /bloqueadoPor/{bloqueadorId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
       // Token de avisos, uno por móvil. SOLO el dueño, a diferencia del documento de
       // perfil de arriba, que lo lee cualquiera con sesión iniciada (`isSignedIn`) —
       // y ahí es justo donde vive hoy el `fcmToken`, al alcance de cualquier cuenta.

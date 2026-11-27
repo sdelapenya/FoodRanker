@@ -1,4 +1,4 @@
-import { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } from "firebase-functions/v2/firestore";
+import { onDocumentCreated, onDocumentUpdated, onDocumentDeleted, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { toDishSlug } from "./dishSlug";
@@ -2015,6 +2015,61 @@ export const onFollowCreated = onDocumentCreated(
         });
     } catch (err) {
       logger.warn(`onFollowCreated: no se pudo avisar a ${followingId}:`, err);
+    }
+  }
+);
+
+/**
+ * Lo que el cliente NO puede hacer al bloquear a alguien.
+ *
+ * Dispara con cualquier escritura en `users/{uid}/bloqueados/{otroUid}` y hace dos cosas
+ * que, por construcción, solo puede hacer el servidor:
+ *
+ * ## 1. El espejo `bloqueadoPor`
+ *
+ * El bloqueo oculta en los DOS sentidos: si B bloquea a A, A tampoco debe ver a B. Pero
+ * el movil de A no puede saberlo, porque las reglas le prohiben leer `users/B/bloqueados`
+ * -- y eso es deliberado: la lista de a quien has bloqueado es tuya y nadie debe poder
+ * enumerarla. Asi que el servidor escribe el reverso en `users/A/bloqueadoPor/B`, que
+ * solo A puede leer.
+ *
+ * Lo que A aprende con eso es "B me bloqueo", no la lista de B. Y eso es inevitable en
+ * cuanto el contenido se oculta: es lo que pasa en cualquier app con bloqueo.
+ *
+ * ## 2. Deshacer los seguimientos
+ *
+ * Las reglas impiden CREAR un seguimiento nuevo con bloqueo de por medio, pero los que ya
+ * existian siguen ahi. A puede borrar el suyo desde la app; el de B hacia A, no: la regla
+ * de borrado exige ser el seguidor. Aqui se borran los dos.
+ *
+ * Idempotente sin llevar registro: todo son `set`/`delete` de documentos con id
+ * determinista, asi que repetir la entrega -- los triggers son at-least-once -- deja el
+ * mismo resultado. Nada que ver con `onRatingDeleted`, que si necesito acta porque
+ * sumaba.
+ */
+export const onBloqueoEscrito = onDocumentWritten(
+  "users/{uid}/bloqueados/{otroUid}",
+  async (event) => {
+    const { uid, otroUid } = event.params;
+    if (!uid || !otroUid || uid === otroUid) return;
+    const bloqueado = event.data?.after?.exists === true;
+    const espejo = db.collection("users").doc(otroUid).collection("bloqueadoPor").doc(uid);
+
+    try {
+      if (!bloqueado) {
+        await espejo.delete();
+        logger.info(`Bloqueo deshecho: ${uid} -> ${otroUid}`);
+        return;
+      }
+      await espejo.set({ creadoEn: Date.now() });
+      // Los dos sentidos. `delete` sobre lo que no existe no falla.
+      await Promise.all([
+        db.collection("follows").doc(`${uid}_${otroUid}`).delete(),
+        db.collection("follows").doc(`${otroUid}_${uid}`).delete(),
+      ]);
+      logger.info(`Bloqueo: ${uid} -> ${otroUid}, espejo escrito y seguimientos deshechos`);
+    } catch (err) {
+      logger.error(`onBloqueoEscrito ${uid} -> ${otroUid}:`, err);
     }
   }
 );

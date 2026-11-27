@@ -20,6 +20,8 @@ import javax.inject.Inject
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.app.foodranker.R
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 /** Un local cercano ya en la app, con sus platos mejor puntuados. */
 data class NearbyVenueDishes(
@@ -48,6 +50,7 @@ data class NearbyDishesUiState(
  */
 @HiltViewModel
 class NearbyDishesViewModel @Inject constructor(
+    private val bloqueos: BloqueoRepository,
     private val firestore: FirebaseFirestore,
     private val venueRepository: VenueRepository,
     @ApplicationContext private val appContext: Context
@@ -84,6 +87,8 @@ class NearbyDishesViewModel @Inject constructor(
                     .get().await()
 
                 val nearby = venueSnap.documents
+                    // bloqueo-ok: un local es un local, no lo publica nadie — lo resuelve
+                    // la CF resolveVenue contra Places. Ver docs/VENUES.md.
                     .mapNotNull { it.toObject(Venue::class.java)?.copy(id = it.id) }
                     .map { venue ->
                         venue to GeoUtils.haversineMeters(location.latitude, location.longitude, venue.lat, venue.lng)
@@ -112,6 +117,7 @@ class NearbyDishesViewModel @Inject constructor(
                 val platesByVenue = platesSnap.documents
                     .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                     .soloPublicos()
+                    .sinBloqueados(bloqueos.ocultos.value)
                     .groupBy { it.venueId }
 
                 val results = nearby.mapNotNull { (venue, distance) ->

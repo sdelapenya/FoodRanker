@@ -58,6 +58,7 @@ A, BU = "userA", "userB"
 RUTA_A_B = B + "/users/userA/bloqueados/userB"   # A bloqueo a B
 RUTA_B_A = B + "/users/userB/bloqueados/userA"   # B bloqueo a A
 PLATO = B + "/plates/p1"
+ESPEJO_DE_A = B + "/users/userA/bloqueadoPor/userB"   # "B me bloqueo", en la copia de A
 RUTA_A_A = B + "/users/userA/bloqueados/userA"   # nadie se bloquea a si mismo
 
 
@@ -178,6 +179,20 @@ CASOS = [
          {"path": B + "/notifications/userB/items/n1", "method": "create", "auth": auth(A),
           "resource": {"data": {"type": "like", "fromUserId": A, "createdAt": 1, "isRead": False}}},
          [existe(RUTA_A_B, False), existe(RUTA_B_A, False)], "ALLOW"),
+    # ── el espejo: quien me bloqueo a MI ──────────────────────────────────────
+    # Lo escribe solo el trigger onBloqueoEscrito via Admin SDK. Que el cliente NO pueda
+    # escribirlo es la mitad importante: si pudiera, cualquiera haria desaparecer
+    # contenido de la app de otra persona sin que ella hubiera bloqueado nada.
+    caso("A lee quien le ha bloqueado a el",
+         {"path": ESPEJO_DE_A, "method": "get", "auth": auth(A)}, [], "ALLOW"),
+    caso("B fisga en el espejo de A",
+         {"path": ESPEJO_DE_A, "method": "get", "auth": auth(BU)}, [], "DENY"),
+    caso("ni el propio A puede escribir su espejo",
+         {"path": ESPEJO_DE_A, "method": "create", "auth": auth(A),
+          "resource": {"data": {"creadoEn": 1}}}, [], "DENY"),
+    caso("B tampoco puede plantar un bloqueo en el espejo de A",
+         {"path": ESPEJO_DE_A, "method": "create", "auth": auth(BU),
+          "resource": {"data": {"creadoEn": 1}}}, [], "DENY"),
     # ── valorar ───────────────────────────────────────────────────────────────
     # ⚠️ EL CASO QUE FALTABA. La app crea el plato y esta valoracion en el MISMO lote, asi
     # que al evaluar la regla el plato aun no existe en el estado anterior. Con `get()`

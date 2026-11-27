@@ -18,6 +18,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import com.app.foodranker.R
 import com.app.foodranker.utils.Fallos
 import androidx.annotation.StringRes
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 data class FollowListRow(
     val userId: String,
@@ -40,6 +42,7 @@ data class FollowListUiState(
 class FollowListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val firestore: FirebaseFirestore,
+    private val bloqueos: BloqueoRepository,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -83,11 +86,18 @@ class FollowListViewModel @Inject constructor(
                         .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
                         .get().await()
                         .documents.forEach { doc ->
-                            doc.toObject(User::class.java)?.let { userMap[doc.id] = it }
+                            // El id del documento manda sobre el campo: el filtro de
+                            // bloqueo mira User.id y un perfil antiguo podría no traerlo.
+                            doc.toObject(User::class.java)?.let { userMap[doc.id] = it.copy(id = doc.id) }
                         }
                 }
+                // Con bloqueo de por medio no sales de la lista de nadie, en ninguno de
+                // los dos sentidos. El seguimiento en sí lo deshace onBloqueoEscrito.
+                val visibles = userMap.values.toList()
+                    .sinBloqueados(bloqueos.ocultos.value)
+                    .associateBy { it.id }
                 val rows = ids.mapNotNull { uid ->
-                    val user = userMap[uid] ?: return@mapNotNull null
+                    val user = visibles[uid] ?: return@mapNotNull null
                     FollowListRow(
                         userId = uid,
                         name = user.name.ifBlank {

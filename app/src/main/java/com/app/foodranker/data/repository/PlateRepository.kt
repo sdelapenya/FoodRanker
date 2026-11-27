@@ -1,5 +1,6 @@
 package com.app.foodranker.data.repository
 
+import com.app.foodranker.data.model.sinBloqueados
 import com.app.foodranker.data.model.soloPublicos
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -12,7 +13,8 @@ import com.app.foodranker.utils.Fallos
 
 @Singleton
 class PlateRepository @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val bloqueos: BloqueoRepository
 ) {
     private val platesCollection = firestore.collection("plates")
 
@@ -20,12 +22,13 @@ class PlateRepository @Inject constructor(
         return try {
             val snapshot = platesCollection
                 .orderBy("rankingScore", Query.Direction.DESCENDING)
-                .limit(limit + 5)  // over-fetch para compensar los que quite soloPublicos()
+                .limit(limit + 5)  // over-fetch: soloPublicos() y sinBloqueados() quitan de aquí
                 .get()
                 .await()
             val plates = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                 .soloPublicos()
+                .sinBloqueados(bloqueos.ocultos.value)
                 .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
@@ -39,12 +42,13 @@ class PlateRepository @Inject constructor(
             val snapshot = platesCollection
                 .whereEqualTo("category", category.name)
                 .orderBy("rankingScore", Query.Direction.DESCENDING)
-                .limit(limit + 5) // over-fetch para compensar los que quite soloPublicos()
+                .limit(limit + 5) // over-fetch: soloPublicos() y sinBloqueados() quitan de aquí
                 .get()
                 .await()
             val plates = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                 .soloPublicos()
+                .sinBloqueados(bloqueos.ocultos.value)
                 .take(limit.toInt())
             Result.success(plates)
         } catch (e: Exception) {
@@ -62,6 +66,7 @@ class PlateRepository @Inject constructor(
             val plates = snapshot.documents
                 .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                 .soloPublicos()
+                .sinBloqueados(bloqueos.ocultos.value)
             Result.success(plates)
         } catch (e: Exception) {
             Fallos.fallo(e)

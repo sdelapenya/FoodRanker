@@ -14,6 +14,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 data class TrendingUiState(
     val mostLiked: List<Plate> = emptyList(),
@@ -25,6 +27,7 @@ data class TrendingUiState(
 
 @HiltViewModel
 class TrendingViewModel @Inject constructor(
+    private val bloqueos: BloqueoRepository,
     private val firestore: FirebaseFirestore
 ) : ViewModel() {
 
@@ -46,6 +49,7 @@ class TrendingViewModel @Inject constructor(
                             .limit(20).get().await()
                             .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                             .soloPublicos()
+                            .sinBloqueados(bloqueos.ocultos.value)
                     }
                     val ratedJob = async {
                         firestore.collection("plates")
@@ -53,6 +57,7 @@ class TrendingViewModel @Inject constructor(
                             .limit(30).get().await()
                             .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                             .soloPublicos()
+                            .sinBloqueados(bloqueos.ocultos.value)
                     }
                     Pair(likedJob.await(), ratedJob.await())
                 }

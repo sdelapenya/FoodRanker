@@ -35,6 +35,8 @@ import javax.inject.Inject
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.app.foodranker.R
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 data class DiscoverUiState(
     val plates: List<Plate> = emptyList(),
@@ -58,6 +60,7 @@ data class DiscoverUiState(
 
 @HiltViewModel
 class DiscoverViewModel @Inject constructor(
+    private val bloqueos: BloqueoRepository,
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val connectivityObserver: ConnectivityObserver,
@@ -135,6 +138,7 @@ class DiscoverViewModel @Inject constructor(
                     .limit(30).get().await()
                     .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                     .soloPublicos()
+                    .sinBloqueados(bloqueos.ocultos.value)
                 _uiState.value = _uiState.value.copy(nearbyPlates = plates)
             } catch (e: Exception) {
                 Fallos.reportar(e, "descubrir: platos cercanos")
@@ -170,6 +174,7 @@ class DiscoverViewModel @Inject constructor(
                         }
                     }.flatMap { it.await() }
                 }.soloPublicos()
+                    .sinBloqueados(bloqueos.ocultos.value)
                     .sortedByDescending { it.createdAt }
                     .take(90)
                 _uiState.value = _uiState.value.copy(followingPlates = plates, isLoadingFollowing = false)
@@ -195,6 +200,7 @@ class DiscoverViewModel @Inject constructor(
                 lastDocument = docs.lastOrNull() ?: cursor
                 val more = docs.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                     .soloPublicos()
+                    .sinBloqueados(bloqueos.ocultos.value)
                 // Seguimos paginando mientras Firestore devuelva páginas completas,
                 // aunque todos los docs de esta página estén filtrados por reportCount.
                 val hasMore = docs.size >= PAGE_SIZE
@@ -256,6 +262,7 @@ class DiscoverViewModel @Inject constructor(
                 val plates = docs
                     .mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                     .soloPublicos()
+                    .sinBloqueados(bloqueos.ocultos.value)
 
                 _uiState.value = _uiState.value.copy(
                     plates = plates,

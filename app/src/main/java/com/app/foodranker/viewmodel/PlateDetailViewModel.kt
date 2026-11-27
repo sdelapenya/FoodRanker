@@ -28,6 +28,8 @@ import javax.inject.Inject
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.app.foodranker.R
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 data class PlateDetailUiState(
     val plate: Plate? = null,
@@ -59,6 +61,7 @@ data class PlateEngagement(
 
 @HiltViewModel
 class PlateDetailViewModel @Inject constructor(
+    private val bloqueos: BloqueoRepository,
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val plateRepository: PlateRepository,
@@ -128,6 +131,7 @@ class PlateDetailViewModel @Inject constructor(
                     val ownRatingDeferred = async {
                         if (userId.isNotEmpty()) {
                             try {
+                                // bloqueo-ok: es MI valoración, no contenido de otro.
                                 firestore.collection("ratings").document("${plateId}_$userId")
                                     .get().await().toObject(Rating::class.java)
                             } catch (e: Exception) {
@@ -156,7 +160,10 @@ class PlateDetailViewModel @Inject constructor(
                     val plateDoc = plateDeferred.await()
                     if (com.app.foodranker.BuildConfig.DEBUG) android.util.Log.d("PlateDetail", "Documento existe: ${plateDoc.exists()}")
 
-                    val plate = if (plateDoc.exists()) {
+                    // bloqueo-ok: se filtra unas lineas mas abajo, al construir `plate`
+                    // — aquí todavía hace falta entero porque el respaldo campo a campo
+                    // de este mismo bloque también necesita el documento.
+                    val plateCargado = if (plateDoc.exists()) {
                         plateDoc.toObject(Plate::class.java)?.copy(id = plateDoc.id)
                             ?: plateDoc.data?.let { data ->
                                 @Suppress("UNCHECKED_CAST")
@@ -184,6 +191,13 @@ class PlateDetailViewModel @Inject constructor(
                             }
                     } else null
 
+                    // El plato de alguien con bloqueo de por medio no se abre, aunque se
+                    // llegue por un enlace directo o por un aviso antiguo: queda como
+                    // "no encontrado", que es lo que la pantalla ya sabe enseñar. El
+                    // bloqueo lo esconde de los listados, pero una pantalla de detalle
+                    // alcanzable por URL sería la rendija por la que se cuela igual.
+                    val plate = plateCargado?.takeUnless { it.addedByUserId in bloqueos.ocultos.value }
+
                     // City rank: plates in same city with higher score, run in parallel
                     val cityRankDeferred = if (plate != null && plate.city.isNotEmpty()) {
                         async {
@@ -200,9 +214,11 @@ class PlateDetailViewModel @Inject constructor(
                         }
                     } else null
 
+                    val ocultos = bloqueos.ocultos.value
                     val loadedRatings = ratingsDeferred.await().documents
                         .mapNotNull { it.toObject(Rating::class.java) }
                         .filter { it.reportCount < 3 }
+                        .sinBloqueados(ocultos)
                     val ownRating = ownRatingDeferred.await()
                     val ratings = if (ownRating != null && loadedRatings.none { it.userId == userId }) {
                         (loadedRatings + ownRating).sortedByDescending { it.createdAt }
@@ -211,6 +227,7 @@ class PlateDetailViewModel @Inject constructor(
                     val comments = commentsDeferred.await().documents
                         .mapNotNull { it.toObject(Comment::class.java) }
                         .filter { it.reportCount < 3 }
+                        .sinBloqueados(ocultos)
                         .sortedByDescending { it.createdAt }
 
                     val isSaved = isSavedDeferred.await()
@@ -295,6 +312,7 @@ class PlateDetailViewModel @Inject constructor(
                 val snap = firestore.collection("collections")
                     .whereEqualTo("userId", userId).limit(50).get().await()
                 val cols = snap.documents.mapNotNull {
+                    // bloqueo-ok: son MIS colecciones.
                     it.toObject(com.app.foodranker.data.model.PlateCollection::class.java)
                 }
                 _uiState.value = _uiState.value.copy(collections = cols)
@@ -538,7 +556,10 @@ class PlateDetailViewModel @Inject constructor(
                     firestore.collection("users")
                         .whereIn(com.google.firebase.firestore.FieldPath.documentId(), allIds)
                         .get().await().documents
-                        .associate { it.id to (it.toObject(User::class.java) ?: User()) }
+                        .associate { it.id to (it.toObject(User::class.java)?.copy(id = it.id) ?: User(id = it.id)) }
+                        .values.toList()
+                        .sinBloqueados(bloqueos.ocultos.value)
+                        .associateBy { it.id }
 
                 _uiState.value = _uiState.value.copy(
                     engagement = PlateEngagement(

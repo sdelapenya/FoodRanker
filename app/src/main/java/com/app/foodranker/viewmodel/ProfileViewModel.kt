@@ -25,6 +25,8 @@ import javax.inject.Inject
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.app.foodranker.R
+import com.app.foodranker.data.model.sinBloqueados
+import com.app.foodranker.data.repository.BloqueoRepository
 
 enum class ProfileTab { MY_PLATES, SAVED, COLLECTIONS }
 
@@ -50,11 +52,16 @@ data class ProfileUiState(
     val isLoadingCollectionPlates: Boolean = false,
     val nearbyRival: User? = null,
     val nearbyRivalGap: Int = 0,
-    val cityRank: Int = 0
+    val cityRank: Int = 0,
+    /** Hay bloqueo con este perfil, en cualquier dirección: no se enseña nada de él. */
+    val hayBloqueo: Boolean = false,
+    /** Y además lo bloqueé yo, así que puedo deshacerlo desde aquí. */
+    val loBloqueeYo: Boolean = false
 )
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
+    private val bloqueos: BloqueoRepository,
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val functions: FirebaseFunctions,
@@ -73,6 +80,17 @@ class ProfileViewModel @Inject constructor(
     fun loadProfile(userId: String) {
         if (userId.isBlank()) {
             _uiState.value = _uiState.value.copy(isLoading = false, error = appContext.getString(R.string.vm_user_invalid))
+            return
+        }
+        // Con bloqueo de por medio el perfil no se carga siquiera. Podría filtrarse
+        // campo a campo, pero entonces cada cosa que se añadiera al perfil más adelante
+        // sería una fuga nueva: es más seguro no traerlo.
+        if (userId != auth.currentUser?.uid && userId in bloqueos.ocultos.value) {
+            _uiState.value = ProfileUiState(
+                isLoading = false,
+                hayBloqueo = true,
+                loBloqueeYo = userId in bloqueos.bloqueadosPorMi.value
+            )
             return
         }
         lastLoadTime = System.currentTimeMillis()
@@ -96,6 +114,7 @@ class ProfileViewModel @Inject constructor(
                                 // Si toObject() falla (doc con forma inesperada), el nombre
                                 // en bruto del propio doc sigue siendo mejor dato que
                                 // displayName, que puede venir vacío del login por navegador.
+                                // bloqueo-ok: es MI perfil.
                                 (userDoc.toObject(User::class.java) ?: User(
                                     id = firebaseUser.uid,
                                     name = userDoc.getString("name") ?: firebaseUser.displayName ?: "Usuario",
@@ -112,12 +131,15 @@ class ProfileViewModel @Inject constructor(
                             }
                         } else {
                             val doc = firestore.collection("users").document(userId).get().await()
+                            // bloqueo-ok: con bloqueo no se llega hasta aquí, loadProfile corta antes.
                             doc.toObject(User::class.java) to (doc.getLong("leagueWins") ?: 0L).toInt()
                         }
                     }
                     val platesDeferred = async {
                         val suyos = firestore.collection("plates")
                             .whereEqualTo("addedByUserId", userId).limit(100).get().await()
+                            // bloqueo-ok: son los platos del perfil que se está viendo, y
+                            // loadProfile ya corta antes si hay bloqueo con su dueño.
                             .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                         // En TU perfil se ven todos, incluido el que acabas de subir y
                         // sigue en moderación: filtrarlo aquí haría parecer que la
@@ -159,8 +181,13 @@ class ProfileViewModel @Inject constructor(
                                     .whereEqualTo("city", user.city)
                                     .whereGreaterThan("xp", user.xp)
                                     .orderBy("xp", com.google.firebase.firestore.Query.Direction.ASCENDING)
-                                    .limit(1).get().await()
-                                    .documents.firstOrNull()?.toObject(User::class.java)
+                                    // Se piden varios y no uno: si el primero es alguien
+                                    // con bloqueo de por medio, el rival pasa a ser el
+                                    // siguiente, no desaparece la tarjeta.
+                                    .limit(5).get().await()
+                                    .documents.mapNotNull { it.toObject(User::class.java)?.copy(id = it.id) }
+                                    .sinBloqueados(bloqueos.ocultos.value)
+                                    .firstOrNull()
                             } catch (e: Exception) {
                                 // Devolver null deja la tarjeta de rival sin pintar, que es
                                 // un apaño razonable. Pero esta consulta lleva whereEqualTo
@@ -240,6 +267,7 @@ class ProfileViewModel @Inject constructor(
             try {
                 val snap = firestore.collection("collections")
                     .whereEqualTo("userId", userId).limit(50).get().await()
+                // bloqueo-ok: son MIS colecciones (whereEqualTo userId == el mío).
                 val cols = snap.documents.mapNotNull {
                     it.toObject(com.app.foodranker.data.model.PlateCollection::class.java)
                 }.sortedByDescending { it.createdAt }
@@ -322,7 +350,7 @@ class ProfileViewModel @Inject constructor(
                                 .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
                         }
                     }.flatMap { it.await() }
-                }
+                }.sinBloqueados(bloqueos.ocultos.value)
                 _uiState.value = _uiState.value.copy(
                     savedPlates = saved.sortedByDescending { it.createdAt }
                 )
@@ -552,6 +580,7 @@ class ProfileViewModel @Inject constructor(
                     firestore.collection("plates")
                         .whereIn(FieldPath.documentId(), chunk).get().await()
                         .documents.mapNotNull { it.toObject(Plate::class.java)?.copy(id = it.id) }
+                        .sinBloqueados(bloqueos.ocultos.value)
                         .let { plates.addAll(it) }
                 }
                 _uiState.value = _uiState.value.copy(
