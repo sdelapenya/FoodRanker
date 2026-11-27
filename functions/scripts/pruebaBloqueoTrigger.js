@@ -119,6 +119,40 @@ async function main() {
   await fns.onBloqueoEscrito.run(evento(A, B, false));
   anota("desbloquear dos veces no falla", true);
 
+  // Eventos FUERA DE ORDEN. Los triggers no garantizan el orden de entrega, solo que
+  // cada evento llega al menos una vez. Si alguien bloquea y desbloquea seguido, el
+  // evento ANTIGUO de bloqueo puede procesarse el ultimo.
+  //
+  // Esto NO lo cubre el caso de doble entrega de arriba: alli es el mismo evento dos
+  // veces, aqui son dos eventos distintos en orden inverso. Decidir mirando
+  // `event.data.after.exists` hace que el evento rezagado resucite el espejo de un
+  // bloqueo que ya no existe. Y ese espejo no lo puede quitar nadie: la lista de A esta
+  // vacia, asi que no queda ninguna escritura que vuelva a disparar la limpieza. Un
+  // bloqueo fantasma indeleble, y la victima sin saber por que no ve a esa persona.
+  await limpia();
+  await db.doc("users/" + A + "/bloqueados/" + B).set({ creadoEn: Date.now() });
+  await fns.onBloqueoEscrito.run(evento(A, B, true));
+  await db.doc("users/" + A + "/bloqueados/" + B).delete();
+  await fns.onBloqueoEscrito.run(evento(A, B, false));
+  // Se reconcilian y vuelven a seguirse: despues de un desbloqueo es lo normal.
+  await db.doc("follows/" + A + "_" + B).set({ followerId: A, followingId: B });
+  // Y AHORA aparece el evento de bloqueo rezagado.
+  await fns.onBloqueoEscrito.run(evento(A, B, true));
+  anota("un evento de bloqueo rezagado NO resucita el espejo",
+    !(await existe("users/" + B + "/bloqueadoPor/" + A)));
+  anota("   ...ni deshace un seguimiento que ya no tiene bloqueo detras",
+    await existe("follows/" + A + "_" + B));
+
+  // Y el simetrico: un evento de DESBLOQUEO rezagado no debe borrar un bloqueo vigente.
+  await limpia();
+  await db.doc("users/" + A + "/bloqueados/" + B).set({ creadoEn: Date.now() });
+  await fns.onBloqueoEscrito.run(evento(A, B, true));
+  await fns.onBloqueoEscrito.run(evento(A, B, false));   // rezagado, miente
+  anota("un evento de desbloqueo rezagado NO borra un bloqueo vigente",
+    await existe("users/" + B + "/bloqueadoPor/" + A));
+
+  await limpia();
+
   // Y que no se cuele un bloqueo de alguien contra si mismo.
   await fns.onBloqueoEscrito.run(evento(A, A, true));
   anota("bloquearse a uno mismo no escribe nada",

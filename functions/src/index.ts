@@ -2042,26 +2042,52 @@ export const onFollowCreated = onDocumentCreated(
  * existian siguen ahi. A puede borrar el suyo desde la app; el de B hacia A, no: la regla
  * de borrado exige ser el seguidor. Aqui se borran los dos.
  *
- * Idempotente sin llevar registro: todo son `set`/`delete` de documentos con id
- * determinista, asi que repetir la entrega -- los triggers son at-least-once -- deja el
- * mismo resultado. Nada que ver con `onRatingDeleted`, que si necesito acta porque
- * sumaba.
+ * ## 3. Por que decide leyendo, y no por el evento
+ *
+ * La primera version miraba `event.data.after.exists` y se apoyaba en que todo son
+ * `set`/`delete` de ids deterministas: repetir la entrega deja el mismo resultado. Eso
+ * es cierto y no basta. **At-least-once no es lo mismo que en orden**: dos eventos
+ * DISTINTOS pueden llegar invertidos, y un bloqueo rezagado resucitaba el espejo de un
+ * bloqueo ya deshecho -- un bloqueo fantasma que nadie podia quitar, porque sin
+ * documento en `bloqueados` no hay escritura que vuelva a disparar esta funcion.
+ *
+ * Asi que el evento solo avisa de que hay que mirar; quien manda es el documento vigente,
+ * leido en transaccion. Dos eventos en cualquier orden convergen al mismo sitio. Lo cubre
+ * `pruebaBloqueoTrigger.js`, y la prueba se vio fallar antes de arreglarlo.
  */
 export const onBloqueoEscrito = onDocumentWritten(
   "users/{uid}/bloqueados/{otroUid}",
   async (event) => {
     const { uid, otroUid } = event.params;
     if (!uid || !otroUid || uid === otroUid) return;
-    const bloqueado = event.data?.after?.exists === true;
+    const fuente = db.collection("users").doc(uid).collection("bloqueados").doc(otroUid);
     const espejo = db.collection("users").doc(otroUid).collection("bloqueadoPor").doc(uid);
 
     try {
+      // ⚠️ NO se mira `event.data.after.exists`. Los triggers garantizan que cada evento
+      // llega al menos una vez, pero NO en orden. Si alguien bloquea y desbloquea
+      // seguido, el evento de bloqueo puede procesarse el ultimo, y decidir por el
+      // payload resucitaria el espejo de un bloqueo que ya no existe.
+      //
+      // Eso no es un desajuste cualquiera: ese espejo no lo puede quitar nadie. La lista
+      // de `bloqueados` de uid esta vacia, asi que no queda ninguna escritura que vuelva
+      // a disparar esta funcion. otroUid dejaria de ver a uid para siempre, sin que nadie
+      // le haya bloqueado y sin forma de averiguar por que.
+      //
+      // Asi que el evento solo sirve de aviso de "mira esto"; quien manda es el documento
+      // VIGENTE, leido en transaccion. Dos eventos en cualquier orden convergen al mismo
+      // sitio, que es lo unico que hace falta.
+      const bloqueado = await db.runTransaction(async (tx) => {
+        const actual = await tx.get(fuente);
+        if (actual.exists) tx.set(espejo, { creadoEn: Date.now() });
+        else tx.delete(espejo);
+        return actual.exists;
+      });
+
       if (!bloqueado) {
-        await espejo.delete();
         logger.info(`Bloqueo deshecho: ${uid} -> ${otroUid}`);
         return;
       }
-      await espejo.set({ creadoEn: Date.now() });
       // Los dos sentidos. `delete` sobre lo que no existe no falla.
       await Promise.all([
         db.collection("follows").doc(`${uid}_${otroUid}`).delete(),
