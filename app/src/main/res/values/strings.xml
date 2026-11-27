@@ -698,4 +698,19 @@
     <string name="prof_edit_plate">Edit %1$s</string>
     <string name="tab_top">Top</string>
     <string name="user_fallback_name">User</string>
+    <!-- Bloqueo entre usuarios -->
+    <string name="block_action">Block user</string>
+    <string name="block_unblock">Unblock</string>
+    <string name="block_confirm_title">Block %1$s?</string>
+    <string name="block_confirm_body">You won\'t see their dishes, ratings or comments, and they won\'t be able to follow you, rate your dishes or comment on them. If either of you follows the other, that stops too.</string>
+    <string name="block_done">Blocked. You won\'t see each other any more.</string>
+    <string name="block_undone">Unblocked.</string>
+    <string name="block_failed">Couldn\'t do that. Try again.</string>
+    <string name="block_profile_title">Profile unavailable</string>
+    <string name="block_profile_mine">You blocked this person. Unblock them to see their profile again.</string>
+    <string name="block_profile_theirs">You can\'t see this profile.</string>
+    <string name="block_list_title">Blocked users</string>
+    <string name="block_list_entry">Blocked users</string>
+    <string name="block_list_empty">You haven\'t blocked anyone.</string>
+    <string name="block_list_note">People you block don\'t see your dishes and can\'t interact with you. They are not told.</string>
 </resources>

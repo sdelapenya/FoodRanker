@@ -62,6 +62,9 @@ object AnalyticsManager {
     // ── Social ────────────────────────────────────────────────────────────
     fun logUserFollowed() = log("user_followed")
     fun logUserUnfollowed() = log("user_unfollowed")
+    // Sin uid de nadie: solo que ha pasado. Cuánto se usa el bloqueo dice si la
+    // moderación funciona; quién bloquea a quién no es asunto de una analítica.
+    fun logUserBlocked() = log("user_blocked")
 
     // ── Perfil ────────────────────────────────────────────────────────────
     fun logProfileEdited() = log("profile_edited")

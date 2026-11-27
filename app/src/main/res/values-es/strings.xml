@@ -705,4 +705,19 @@
     <string name="prof_edit_plate">Editar %1$s</string>
     <string name="tab_top">Top</string>
     <string name="user_fallback_name">Usuario</string>
+    <!-- Bloqueo entre usuarios -->
+    <string name="block_action">Bloquear usuario</string>
+    <string name="block_unblock">Desbloquear</string>
+    <string name="block_confirm_title">¿Bloquear a %1$s?</string>
+    <string name="block_confirm_body">No verás sus platos, valoraciones ni comentarios, y no podrá seguirte, valorar tus platos ni comentarlos. Si alguno de los dos sigue al otro, eso también se deshace.</string>
+    <string name="block_done">Bloqueado. Ya no os veréis.</string>
+    <string name="block_undone">Desbloqueado.</string>
+    <string name="block_failed">No se ha podido. Inténtalo otra vez.</string>
+    <string name="block_profile_title">Perfil no disponible</string>
+    <string name="block_profile_mine">Bloqueaste a esta persona. Desbloquéala para volver a ver su perfil.</string>
+    <string name="block_profile_theirs">No puedes ver este perfil.</string>
+    <string name="block_list_title">Usuarios bloqueados</string>
+    <string name="block_list_entry">Usuarios bloqueados</string>
+    <string name="block_list_empty">No has bloqueado a nadie.</string>
+    <string name="block_list_note">A quien bloqueas no le llega ningún aviso: simplemente deja de verte y no puede interactuar contigo.</string>
 </resources>

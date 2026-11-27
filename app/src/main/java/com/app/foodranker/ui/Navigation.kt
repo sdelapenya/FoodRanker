@@ -32,6 +32,7 @@ sealed class Screen(val route: String) {
     object Trending : Screen("trending")
     object Nearby : Screen("nearby")
     object Privacy : Screen("privacy")
+    object Bloqueados : Screen("bloqueados")
     object Terms         : Screen("terms")
     object Notifications : Screen("notifications")
     object League : Screen("league")

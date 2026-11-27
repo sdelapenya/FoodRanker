@@ -22,6 +22,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -40,7 +46,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
@@ -97,6 +105,7 @@ fun ProfileScreen(
     onNavigateToPlate: (String) -> Unit = {},
     onNavigateToFollowList: (profileUserId: String, followers: Boolean) -> Unit = { _, _ -> },
     onNavigateToPrivacy: () -> Unit = {},
+    onNavigateToBloqueados: () -> Unit = {},
     onNavigateToTerms: () -> Unit = {},
     onNavigateToReferral: () -> Unit = {},
     onAccountDeleted: () -> Unit = onSignOut,
@@ -108,6 +117,7 @@ fun ProfileScreen(
     LightStatusBarIcons()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -119,6 +129,8 @@ fun ProfileScreen(
     // Id de texto del error al corregir el nombre de un plato, o null. Vive aqui y no
     // en la hoja porque quien conoce el veredicto es el ViewModel, no la hoja.
     var renameError by remember { mutableStateOf<Int?>(null) }
+    var menuBloqueo by remember { mutableStateOf(false) }
+    var confirmarBloqueo by remember { mutableStateOf(false) }
 
     // ON_RESUME carga el perfil tanto en la primera apertura como al volver.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -163,13 +175,103 @@ fun ProfileScreen(
                         IconButton(onClick = { authViewModel.signOut(); onSignOut() }) {
                             Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.prof_sign_out), tint = Color.White)
                         }
+                    } else if (currentUser != null && currentUser.uid != userId) {
+                        // Bloquear vive en un menú y no en un botón suelto: no es algo que
+                        // deba poder pulsarse sin querer al volver atrás.
+                        Box {
+                            IconButton(onClick = { menuBloqueo = true }) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.block_action),
+                                    tint = Color.White
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuBloqueo,
+                                onDismissRequest = { menuBloqueo = false },
+                                containerColor = FoodTheme.colors.surface
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (uiState.loBloqueeYo) R.string.block_unblock
+                                                else R.string.block_action
+                                            ),
+                                            color = FoodTheme.colors.textPrimary
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Block,
+                                            contentDescription = null,
+                                            tint = FoodTheme.colors.textSecondary
+                                        )
+                                    },
+                                    onClick = {
+                                        menuBloqueo = false
+                                        if (uiState.loBloqueeYo) viewModel.desbloquear(userId)
+                                        else confirmarBloqueo = true
+                                    }
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { paddingValues ->
-        if (uiState.isLoading) {
+        if (uiState.hayBloqueo) {
+            // Ni foto, ni nombre, ni platos: el ViewModel no ha traído nada. Lo único
+            // que se ofrece es deshacerlo, y solo a quien lo hizo.
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.Block,
+                    contentDescription = null,
+                    tint = FoodTheme.colors.textSecondary,
+                    modifier = Modifier.size(56.dp)
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.block_profile_title),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = FoodTheme.colors.textPrimary
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(
+                        if (uiState.loBloqueeYo) R.string.block_profile_mine
+                        else R.string.block_profile_theirs
+                    ),
+                    fontSize = 14.sp,
+                    color = FoodTheme.colors.textSecondary,
+                    textAlign = TextAlign.Center
+                )
+                if (uiState.loBloqueeYo) {
+                    Spacer(Modifier.height(24.dp))
+                    val textoHecho = stringResource(R.string.block_undone)
+                    val textoFallo = stringResource(R.string.block_failed)
+                    Button(onClick = {
+                        viewModel.desbloquear(userId) { ok ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(if (ok) textoHecho else textoFallo)
+                            }
+                        }
+                    }) {
+                        Text(stringResource(R.string.block_unblock))
+                    }
+                }
+            }
+        } else if (uiState.isLoading) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().height(220.dp)
@@ -463,6 +565,7 @@ fun ProfileScreen(
                             isDeleting = uiState.isDeletingAccount,
                             onDeleteClick = { showDeleteDialog = true },
                             onPrivacy = onNavigateToPrivacy,
+                            onBloqueados = onNavigateToBloqueados,
                             onTerms = onNavigateToTerms,
                             onReferral = onNavigateToReferral,
                             modifier = Modifier.padding(horizontal = 16.dp)
@@ -530,6 +633,49 @@ fun ProfileScreen(
     }
 
     // Diálogo confirmación eliminar cuenta
+    if (confirmarBloqueo) {
+        val nombre = uiState.user?.name?.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.user_fallback_name)
+        val textoHecho = stringResource(R.string.block_done)
+        val textoFallo = stringResource(R.string.block_failed)
+        AlertDialog(
+            onDismissRequest = { confirmarBloqueo = false },
+            title = {
+                Text(
+                    stringResource(R.string.block_confirm_title, nombre),
+                    fontWeight = FontWeight.Bold,
+                    color = FoodTheme.colors.textPrimary
+                )
+            },
+            // Se dice lo que hace ANTES de hacerlo, y entero: que deja de verse, que
+            // deja de poder interactuar y que los seguimientos se deshacen. Un bloqueo
+            // que hace más de lo que anunció es un bloqueo en el que no se confía.
+            text = {
+                Text(
+                    stringResource(R.string.block_confirm_body),
+                    fontSize = 14.sp,
+                    color = FoodTheme.colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmarBloqueo = false
+                    viewModel.bloquear(userId) { ok ->
+                        scope.launch {
+                            snackbarHostState.showSnackbar(if (ok) textoHecho else textoFallo)
+                        }
+                    }
+                }) { Text(stringResource(R.string.block_action), color = ErrorRed) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmarBloqueo = false }) {
+                    Text(stringResource(R.string.action_cancel), color = FoodTheme.colors.textSecondary)
+                }
+            },
+            containerColor = FoodTheme.colors.surface
+        )
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -690,6 +836,7 @@ private fun ProfileAccountDangerZone(
     isDeleting: Boolean,
     onDeleteClick: () -> Unit,
     onPrivacy: () -> Unit,
+    onBloqueados: () -> Unit,
     onTerms: () -> Unit,
     onReferral: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -842,6 +989,15 @@ private fun ProfileAccountDangerZone(
                         }
                     }
                 }
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            ProfileMenuRow(
+                icon = Icons.Default.Block,
+                title = stringResource(R.string.block_list_entry),
+                iconTint = OrangePrimary.copy(alpha = 0.85f),
+                onClick = onBloqueados
             )
 
             Spacer(Modifier.height(6.dp))

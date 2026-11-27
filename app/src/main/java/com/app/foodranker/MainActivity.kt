@@ -280,6 +280,7 @@ fun FoodRankerNavigation() {
                     navController.navigate(Screen.FollowList.createRoute(uid, followers))
                 },
                 onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
+                onNavigateToBloqueados = { navController.navigate(Screen.Bloqueados.route) },
                 onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
                 onNavigateToReferral = { navController.navigate(Screen.Referral.route) }
             )
@@ -370,6 +371,12 @@ fun FoodRankerNavigation() {
 
         composable(Screen.Privacy.route) {
             PrivacyPolicyScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Bloqueados.route) {
+            com.app.foodranker.ui.screens.profile.BloqueadosScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.Terms.route) {

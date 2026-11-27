@@ -532,6 +532,41 @@ class ProfileViewModel @Inject constructor(
 
     @Volatile private var isTogglingFollow = false
 
+    /**
+     * Bloquear a alguien desde su perfil.
+     *
+     * Al volver se recarga el perfil, que con el bloqueo ya puesto se corta solo y deja
+     * la pantalla en "perfil no disponible". No se navega hacia atrás a propósito: el
+     * usuario acaba de pulsar algo y tiene que ver que ha surtido efecto.
+     *
+     * ⚠️ `lastLoadTime = 0` antes de recargar. Sin eso, `loadProfileIfStale` se traga la
+     * recarga durante un minuto y la pantalla se queda enseñando a quien acabas de
+     * bloquear — que es justo el momento en el que peor sienta.
+     */
+    fun bloquear(targetUserId: String, alTerminar: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val ok = bloqueos.bloquear(targetUserId).isSuccess
+            if (ok) {
+                com.app.foodranker.utils.AnalyticsManager.logUserBlocked()
+                lastLoadTime = 0L
+                loadProfile(targetUserId)
+            }
+            alTerminar(ok)
+        }
+    }
+
+    /** Deshacerlo. Los seguimientos NO vuelven: volver a seguir es una decisión. */
+    fun desbloquear(targetUserId: String, alTerminar: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val ok = bloqueos.desbloquear(targetUserId).isSuccess
+            if (ok) {
+                lastLoadTime = 0L
+                loadProfile(targetUserId)
+            }
+            alTerminar(ok)
+        }
+    }
+
     fun toggleFollow(targetUserId: String) {
         val currentUserId = auth.currentUser?.uid ?: return
         // Evita que un doble-tap rápido dispare dos coroutines que lean isFollowing
