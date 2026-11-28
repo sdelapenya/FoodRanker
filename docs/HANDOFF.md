@@ -54,6 +54,63 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ ENTRAR CON GOOGLE, PROBADO CON LA FIRMA DE PLAY (2026-11-28)
+
+**El riesgo que quedaba vivo esta cerrado.** La v29 se instalo **desde la prueba interna**
+y se entro con Google: `lastSignInTime` 12:16:49 GMT, proveedor `google.com`, y en
+`logcat` ni un error de la app (los que salen son todos de HyperOS: Zygote, HWUI, FPSGO).
+
+⚠️ **Y casi se prueba lo que no era.** Lo primero que se miro no fue el login, sino **de
+donde salia el APK instalado**, y menos mal:
+
+| | |
+|---|---|
+| `pm list packages -i` daba | `com.google.android.packageinstaller` — **no Play**, era el APK pasado a mano |
+| tamano | 7.341.932 bytes, identico al `app-release.apk` local |
+| certificado | `CN=Sergio de la Peña, O=sdelapenya.dev`, SHA-1 `2778234b…` |
+
+Probar el login sobre eso no habria probado nada. **Play tampoco podia actualizarlo**: el
+`versionCode` coincidia y, sobre todo, Android no sustituye un APK por otro con distinto
+certificado. Hubo que **desinstalar** y luego instalar desde Play.
+
+Con la de Play: `installer=com.android.vending`, **4,7 MB** (el reparto por trozos
+funcionando, frente a 13,5 MB de AAB) y certificado `CN=Android, O=Google Inc.`, SHA-1
+`9e6dcb790778ad01be7b4e77a60e78beeaf50e71`.
+
+```powershell
+# Comprobar SIEMPRE de donde viene antes de dar por buena una prueba en el movil
+adb shell pm list packages -i com.app.foodranker     # com.android.vending = Play
+adb pull $(adb shell pm path com.app.foodranker | sed 's/package://') x.apk
+apksigner verify --print-certs x.apk                  # O=Google Inc. = re-firmado por Play
+```
+
+⚠️ **`app/google-services.json` ESTA EN `.gitignore` Y SE HABIA QUEDADO VIEJO.** Tenia
+**3** hashes cuando el proyecto tiene **5** — le faltaba justo el de Play. Mirarlo llevaba a
+concluir que el login iba a fallar. **La fuente de verdad es el servidor:**
+
+```bash
+npx firebase-tools apps:sdkconfig ANDROID --project foodranker-51270
+```
+
+No rompia nada (la validacion la hace Google contra el proyecto, no contra el fichero),
+pero como no esta versionado nadie lo revisa y **la copia del servidor (Cursor) puede
+estar igual de vieja**. Actualizado en el PC el 2026-11-28.
+
+### ⚠️ LA FICHA DECLARA ANUNCIOS Y COMPRAS, Y LAS DOS SON FALSAS (2026-11-28)
+
+Visto en el movil, en la ficha de Play: **"Contiene anuncios · Compras en la aplicacion"**.
+Las dos dejaron de ser ciertas con la v28.
+
+| Etiqueta | De donde sale | Que hacer |
+|---|---|---|
+| **Contiene anuncios** | la declaracion de *Contenido de la app → Anuncios* | ponerla a "no contiene anuncios". El 2026-11-24 quedo "lista para enviar", asi que o no se envio o no se aplico |
+| **Compras en la aplicacion** | **dos causas, hacen falta las dos** | (a) archivar el producto de suscripcion; (b) promover la v29 |
+
+Lo de (b) esta comprobado sobre los binarios: el manifest fusionado de la **v29 tiene 0**
+referencias a `com.android.vending.BILLING` (`billing-ktx` salio en `32383c0`), pero la
+**v28, que es la que hay en produccion, si** la declara. Mientras produccion sea la v28, el
+binario sigue diciendo que hace facturacion.
+
 ### ✅ `awardAdXp` BORRADA, Y UNA FUNCION CORRIENDO SIN FUENTE (2026-11-28)
 
 **Produccion tenia 19 funciones y el codigo 18.** `awardAdXp` salio del fuente el
