@@ -54,6 +54,60 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### ✅ `awardAdXp` BORRADA, Y UNA FUNCION CORRIENDO SIN FUENTE (2026-11-28)
+
+**Produccion tenia 19 funciones y el codigo 18.** `awardAdXp` salio del fuente el
+2026-11-22 con la v28, pero **siguio viva en produccion seis dias**: todos los despliegues
+van con `--only functions:X`, y esa forma **nunca borra** lo que ya no esta en el codigo.
+Un `deploy --only functions` entero si lo habria preguntado.
+
+⚠️ **Comprobar el desfase es una linea y conviene hacerlo de vez en cuando:**
+
+```bash
+cd functions && node -e "const m=require('./lib/index.js');
+  console.log(Object.keys(m).filter(k=>m[k]&&m[k].__endpoint).sort().join('
+'))" | sort > /tmp/locales
+npx firebase-tools functions:list --project foodranker-51270   # y comparar
+```
+
+Lo que estaba expuesto: `awardAdXp` es *callable*, exige autenticacion y tiene
+enfriamiento, pero **nunca comprobo que se hubiera visto un anuncio** — se fiaba del
+cliente. Cualquier usuario autenticado podia sumarse XP cada enfriamiento, y sin fuente en
+el repo que lo documentara. El codigo sigue recuperable en `8837989^`.
+
+**El criterio de esperar a que AdMob llegara a cero era innecesario, y se verifico en vez
+de suponerlo:** de los **15 usuarios, uno solo** ha recibido XP por anuncio en toda la
+vida de la app, y fue el **2026-09-17, hace 71 dias**. Las 76 solicitudes semanales de
+AdMob eran peticiones de anuncio que ni siquiera llegaban a conceder nada.
+
+> ⚠️ **Y el log no servia para decidirlo:** `awardAdXp` **solo escribe en el log si
+> falla**, asi que un log vacio no prueba que no se llame. Lo que lo prueba es el dato:
+> cada concesion escribe `lastAdRewardAt` en el usuario. **Cuando un cero vaya a sostener
+> una decision, mirar si esa consulta podia haber devuelto algo.**
+
+⚠️ **`functions:log` SIN `--only` MIENTE.** Devolvia hasta el 26 cuando habia
+actividad del 27. **Siempre con `--only <funcion>`.**
+
+### ✅ EL AVISO A SEGUIDORES, POR FIN VIGILADO (2026-11-28)
+
+`avisarASeguidores` **no es una Cloud Function**: es auxiliar dentro de `validateFoodImage`
+(por eso pedirle logs da cero pase lo que pase). Era **la unica pieza del bloqueo sin
+prueba**, y ademas **no se ha ejecutado ni una vez en produccion**: `validateFoodImage` no
+corre desde el 1 de noviembre, porque `plates` esta vacio a proposito. El dia que alguien
+publique un plato sera la primera vez que ese codigo corra de verdad.
+
+Importa porque **este aviso lo escribe el Admin SDK, que no pasa por las reglas**. Si el
+filtro se cae, quien te bloqueo recibe tus avisos de plato nuevo con tu nombre y tu foto.
+Y el sentido dificil es el contrario: a quien me bloqueo **a mi**, cuyo seguimiento el
+cliente del autor no puede borrar — si no lo filtra el servidor aqui, no lo filtra nadie.
+
+`functions/scripts/pruebaAvisoSeguidores.js`, **7 casos**, vista fallar quitando el filtro:
+falla los 3 que dependen de el y mantiene los otros 4.
+
+Para poder probarla lleva `export`, que **no la convierte en Cloud Function**: el CLI solo
+despliega los exports con `__endpoint`. Comprobado contando antes y despues (18 y 18), no
+supuesto.
+
 ### ✅ BLOQUEO ENTRE USUARIOS, COMPLETO (2026-11-27) — DESPLEGADO Y PROBADO EN EL MÓVIL
 
 Lo pedía la política de contenido generado por usuarios de Play: una app con contenido

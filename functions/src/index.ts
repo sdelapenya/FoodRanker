@@ -882,7 +882,9 @@ async function approveplate(
  * actualización y no vuelve a sonar. Resultado: como mucho un aviso por persona seguida y
  * día, y la campana enseña "ha publicado 3 platos" cuando se mira.
  */
-async function avisarASeguidores(authorId: string, plateId: string, plateName: string) {
+// `export` solo para poder probarla: no es una Cloud Function y el CLI la ignora, porque
+// solo despliega los exports que traen `__endpoint`. Comprobado, no supuesto.
+export async function avisarASeguidores(authorId: string, plateId: string, plateName: string) {
   try {
     const autor = await db.collection("users").doc(authorId).get();
     const nombre = (autor.get("name") as string) || "Alguien";
