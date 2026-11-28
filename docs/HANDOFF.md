@@ -158,13 +158,44 @@ código, habría dado por buena la mejor noticia posible sin haber leído nada.
 
 #### ⚠️ QUÉ FALTA
 
-1. **6 commits sin pushear** (`a033d20`, `b95effe`, `59ca59c`, `a80d72d`, `60a9899`,
-   `2941e5b`) — ⚠️ **hay código de servidor desplegado que no está en ningún remoto.**
-   Si este PC se muere, las reglas y el disparador que están corriendo en producción no
-   están en ninguna otra parte. GitHub **y** Gitea (ojo a la sección *Sync*).
-2. **La v29 sin subir a Play**, y ahora además lleva el bloqueo — que es justo lo que
-   pedía la política de contenido de Play, así que esta es la versión que conviene subir.
-3. `functions/scripts/verBloqueo.js` es nuevo y va en el commit que falte.
+1. ✅ **Empujado todo.** GitHub y Gitea en `7db9465`, comprobado leyendo cada remoto.
+2. ✅ **`functions` redesplegado** con el arreglo de orden (abajo), y verificado el camino
+   normal contra produccion despues de desplegar — no solo el "Deploy complete".
+3. ✅ **V29 (1.12) SUBIDA A PLAY el 2026-11-27.** AAB verificado por contenido antes de
+   subirlo, no por la fecha: `versionCode` 29, cadenas de bloqueo en los dos idiomas y
+   rutas `bloqueados`/`bloqueadoPor` en el dex.
+4. ⚠️ **LO QUE QUEDA POR COMPROBAR, Y ES LO QUE YA ROMPIO UNA VEZ: ENTRAR CON GOOGLE.**
+   La APK que se probo el 27 por la noche estaba firmada con el keystore local. Play
+   **re-firma con su clave**, y eso cambia el SHA-1 que ve Google Sign-In. En este
+   proyecto eso ya dejo el login muerto en produccion funcionando perfectamente en local
+   (ver `project_play_signing_sha1`). **Instalar desde Play y entrar con Google.** Si
+   falla, es esto y no otra cosa.
+
+#### ⚠️ EL ESPEJO DECIDIA POR EL EVENTO, Y LOS EVENTOS NO LLEGAN EN ORDEN (2026-11-27)
+
+`onBloqueoEscrito` miraba `event.data.after.exists`. El razonamiento era que todo son
+`set`/`delete` de ids deterministas, asi que repetir una entrega deja el mismo resultado.
+Cierto, y **no basta: at-least-once no es lo mismo que en orden.**
+
+Si alguien bloquea y desbloquea seguido y el evento de bloqueo se procesa el ultimo, el
+espejo resucitaba. Y **ese espejo no lo podia quitar nadie**: sin documento en
+`bloqueados` no queda ninguna escritura que vuelva a disparar la funcion. La otra persona
+dejaba de verte para siempre, sin que nadie la hubiera bloqueado y sin forma de saber por
+que.
+
+Ahora el evento solo avisa de que hay que mirar: **manda el documento vigente, leido en
+transaccion**. Dos eventos en cualquier orden convergen al mismo sitio.
+
+> **La leccion, y es nueva:** ya habia un caso de prueba llamado *"entregado dos veces"*,
+> y ese nombre dio una sensacion de cobertura que no existia. Cubria **el mismo evento
+> repetido**, no **dos eventos distintos invertidos**. Lo encontro una revision externa
+> leyendo el codigo; las pruebas no. Tres casos nuevos en `pruebaBloqueoTrigger.js`, vistos
+> fallar antes de tocar nada (11/11 ahora).
+
+⚠️ **Y el AAB que casi se sube**: el que habia en `build/outputs` era del 26 a las
+22:43, **anterior a todos los commits del bloqueo**. Se habria publicado una v29 sin lo
+unico por lo que existe la v29. Lo vio la misma revision externa. **Comprobar el AAB por
+contenido, no por fecha** — extraerlo y buscar las cadenas, como se hizo esta vez.
 
 ### ✅ LOS TRES PUNTOS DE LA REVISIÓN EXTERNA, RESUELTOS (2026-11-26, noche)
 
