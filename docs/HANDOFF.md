@@ -54,6 +54,54 @@ El 2026-08-04 se mergeó una rama del servidor que divergía 13 commits (10 conf
 
 ## LO SIGUIENTE (retomar aquí)
 
+### 🚀 V29 (1.12) ENVIADA A REVISION PARA PRODUCCION (2026-11-28)
+
+**100 %, todos los paises de destino, notas en los 3 idiomas.** Producción pasa de la v28
+a la v29, que es la que trae el **bloqueo entre usuarios** — lo que pedía la política de
+contenido de Play y que hasta hoy la app publicada **no cumplía**.
+
+**Lo que había que comprobar antes de enviar, y se comprobó:**
+
+| | |
+|---|---|
+| entrar con Google **con la firma de Play** | ✅ el único riesgo que dependía de la re-firma |
+| el bloqueo presente en el binario de Play y su pantalla cargando | ✅ |
+| **Dispositivos que ya no son compatibles: 0** | ✅ en los cinco factores de forma |
+| notas en 3 de 3 idiomas, 100 %, todos los países | ✅ |
+
+⚠️ **Lo de "dispositivos que ya no son compatibles" hay que mirarlo en cada versión.** La
+v27 ya tuvo a Play **escondiendo la app por filtrado de hardware**; una versión que reduzca
+dispositivos es un retroceso que no avisa. Aquí 11.586 teléfonos y 6.584 tablets, sin
+pérdidas.
+
+La advertencia de **símbolos de depuración sale siempre y NO se puede quitar** (no hay
+código nativo propio; los `.so` son de AndroidX y llegan sin símbolos). Ignorarla.
+
+⚠️ **Guardar no publica.** Los cambios caen en *Resumen de publicación* y hay que
+**enviarlos a revisión** desde ahí. Hecho el 28 a las ~13:40.
+
+#### Qué vigilar ahora
+
+1. **Que la revisión pase.** Si la rechazan, el motivo más probable NO es el código sino
+   una declaración; el bloqueo es justo lo que venían pidiendo.
+2. **La ficha, al día siguiente de que salga.** Deberían caer **"Contiene anuncios"** y
+   **"Compras en la aplicación"**. La hipótesis es que esas etiquetas se recalculan con el
+   lanzamiento a producción: la declaración de Anuncios ya estaba correcta y guardada
+   (24 nov, en *Completadas*), y la v28 declaraba `BILLING` mientras la v29 no.
+   ⚠️ **Si "Contiene anuncios" sigue con la v29 ya en producción, no quedan explicaciones
+   benignas: tocará mirar lo de las DOS APPS de la consola**, que ya mordió una vez.
+3. **Archivar el producto de suscripción** — es la otra mitad de "Compras en la
+   aplicación" y es independiente del lanzamiento.
+4. **Crashlytics**, cuando haya instalaciones de la v29.
+5. `avisarASeguidores` **se ejecutará por primera vez en producción** cuando alguien
+   publique un plato (no corre desde el 1 de noviembre). Ya tiene prueba, pero es su
+   estreno real.
+
+#### Detalle cosmético, sin prisa
+
+En `ProfileScreen`, al bajar, los iconos de la barra superior quedan **encima de las
+tarjetas de platos** y se leen mal sobre las fotos. No rompe nada.
+
 ### ✅ ENTRAR CON GOOGLE, PROBADO CON LA FIRMA DE PLAY (2026-11-28)
 
 **El riesgo que quedaba vivo esta cerrado.** La v29 se instalo **desde la prueba interna**
